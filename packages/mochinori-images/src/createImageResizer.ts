@@ -13,6 +13,12 @@ export interface ImageResizerOptions {
   maxBytes?: number;
   /** Encoder quality from 0 to 1 for JPEG and WebP output (default 0.92) */
   quality?: number;
+  /**
+   * The format to re-encode to, such as `'image/webp'`. When the browser
+   * can't encode it, the default applies: JPEG for JPEG photos, else WebP
+   * where possible. JPEG has no transparency.
+   */
+  type?: string;
 }
 
 // Each retry for maxBytes shrinks the image by at least this factor
@@ -36,8 +42,8 @@ function drawingContext(
  * Creates an {@link ImagePreparer} that re-encodes images that are larger
  * than `maxWidth` × `maxHeight` or `maxBytes`, keeping their aspect ratio,
  * EXIF orientation and (where the browser supports it) Display P3 color.
- * JPEG photos stay JPEG; other images become WebP where the browser can
- * encode it, else PNG. Re-encoding drops EXIF metadata such as location.
+ * JPEG photos stay JPEG and other images become WebP where the browser can
+ * encode it (else PNG), unless `type` asks for another format. Re-encoding drops EXIF metadata such as location.
  * Images within every limit, GIFs (which could be animated), and anything
  * the browser can't decode are uploaded unchanged.
  *
@@ -53,6 +59,7 @@ export function createImageResizer(
     maxHeight = 2048,
     maxWidth = 2048,
     quality = 0.92,
+    type: preferredType,
   } = options;
   return async image => {
     if (
@@ -77,7 +84,21 @@ export function createImageResizer(
       if (scale === 1 && image.size <= maxBytes) {
         return image;
       }
-      const type = image.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp';
+      const defaultType =
+        image.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp';
+      const encode = async (canvas: OffscreenCanvas): Promise<Blob> => {
+        if (preferredType && preferredType !== defaultType) {
+          const blob = await canvas.convertToBlob({
+            quality,
+            type: preferredType,
+          });
+          // Browsers return PNG for a type they can't encode
+          if (blob.type === preferredType) {
+            return blob;
+          }
+        }
+        return canvas.convertToBlob({quality, type: defaultType});
+      };
       let result: Blob = image;
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         const width = Math.max(1, Math.round(bitmap.width * scale));
@@ -90,7 +111,7 @@ export function createImageResizer(
           return image;
         }
         context.drawImage(bitmap, 0, 0, width, height);
-        result = await canvas.convertToBlob({quality, type});
+        result = await encode(canvas);
         if (result.size <= maxBytes) {
           return result;
         }

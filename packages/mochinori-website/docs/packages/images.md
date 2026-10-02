@@ -125,15 +125,20 @@ with `{"error": "..."}`. `createHttpImageMirror` POSTs
 fetches the image itself and answers the same way. The demo site's Worker implements this endpoint on
 R2, and deletes uploads after an hour.
 
-### `createImageResizer({maxWidth, maxHeight, maxBytes, quality})`
+### `createImageResizer({maxWidth, maxHeight, maxBytes, quality, type})`
 
 A `prepareUpload` function that re-encodes images in the browser when they
 are larger than `maxWidth` × `maxHeight` (2048 × 2048 by default) or
 `maxBytes` (no limit by default). It keeps the aspect ratio, the EXIF
 orientation and, where the browser supports it, Display P3 color. An image
 over `maxBytes` is re-encoded at full size first, then made smaller step by
-step until it fits. JPEG photos stay JPEG at `quality` (0.92 by default);
-other images become WebP where the browser can encode it. Re-encoding drops
+step until it fits. JPEG photos stay JPEG at `quality` (0.92 by default)
+and other images become WebP where the browser can encode it, unless `type`
+asks for another format. WebP is usually 25–35% smaller than JPEG at the
+same quality, but not every browser can encode it from a canvas, so a
+`type` the browser can't produce falls back to that default. No browser can
+encode AVIF from a canvas; for AVIF, keep the original and convert it when
+serving (for example with Cloudflare Images). Re-encoding drops
 EXIF metadata such as location. Images within every limit, GIFs (which may
 be animated) and images the browser can't decode are uploaded byte for byte.
 
@@ -150,7 +155,7 @@ createImageResizer({
 ```
 
 The demo on this site instead shrinks images early (1600 × 1600, 1 MB,
-quality 0.8) to keep its storage small.
+quality 0.8, WebP) to keep its storage small.
 
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 

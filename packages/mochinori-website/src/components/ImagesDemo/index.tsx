@@ -80,6 +80,8 @@ const ImagesDemoExtension = defineExtension({
         maxHeight: 1600,
         maxWidth: 1600,
         quality: 0.8,
+        // Smaller than JPEG; browsers that can't encode WebP use JPEG
+        type: 'image/webp',
       }),
       // The site's Worker stores uploads in R2 for one hour
       upload: createHttpImageUploader({url: '/api/images'}),

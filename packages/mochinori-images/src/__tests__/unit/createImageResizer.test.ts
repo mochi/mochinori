@@ -9,7 +9,12 @@ const signal = new AbortController().signal;
  * Stubs createImageBitmap and OffscreenCanvas for a bitmap of this size.
  * An encoded image has one byte per `pixelsPerByte` pixels.
  */
-function stubCanvas(width: number, height: number, pixelsPerByte = 1000) {
+function stubCanvas(
+  width: number,
+  height: number,
+  pixelsPerByte = 1000,
+  encodable = (type: string) => type !== 'image/avif',
+) {
   const drawn: number[][] = [];
   const encoded: unknown[] = [];
   const contexts: unknown[] = [];
@@ -34,7 +39,9 @@ function stubCanvas(width: number, height: number, pixelsPerByte = 1000) {
       async convertToBlob(options: {type: string; quality: number}) {
         encoded.push(options);
         const bytes = Math.ceil((this.size[0] * this.size[1]) / pixelsPerByte);
-        return new Blob([new Uint8Array(bytes)], {type: options.type});
+        return new Blob([new Uint8Array(bytes)], {
+          type: encodable(options.type) ? options.type : 'image/png',
+        });
       }
     },
   );
@@ -63,6 +70,32 @@ describe('createImageResizer', () => {
     const png = new Blob(['png'], {type: 'image/png'});
     await createImageResizer({maxWidth: 1000, quality: 0.5})(png, {signal});
     expect(encoded).toEqual([{quality: 0.5, type: 'image/webp'}]);
+  });
+
+  it('encodes to the requested type when the browser can', async () => {
+    const {encoded} = stubCanvas(4000, 3000);
+    const resized = await createImageResizer({type: 'image/webp'})(photo, {
+      signal,
+    });
+    expect(resized.type).toBe('image/webp');
+    expect(encoded).toEqual([{quality: 0.92, type: 'image/webp'}]);
+  });
+
+  it('falls back to the default type when the browser cannot', async () => {
+    const {encoded} = stubCanvas(
+      4000,
+      3000,
+      1000,
+      type => type !== 'image/webp',
+    );
+    const resized = await createImageResizer({type: 'image/webp'})(photo, {
+      signal,
+    });
+    expect(resized.type).toBe('image/jpeg');
+    expect(encoded).toEqual([
+      {quality: 0.92, type: 'image/webp'},
+      {quality: 0.92, type: 'image/jpeg'},
+    ]);
   });
 
   it('returns images that already fit unchanged', async () => {
