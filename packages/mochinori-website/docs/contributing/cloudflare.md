@@ -89,18 +89,19 @@ variable to the account's workers.dev subdomain (the part before
 
 ## Pull request previews
 
-The **Preview** workflow builds each pull request and uploads it as a new
-version of the `mochinori-website` Worker without deploying it, then
-comments its URL on the pull request:
-`https://pr-<number>-mochinori-website.<subdomain>.workers.dev`. Each push
-updates the same URL. It uses the same secrets as the Deploy workflow, and
-skips pull requests from forks, which get no secrets.
+The **Preview** workflow deploys each pull request as its own Worker,
+`mochinori-website-pr-<number>`, and comments its URL on the pull request:
+`https://mochinori-website-pr-<number>.<subdomain>.workers.dev`. Each push
+redeploys it, and closing the pull request deletes it. It uses the same
+secrets as the Deploy workflow, and skips pull requests from forks, which get
+no secrets.
 
-A preview is a version of the production Worker, so it shares production's
-R2 bucket and Durable Objects. The workflow creates any R2 bucket the pull
-request adds. Previews are uploaded without Durable Object migrations,
-because only a deploy can apply them, so a pull request that adds a Durable
-Object class gets no preview until it is deployed from `main`.
+A preview is a separate Worker rather than a preview version of
+`mochinori-website`, because Cloudflare gives no preview URL to versions of a
+Worker that defines Durable Objects. So each preview has its own Durable
+Objects and applies its own migrations. It shares production's R2 bucket
+(the workflow creates any bucket the pull request adds) and has no cron
+triggers; production's cron expires uploads for both.
 
 ## Add a Cloudflare feature
 

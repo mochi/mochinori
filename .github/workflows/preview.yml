@@ -1,14 +1,15 @@
-# Uploads each pull request's website as a preview version of the
-# mochinori-website Worker, at a stable alias URL
-# (https://pr-<number>-mochinori-website.<subdomain>.workers.dev), and
-# comments the URL on the pull request. Production traffic is unchanged:
-# `wrangler versions upload` creates a version without deploying it.
+# Deploys each pull request's website as its own Worker,
+# mochinori-website-pr-<number>, at
+# https://mochinori-website-pr-<number>.<subdomain>.workers.dev, comments
+# the URL on the pull request, and deletes the Worker when the pull request
+# is closed. Production is never touched.
 #
-# Previews share production's bindings (the R2 bucket and Durable Objects),
-# so they see and write the same demo data. Previews are uploaded without
-# Durable Object migrations, which only a deploy can apply, so a pull request
-# that adds a Durable Object class gets no preview until it is deployed from
-# main.
+# A separate Worker (rather than a preview version of mochinori-website)
+# because Cloudflare gives no preview URL to versions of a Worker that
+# defines Durable Objects. It also means each preview has its own Durable
+# Objects and applies its own migrations. The R2 bucket is shared with
+# production, and previews have no cron triggers (production's cron expires
+# demo uploads for both).
 #
 # Needs the same CLOUDFLARE_API_TOKEN secret (and CLOUDFLARE_ACCOUNT_ID) as
 # the Deploy workflow. Pull requests from forks get no secrets, so they are
@@ -17,7 +18,7 @@ name: Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: read
@@ -27,16 +28,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  CI: true
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  PREVIEW_WORKER: mochinori-website-pr-${{ github.event.pull_request.number }}
+
 jobs:
   preview:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    env:
-      CI: true
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     defaults:
       run:
         working-directory: packages/mochinori-website-worker
@@ -46,7 +51,7 @@ jobs:
         with:
           node-version: 24.x
       - run: pnpm run build
-      # A pull request that adds an R2 bucket would otherwise fail to upload
+      # A pull request that adds an R2 bucket would otherwise fail to deploy
       # until a deploy from main creates it.
       - name: Create missing R2 buckets
         run: |
@@ -54,23 +59,23 @@ jobs:
             pnpm exec wrangler r2 bucket info "$bucket" > /dev/null 2>&1 ||
               pnpm exec wrangler r2 bucket create "$bucket"
           done
-      - name: Upload preview version
+      - name: Deploy the preview Worker
         run: |
           set -o pipefail
-          # Only a deploy can apply Durable Object migrations, and a version
-          # upload refuses any it thinks are pending, so leave them out. The
-          # classes already exist on the deployed Worker.
+          # The built config, renamed, on workers.dev, without cron triggers.
+          # It stays next to the original so its relative paths still work.
           node -e '
             const config = require("./dist/ssr/wrangler.json");
-            delete config.migrations;
+            config.name = process.env.PREVIEW_WORKER;
+            config.workers_dev = true;
+            config.triggers = {crons: []};
             require("fs").writeFileSync("dist/ssr/wrangler.preview.json", JSON.stringify(config));
           '
-          pnpm exec wrangler versions upload -c dist/ssr/wrangler.preview.json \
-            --preview-alias "pr-$PR_NUMBER" \
-            --message "PR #$PR_NUMBER at ${HEAD_SHA:0:7}" | tee upload.log
-          url=$(grep -oE 'Version Preview Alias URL: https://[^ ]+' upload.log | cut -d' ' -f5)
+          pnpm exec wrangler deploy -c dist/ssr/wrangler.preview.json \
+            --message "PR #$PR_NUMBER at ${HEAD_SHA:0:7}" | tee deploy.log
+          url=$(grep -oE "https://$PREVIEW_WORKER\.[a-z0-9-]+\.workers\.dev" deploy.log | head -1)
           if [ -z "$url" ]; then
-            echo "::error::No preview alias URL. Check that preview URLs are enabled on the mochinori-website Worker."
+            echo "::error::wrangler deploy printed no workers.dev URL"
             exit 1
           fi
           echo "PREVIEW_URL=$url" >> "$GITHUB_ENV"
@@ -80,3 +85,24 @@ jobs:
         run: |
           gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body \
             "Website preview for ${HEAD_SHA:0:7}: $PREVIEW_URL"
+
+  cleanup:
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/mochinori-website-worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+      - name: Delete the preview Worker
+        run: |
+          if pnpm exec wrangler deployments list --name "$PREVIEW_WORKER" > /dev/null 2>&1; then
+            pnpm exec wrangler delete "$PREVIEW_WORKER" --force
+          else
+            echo "No preview Worker $PREVIEW_WORKER to delete"
+          fi
