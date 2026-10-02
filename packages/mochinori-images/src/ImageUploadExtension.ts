@@ -4,6 +4,7 @@ import {
   namedSignals,
   type ReadonlySignal,
   signal,
+  WatchEditableExtension,
 } from '@lexical/extension';
 import {DRAG_DROP_PASTE} from '@lexical/rich-text';
 import {
@@ -11,6 +12,7 @@ import {
   $getRoot,
   $insertNodes,
   $isElementNode,
+  $nodesOfType,
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
   createCommand,
@@ -425,11 +427,12 @@ export const ImageUploadExtension = defineExtension({
     prepareUpload: null,
     upload: null,
   }),
-  dependencies: [ImagesExtension],
+  dependencies: [ImagesExtension, WatchEditableExtension],
   name: '@mochinori/images/ImageUpload',
   register: (editor, _config, state) => {
     const output = state.getOutput();
     const {inlineDataUrlMaxLength, uploads} = output;
+    const editable = state.getDependency(WatchEditableExtension).output;
     const needsUpload = (src: string) =>
       src.startsWith('blob:') ||
       (src.startsWith('data:') && src.length > inlineDataUrlMaxLength.peek()) ||
@@ -447,7 +450,7 @@ export const ImageUploadExtension = defineExtension({
       }
       // A read-only editor (a viewer of a shared document) leaves uploads
       // and mirroring to the editors that can change the document
-      if (!upload && editor.isEditable() && needsUpload(src)) {
+      if (!upload && editable.peek() && needsUpload(src)) {
         // Uploads start after the update that created the image commits
         queueMicrotask(() => output.startUpload(src));
       }
@@ -487,6 +490,26 @@ export const ImageUploadExtension = defineExtension({
         },
         {skipInitialization: true},
       ),
+      // Images that arrived while read-only are checked once the editor
+      // becomes editable
+      (() => {
+        let wasEditable = editable.peek();
+        return effect(() => {
+          const isEditable = editable.value;
+          if (isEditable && !wasEditable) {
+            editor.read('latest', () => {
+              for (const node of $nodesOfType(ImageNode)) {
+                const localSrc = node.getSrc();
+                const src = check(localSrc);
+                if (src !== null) {
+                  output.swapToUploaded(localSrc, src);
+                }
+              }
+            });
+          }
+          wasEditable = isEditable;
+        });
+      })(),
       editor.registerCommand(
         INSERT_IMAGE_FILES_COMMAND,
         fileList => output.$insertFiles(fileList),

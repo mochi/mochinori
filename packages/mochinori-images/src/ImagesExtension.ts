@@ -1,3 +1,4 @@
+import {effect, WatchEditableExtension} from '@lexical/extension';
 import {
   $insertNodes,
   COMMAND_PRIORITY_EDITOR,
@@ -27,10 +28,12 @@ export const INSERT_IMAGE_COMMAND: LexicalCommand<ImagePayload> = createCommand(
  * Add `ImageUploadExtension` to upload files.
  */
 export const ImagesExtension = defineExtension({
+  dependencies: [WatchEditableExtension],
   name: '@mochinori/images/Images',
   nodes: () => [ImageNode],
-  register: editor =>
-    mergeRegister(
+  register: (editor, _config, state) => {
+    const editable = state.getDependency(WatchEditableExtension).output;
+    return mergeRegister(
       editor.registerCommand(
         INSERT_IMAGE_COMMAND,
         payload => {
@@ -39,6 +42,10 @@ export const ImagesExtension = defineExtension({
         },
         COMMAND_PRIORITY_EDITOR,
       ),
-      registerImageInteractions(editor),
-    ),
+      // Registered only while the editor is editable
+      effect(() =>
+        editable.value ? registerImageInteractions(editor) : undefined,
+      ),
+    );
+  },
 });

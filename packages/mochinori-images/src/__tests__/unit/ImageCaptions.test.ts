@@ -241,7 +241,7 @@ describe('image selection', () => {
 });
 
 describe('read-only editors', () => {
-  it('does not select images or handle caption keys', () => {
+  it('does not select images or handle caption keys until editable', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     update(editor, () => {
@@ -257,6 +257,12 @@ describe('read-only editors', () => {
       editor.dispatchCommand(CLICK_COMMAND, event);
       editor.dispatchCommand(KEY_ESCAPE_COMMAND, keyEvent('Escape'));
       expect($isNodeSelection($getSelection())).toBe(false);
+    });
+    // The interactions come back when the editor becomes editable
+    editor.setEditable(true);
+    update(editor, () => {
+      editor.dispatchCommand(KEY_ESCAPE_COMMAND, keyEvent('Escape'));
+      expect($isNodeSelection($getSelection())).toBe(true);
     });
   });
 });

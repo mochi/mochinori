@@ -83,9 +83,12 @@ package. So:
   extension a `disabled` config to turn all of it off: an app that doesn't
   want a feature leaves the extension out of its dependencies. A `disabled`
   config (exposed as a signal with `namedSignals`) is only for behavior that
-  must be switched off and on again while one editor is running. Behavior
-  that makes no sense in a read-only editor checks `editor.isEditable()`
-  instead.
+  must be switched off and on again while one editor is running.
+- Behavior that makes no sense in a read-only editor observes the editable
+  state: depend on `WatchEditableExtension` and register it in an `effect`
+  while its signal is true (see `ImagesExtension`), or react when it turns
+  true (see `ImageUploadExtension`). A one-off action, like opening a
+  dialog, can check `editor.isEditable()`.
 
 ### Custom nodes
 

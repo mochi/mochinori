@@ -397,6 +397,13 @@ describe('ImageUploadExtension', () => {
     expect(calls).toHaveLength(0);
     expect(mirrorCalls).toHaveLength(0);
     expect(document.querySelector('input[type=file]')).toBeNull();
+
+    // Once editable, the editor catches up on the images it received
+    editor.setEditable(true);
+    await flush();
+    expect(mirrorCalls.map(call => call.src)).toEqual([
+      'https://example.com/mochi.png',
+    ]);
   });
 
   describe('mirroring', () => {

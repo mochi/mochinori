@@ -112,9 +112,6 @@ function registerImageClick(editor: LexicalEditor): () => void {
   return editor.registerCommand(
     CLICK_COMMAND,
     event => {
-      if (!editor.isEditable()) {
-        return false;
-      }
       const image = $getImageFromTarget(editor, event.target);
       if (image === null) {
         return $enterCaption(editor, event);
@@ -143,11 +140,7 @@ function registerImageClick(editor: LexicalEditor): () => void {
 function registerCaptionKeys(editor: LexicalEditor): () => void {
   const $captionSelection = (): [RangeSelection, ImageNode] | null => {
     const selection = $getSelection();
-    if (
-      !editor.isEditable() ||
-      !$isRangeSelection(selection) ||
-      !selection.isCollapsed()
-    ) {
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
       return null;
     }
     const image = $getCaptionImage(selection.anchor.getNode());
@@ -355,7 +348,7 @@ function registerImageDragAndDrop(editor: LexicalEditor): () => void {
         const image = $getImageFromTarget(editor, event.target);
         const {dataTransfer} = event;
         const doc = editor.getRootElement()?.ownerDocument;
-        if (!image || !dataTransfer || !doc || !editor.isEditable()) {
+        if (!image || !dataTransfer || !doc) {
           return false;
         }
         const data: ImageDragData = {
@@ -413,7 +406,11 @@ function registerImageDragAndDrop(editor: LexicalEditor): () => void {
   );
 }
 
-/** Click selection, caption keys, and moving images by drag and drop */
+/**
+ * Click selection, caption keys, and moving images by drag and drop. For
+ * editable editors only: ImagesExtension registers these while the editor
+ * is editable.
+ */
 export function registerImageInteractions(editor: LexicalEditor): () => void {
   return mergeRegister(
     registerImageClick(editor),
