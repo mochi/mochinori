@@ -125,15 +125,32 @@ with `{"error": "..."}`. `createHttpImageMirror` POSTs
 fetches the image itself and answers the same way. The demo site's Worker implements this endpoint on
 R2, and deletes uploads after an hour.
 
-### `createImageResizer({maxWidth, maxHeight, quality})`
+### `createImageResizer({maxWidth, maxHeight, maxBytes, quality})`
 
-A `prepareUpload` function that downscales images larger than
-`maxWidth` × `maxHeight` (2048 × 2048 by default), keeping the aspect ratio
-and EXIF orientation. JPEG photos stay JPEG; other images become WebP where
-the browser can encode it. Images that already fit, GIFs (which may be
-animated) and images the browser can't decode are uploaded unchanged. Photos
-from a phone camera are often several megabytes, so use this whenever the
-server has an upload limit.
+A `prepareUpload` function that re-encodes images in the browser when they
+are larger than `maxWidth` × `maxHeight` (2048 × 2048 by default) or
+`maxBytes` (no limit by default). It keeps the aspect ratio, the EXIF
+orientation and, where the browser supports it, Display P3 color. An image
+over `maxBytes` is re-encoded at full size first, then made smaller step by
+step until it fits. JPEG photos stay JPEG at `quality` (0.92 by default);
+other images become WebP where the browser can encode it. Re-encoding drops
+EXIF metadata such as location. Images within every limit, GIFs (which may
+be animated) and images the browser can't decode are uploaded byte for byte.
+
+Without `prepareUpload`, the extension uploads every file unchanged. To stay
+as close to that as possible while still fitting a server's upload limit,
+lift the dimension limits and set only `maxBytes`:
+
+```ts
+createImageResizer({
+  maxBytes: 5 * 1024 * 1024,
+  maxHeight: Infinity,
+  maxWidth: Infinity,
+});
+```
+
+The demo on this site instead shrinks images early (1600 × 1600, 1 MB,
+quality 0.8) to keep its storage small.
 
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 

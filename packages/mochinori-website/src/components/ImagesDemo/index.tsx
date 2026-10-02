@@ -73,8 +73,14 @@ const ImagesDemoExtension = defineExtension({
       // Images in HTML pasted from other sites are copied by the Worker
       mirror: createHttpImageMirror({url: '/api/images'}),
       onReject,
-      // Photos from a phone are often bigger than the limit
-      prepareUpload: createImageResizer({maxHeight: 2048, maxWidth: 2048}),
+      // The demo shrinks images early to keep storage small. For uploads as
+      // close to lossless as possible, set only maxBytes to the limit
+      prepareUpload: createImageResizer({
+        maxBytes: 1024 * 1024,
+        maxHeight: 1600,
+        maxWidth: 1600,
+        quality: 0.8,
+      }),
       // The site's Worker stores uploads in R2 for one hour
       upload: createHttpImageUploader({url: '/api/images'}),
     }),
