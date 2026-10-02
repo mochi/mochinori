@@ -6,15 +6,21 @@ title: Cloudflare
 
 This site runs on Cloudflare as a [Void](https://void.cloud) app. Void
 builds one Worker that serves the Docusaurus output as static assets, plus
-the site's API routes and Durable Objects. Everything lives in
-`packages/mochinori-website/`:
+the site's API routes and Durable Objects. The Worker is its own package,
+`packages/mochinori-website-worker/` (`@mochinori/website-worker`), separate
+from the Docusaurus site in `packages/mochinori-website/`. Void treats any
+package that depends on `@docusaurus/core` as a static site and refuses to
+deploy it with a backend, even with `inference.appType: 'void'` (true of
+Void 0.22.0).
+
+In `packages/mochinori-website-worker/`:
 
 - `void.config.ts` sets the Worker name and compatibility date. It also tells
-  Void to build Docusaurus first (`docusaurus build && vite build`) and to
-  serve Docusaurus's own `404.html` for unknown URLs.
-- `vite.config.mts` adds `voidPlugin()` and uses `build/` (the Docusaurus
-  output) as the static assets. It is `.mts` because the package is not
-  `"type": "module"`.
+  Void to build the Docusaurus site first
+  (`pnpm --filter @mochinori/website run build && vite build`) and to serve
+  Docusaurus's own `404.html` for unknown URLs.
+- `vite.config.ts` adds `voidPlugin()` and uses
+  `../mochinori-website/build` (the Docusaurus output) as the static assets.
 - `routes/` holds API routes. Each file exports Hono handlers per method,
   wrapped in `defineHandler`, and `[name]` is a path parameter.
   `routes/api/health.ts` serves `GET /api/health`, and
@@ -41,8 +47,8 @@ for live-reloading docs work; it runs Docusaurus alone, without the API.
 To check a production build:
 
 ```sh
-pnpm --filter @mochinori/website run build
-pnpm --filter @mochinori/website run preview
+pnpm run build-website
+pnpm --filter @mochinori/website-worker run preview
 ```
 
 ## Deploy
@@ -55,7 +61,7 @@ pnpm run deploy:website
 ```
 
 The first local deploy signs you in to Cloudflare and saves the account in
-`.void/project.json`. The workflow needs the `CLOUDFLARE_API_TOKEN` secret.
+`packages/mochinori-website-worker/.void/project.json`. The workflow needs the `CLOUDFLARE_API_TOKEN` secret.
 Set `CLOUDFLARE_ACCOUNT_ID` too when the token can reach more than one
 account. Set the `CLOUDFLARE_WORKERS_SUBDOMAIN` variable if the Worker has no
 preview URL.
@@ -65,7 +71,8 @@ preview URL.
 - **API route:** add a file under `routes/`. Routes under `/api` reach the
   Worker before static assets.
 - **Durable Object:** add a module under `durable-objects/`, run
-  `pnpm --filter @mochinori/website run prepare` to regenerate types, and
+  `pnpm --filter @mochinori/website-worker run prepare` to regenerate types,
+  and
   commit the updated `void.lock.json`.
 - **KV, R2, D1, queues and crons** are inferred from how the code uses them.
   See the [Void docs](https://void.cloud/guide) for each one.

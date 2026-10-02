@@ -14,18 +14,8 @@
     "customConditions": ["mochinori-source"],
     "types": ["node", "@docusaurus/module-type-aliases"],
     "paths": {
-      "@site/*": ["./*"],
-      "void/routes": ["./.void/routes.d.ts"]
+      "@site/*": ["./*"]
     }
   },
-  "include": [
-    "src",
-    "routes",
-    "durable-objects",
-    "docusaurus.config.ts",
-    "sidebars.ts",
-    "vite.config.mts",
-    "void.config.ts",
-    ".void/routes.d.ts"
-  ]
+  "include": ["src", "docusaurus.config.ts", "sidebars.ts"]
 }

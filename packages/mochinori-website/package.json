@@ -5,16 +5,11 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
-    "dev": "docusaurus build && vite dev",
-    "build": "docusaurus build && vite build",
-    "preview": "vite preview",
-    "deploy": "void deploy",
-    "prepare": "void prepare",
+    "build": "docusaurus build",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear",
     "clean": "docusaurus clear",
-    "tsc": "tsc -p tsconfig.json",
-    "build:docs": "docusaurus build"
+    "tsc": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@docusaurus/core": "^3.10.2",
@@ -37,9 +32,7 @@
     "@docusaurus/module-type-aliases": "^3.10.2",
     "@docusaurus/tsconfig": "^3.10.2",
     "@docusaurus/types": "^3.10.2",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.1",
-    "void": "0.22.0"
+    "typescript": "^6.0.3"
   },
   "browserslist": {
     "production": [

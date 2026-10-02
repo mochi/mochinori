@@ -14,7 +14,7 @@ notice.
 - `pnpm install` - Install dependencies (pnpm 11, Node 24.15+; see `.nvmrc`)
 - `pnpm run build` - Build the published packages into `dist/`
 - `pnpm run build-website` - Build the Docusaurus site into
-  `packages/mochinori-website/build`
+  `packages/mochinori-website/build`, then the Worker that serves it
 - `pnpm run start:website` - Run the site with live reload
 - `pnpm run test-unit` - Run unit tests (Vitest, jsdom by default)
 - `pnpm run lint` / `lint:fix` - ESLint
@@ -31,13 +31,16 @@ notice.
 - `packages/mochinori-<name>/` is the package `@mochinori/<name>`.
   - Published libraries (like `@mochinori/images`) build with plain `tsc`
     (`tsconfig.build.json`) into `dist/`.
-  - `mochinori-website` is the Docusaurus docs and demos site, deployed as a
-    [Void](https://void.cloud) app: `routes/` holds API routes (Hono
-    handlers), `durable-objects/` holds Durable Objects
-    (`defineDurableState`), and `void.config.ts` the Worker settings.
-    Commit `void.lock.json`; it records Durable Object migrations, which are
-    append-only. The package must not be `"type": "module"` (Docusaurus
-    breaks), so its Vite config is `vite.config.mts`.
+  - `mochinori-website` is the Docusaurus docs and demos site. It must not
+    be `"type": "module"` (Docusaurus breaks).
+  - `mochinori-website-worker` is the [Void](https://void.cloud) app that
+    deploys the site: `routes/` holds API routes (Hono handlers),
+    `durable-objects/` holds Durable Objects (`defineDurableState`), and
+    `void.config.ts` the Worker settings. Its static assets are the
+    Docusaurus build. Keep Docusaurus out of this package's dependencies:
+    Void 0.22.0 refuses to deploy a backend from a package that depends on
+    `@docusaurus/core`. Commit `void.lock.json`; it records Durable Object
+    migrations, which are append-only.
   - `mochinori-eslint-plugin-internal` holds lint rules for this repo.
 - `scripts/` holds repo scripts; `scripts/__tests__/unit/packages.test.ts`
   enforces the package conventions below.
