@@ -1,0 +1,72 @@
+# Uploads each pull request's website as a preview version of the
+# mochinori-website Worker, at a stable alias URL
+# (https://pr-<number>-mochinori-website.<subdomain>.workers.dev), and
+# comments the URL on the pull request. Production traffic is unchanged:
+# `wrangler versions upload` creates a version without deploying it.
+#
+# Previews share production's bindings (the R2 bucket and Durable Objects),
+# so they see and write the same demo data. A pull request that adds a
+# Durable Object migration gets no preview until it is deployed from main,
+# because only a deploy can apply migrations.
+#
+# Needs the same CLOUDFLARE_API_TOKEN secret (and CLOUDFLARE_ACCOUNT_ID) as
+# the Deploy workflow. Pull requests from forks get no secrets, so they are
+# skipped.
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    defaults:
+      run:
+        working-directory: packages/mochinori-website-worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+      - run: pnpm run build
+      # A pull request that adds an R2 bucket would otherwise fail to upload
+      # until a deploy from main creates it.
+      - name: Create missing R2 buckets
+        run: |
+          for bucket in $(node -e 'for (const b of require("./dist/ssr/wrangler.json").r2_buckets ?? []) console.log(b.bucket_name)'); do
+            pnpm exec wrangler r2 bucket info "$bucket" > /dev/null 2>&1 ||
+              pnpm exec wrangler r2 bucket create "$bucket"
+          done
+      - name: Upload preview version
+        run: |
+          pnpm exec wrangler versions upload -c dist/ssr/wrangler.json \
+            --preview-alias "pr-$PR_NUMBER" \
+            --message "PR #$PR_NUMBER at ${HEAD_SHA:0:7}" | tee upload.log
+          url=$(grep -oE 'Version Preview Alias URL: https://[^ ]+' upload.log | cut -d' ' -f5)
+          if [ -z "$url" ]; then
+            echo "::error::No preview alias URL. Check that preview URLs are enabled on the mochinori-website Worker."
+            exit 1
+          fi
+          echo "PREVIEW_URL=$url" >> "$GITHUB_ENV"
+      - name: Comment the preview URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body \
+            "Website preview for ${HEAD_SHA:0:7}: $PREVIEW_URL"

@@ -61,8 +61,9 @@ pnpm --filter @mochinori/website-worker run preview
 
 ## Deploy
 
-Deploys are manual. Run the **Deploy** workflow from the Actions tab, or
-deploy from your machine:
+Every push to `main` deploys the site through the **Deploy** workflow. You
+can also run that workflow from the Actions tab, or deploy from your
+machine:
 
 ```sh
 pnpm run deploy:website
@@ -77,10 +78,25 @@ deploy again.
 
 The first local deploy signs you in to Cloudflare and saves the account in
 `packages/mochinori-website-worker/.void/project.json`. The workflow needs
-the `CLOUDFLARE_API_TOKEN` secret.
-Set `CLOUDFLARE_ACCOUNT_ID` too when the token can reach more than one
-account. Set the `CLOUDFLARE_WORKERS_SUBDOMAIN` variable if the Worker has no
-preview URL.
+the `CLOUDFLARE_API_TOKEN` secret, from a token that can edit Workers
+Scripts and Workers R2 Storage. Set `CLOUDFLARE_ACCOUNT_ID` too when the
+token can reach more than one account, and the `CLOUDFLARE_WORKERS_SUBDOMAIN`
+variable to the account's workers.dev subdomain (the part before
+`.workers.dev`).
+
+## Pull request previews
+
+The **Preview** workflow builds each pull request and uploads it as a new
+version of the `mochinori-website` Worker without deploying it, then
+comments its URL on the pull request:
+`https://pr-<number>-mochinori-website.<subdomain>.workers.dev`. Each push
+updates the same URL. It uses the same secrets as the Deploy workflow, and
+skips pull requests from forks, which get no secrets.
+
+A preview is a version of the production Worker, so it shares production's
+R2 bucket and Durable Objects. The workflow creates any R2 bucket the pull
+request adds. A pull request that adds a Durable Object migration gets no
+preview, because only a deploy can apply migrations.
 
 ## Add a Cloudflare feature
 
