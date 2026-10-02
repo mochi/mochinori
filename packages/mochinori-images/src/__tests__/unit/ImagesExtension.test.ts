@@ -1,5 +1,8 @@
-import {buildEditorFromExtensions} from '@lexical/extension';
-import {$generateHtmlFromNodes, $generateNodesFromDOM} from '@lexical/html';
+import {
+  buildEditorFromExtensions,
+  getExtensionDependencyFromEditor,
+} from '@lexical/extension';
+import {$generateHtmlFromNodes, DOMImportExtension} from '@lexical/html';
 import {RichTextExtension} from '@lexical/rich-text';
 import {
   $createParagraphNode,
@@ -16,6 +19,7 @@ import {
   $isImageNode,
   type ImageNode,
   ImagesExtension,
+  ImagesImportExtension,
   INSERT_IMAGE_COMMAND,
 } from '../../index.ts';
 
@@ -30,6 +34,7 @@ function buildEditor(disabled = false) {
       dependencies: [
         RichTextExtension,
         configExtension(ImagesExtension, {disabled}),
+        ImagesImportExtension,
       ],
       name: '[root]',
     }),
@@ -154,11 +159,15 @@ describe('ImagesExtension', () => {
     expect(html).toContain('<img src="https://example.com/a.png" alt="alt">');
 
     using other = buildEditor();
+    const {$generateNodesFromDOM} = getExtensionDependencyFromEditor(
+      other,
+      DOMImportExtension,
+    ).output;
     other.update(
       () => {
         const dom = new DOMParser().parseFromString(html, 'text/html');
         $getRoot().clear().select();
-        $insertNodes($generateNodesFromDOM(other, dom));
+        $insertNodes($generateNodesFromDOM(dom));
       },
       {discrete: true},
     );
@@ -166,6 +175,33 @@ describe('ImagesExtension', () => {
       const [image] = $getImages();
       expect(image.getSrc()).toBe('https://example.com/a.png');
       expect(image.getAltText()).toBe('alt');
+    });
+  });
+
+  it('imports <img> dimensions and skips local file images', () => {
+    using editor = buildEditor();
+    const {$generateNodesFromDOM} = getExtensionDependencyFromEditor(
+      editor,
+      DOMImportExtension,
+    ).output;
+    editor.update(
+      () => {
+        const dom = new DOMParser().parseFromString(
+          '<p><img src="a.png" width="10" height="20px">' +
+            '<img src="file:///tmp/b.png"></p>',
+          'text/html',
+        );
+        $getRoot().clear().select();
+        $insertNodes($generateNodesFromDOM(dom));
+      },
+      {discrete: true},
+    );
+    editor.read(() => {
+      const images = $getImages();
+      expect(images).toHaveLength(1);
+      expect(images[0].getSrc()).toBe('a.png');
+      expect(images[0].getWidth()).toBe(10);
+      expect(images[0].getHeight()).toBe(20);
     });
   });
 });

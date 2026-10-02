@@ -5,7 +5,6 @@ import {
   $getDocument,
   addClassNamesToElement,
   DecoratorNode,
-  type DOMConversionOutput,
   type DOMExportOutput,
   type EditorConfig,
   type LexicalNode,
@@ -15,6 +14,7 @@ import {
   type SerializedLexicalNode,
   type Spread,
   stringValue,
+  withField,
 } from 'lexical';
 
 import {ImageComponent} from './ImageComponent.tsx';
@@ -36,11 +36,13 @@ export type SerializedImageNode = Spread<
   SerializedLexicalNode
 >;
 
+// Declaring each property's field lets Lexical derive exportJSON,
+// updateFromJSON and the copy in afterCloneFrom from this one schema.
 const imageNodeSchema = nodeSchema<ImageNode>()({
-  altText: stringValue(),
-  height: optional(numberValue()),
-  src: stringValue(),
-  width: optional(numberValue()),
+  altText: withField(stringValue(), {field: '__altText'}),
+  height: withField(optional(numberValue()), {field: '__height'}),
+  src: withField(stringValue(), {field: '__src'}),
+  width: withField(optional(numberValue()), {field: '__width'}),
 });
 
 /**
@@ -57,22 +59,8 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
   $config() {
     return this.config('image', {
       extends: DecoratorNode,
-      importDOM: {
-        img: () => ({
-          conversion: $convertImageElement,
-          priority: 0,
-        }),
-      },
       json: imageNodeSchema,
     });
-  }
-
-  afterCloneFrom(prevNode: this): void {
-    super.afterCloneFrom(prevNode);
-    this.__src = prevNode.__src;
-    this.__altText = prevNode.__altText;
-    this.__width = prevNode.__width;
-    this.__height = prevNode.__height;
   }
 
   getSrc(): string {
@@ -149,27 +137,6 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
       />
     );
   }
-}
-
-function parseDimension(value: string | null): number | undefined {
-  const n = value === null ? NaN : Number.parseFloat(value);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
-}
-
-function $convertImageElement(domNode: HTMLElement): DOMConversionOutput {
-  const img = domNode as HTMLImageElement;
-  const src = img.getAttribute('src');
-  if (!src || src.startsWith('file:///')) {
-    return {node: null};
-  }
-  return {
-    node: $createImageNode({
-      altText: img.getAttribute('alt') || '',
-      height: parseDimension(img.getAttribute('height')),
-      src,
-      width: parseDimension(img.getAttribute('width')),
-    }),
-  };
 }
 
 export function $createImageNode({

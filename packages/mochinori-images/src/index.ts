@@ -11,3 +11,8 @@ export {
   ImagesExtension,
   INSERT_IMAGE_COMMAND,
 } from './ImagesExtension.ts';
+export {
+  ImageImportRule,
+  ImagesImportExtension,
+  ImagesImportRules,
+} from './ImagesImportExtension.ts';

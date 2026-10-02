@@ -55,8 +55,17 @@ An inline `DecoratorNode` rendered as an `<img>`. It serializes as:
 }
 ```
 
-`width` and `height` are omitted when unknown. The node imports from and
-exports to `<img>` HTML.
+`width` and `height` are omitted when unknown. The node exports to `<img>`
+HTML. HTML import goes through `ImagesImportExtension` only.
+
+### `ImagesImportExtension`
+
+Adds `ImageImportRule` to `@lexical/html`'s `DOMImportExtension`, so pasted
+HTML and `$generateNodesFromDOM` turn `<img>` into `ImageNode`. It depends on
+`ImagesExtension` and `CoreImportExtension`. Images whose `src` is a local
+`file:///` path are skipped, because they can never load in the editor.
+`ImageNode` has no legacy `importDOM`, so add this extension wherever images
+should be imported from HTML.
 
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 

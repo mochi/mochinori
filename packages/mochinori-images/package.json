@@ -39,6 +39,7 @@
   },
   "peerDependencies": {
     "@lexical/extension": "^0.52.0",
+    "@lexical/html": "^0.52.0",
     "@lexical/react": "^0.52.0",
     "lexical": "^0.52.0",
     "react": ">=18.3.1",
