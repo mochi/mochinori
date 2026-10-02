@@ -48,9 +48,8 @@ interactive:
   Enter does nothing, Escape selects the image, the arrow keys leave the
   caption at either end, and Backspace in an empty caption removes it.
 
-| Config | Default | Description |
-| --- | --- | --- |
-| `disabled` | `false` | When `true`, `INSERT_IMAGE_COMMAND` is not handled and images can't be selected by clicking or moved by dragging. Also exposed as a signal on the extension's output. |
+None of these work while the editor is read-only. The extension has no
+configuration.
 
 ### `ImageNode`
 

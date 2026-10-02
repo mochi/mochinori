@@ -240,6 +240,27 @@ describe('image selection', () => {
   });
 });
 
+describe('read-only editors', () => {
+  it('does not select images or handle caption keys', () => {
+    using editor = buildEditor();
+    insertImage(editor, 'A mochi');
+    update(editor, () => {
+      ($images()[0].getCaption() as ElementNode).selectEnd();
+    });
+    editor.setEditable(false);
+    const dom = editor.read(() =>
+      editor.getElementByKey($images()[0].getKey()),
+    )!;
+    update(editor, () => {
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'target', {value: dom});
+      editor.dispatchCommand(CLICK_COMMAND, event);
+      editor.dispatchCommand(KEY_ESCAPE_COMMAND, keyEvent('Escape'));
+      expect($isNodeSelection($getSelection())).toBe(false);
+    });
+  });
+});
+
 describe('moving images', () => {
   function textDOM(editor: LexicalEditor, index: number): Text {
     const key = editor.read(() => {

@@ -143,7 +143,11 @@ function registerImageClick(editor: LexicalEditor): () => void {
 function registerCaptionKeys(editor: LexicalEditor): () => void {
   const $captionSelection = (): [RangeSelection, ImageNode] | null => {
     const selection = $getSelection();
-    if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+    if (
+      !editor.isEditable() ||
+      !$isRangeSelection(selection) ||
+      !selection.isCollapsed()
+    ) {
       return null;
     }
     const image = $getCaptionImage(selection.anchor.getNode());

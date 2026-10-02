@@ -9,7 +9,6 @@ import {
   $getRoot,
   $insertNodes,
   $isElementNode,
-  configExtension,
   defineExtension,
 } from 'lexical';
 import {describe, expect, it} from 'vitest';
@@ -23,7 +22,7 @@ import {
   INSERT_IMAGE_COMMAND,
 } from '../../index.ts';
 
-function buildEditor(disabled = false) {
+function buildEditor() {
   return buildEditorFromExtensions(
     defineExtension({
       $initialEditorState: () => {
@@ -31,11 +30,7 @@ function buildEditor(disabled = false) {
         $getRoot().append(paragraph);
         paragraph.select();
       },
-      dependencies: [
-        RichTextExtension,
-        configExtension(ImagesExtension, {disabled}),
-        ImagesImportExtension,
-      ],
+      dependencies: [RichTextExtension, ImagesExtension, ImagesImportExtension],
       name: '[root]',
     }),
   );
@@ -94,21 +89,6 @@ describe('ImagesExtension', () => {
       expect(image.getSrc()).toBe('a.png');
       expect(image.getWidth()).toBe(10);
       expect(image.getHeight()).toBe(20);
-    });
-  });
-
-  it('does not handle INSERT_IMAGE_COMMAND when disabled', () => {
-    using editor = buildEditor(true);
-    editor.update(
-      () => {
-        expect(
-          editor.dispatchCommand(INSERT_IMAGE_COMMAND, {src: 'x.png'}),
-        ).toBe(false);
-      },
-      {discrete: true},
-    );
-    editor.read(() => {
-      expect($getImages()).toHaveLength(0);
     });
   });
 

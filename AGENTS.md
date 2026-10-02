@@ -81,7 +81,7 @@ package. So:
   `no-optional-chaining` lint rule); mochinori does not carry that rule.
 - Prefer extensions (`defineExtension`) over React plugins. Extensions whose
   behavior can be switched off take a `disabled` config and expose it as a
-  signal with `namedSignals` (see `ImagesExtension`).
+  signal with `namedSignals` (see `ImageUploadExtension`).
 
 ### Custom nodes
 
