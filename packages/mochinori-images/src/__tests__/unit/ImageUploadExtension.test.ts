@@ -21,6 +21,7 @@ import {
   $isImageNode,
   type ImageMirror,
   type ImageNode,
+  ImageTooLargeError,
   type ImageUploadConfig,
   type ImageUploader,
   ImageUploadExtension,
@@ -212,6 +213,54 @@ describe('ImageUploadExtension', () => {
     ]);
     expect(calls).toHaveLength(0);
     editor.read(() => expect($getImages()).toHaveLength(0));
+  });
+
+  it('inserts files over the limit when prepareUpload can shrink them', async () => {
+    const {calls, upload} = manualUploader();
+    const onReject = vi.fn();
+    const small = new Blob([new Uint8Array([1, 2])], {type: 'image/webp'});
+    const prepareUpload = vi.fn(async () => small);
+    using editor = buildEditor({
+      maxFileSize: 3,
+      onReject,
+      prepareUpload,
+      upload,
+    });
+    const big = png();
+    editor.update(() => editor.dispatchCommand(DRAG_DROP_PASTE, [big]), {
+      discrete: true,
+    });
+    await flush();
+    expect(onReject).not.toHaveBeenCalled();
+    expect(prepareUpload).toHaveBeenCalledWith(big, {
+      signal: expect.any(AbortSignal),
+    });
+    expect(calls.map(call => call.file)).toEqual([small]);
+    editor.read(() => expect($getImages()[0].getSrc()).toBe('blob:test/1'));
+  });
+
+  it('fails the upload when the prepared image is still too large', async () => {
+    const {calls, upload} = manualUploader();
+    using editor = buildEditor({
+      maxFileSize: 3,
+      prepareUpload: async image => image,
+      upload,
+    });
+    const {uploads} = getExtensionDependencyFromEditor(
+      editor,
+      ImageUploadExtension,
+    ).output;
+    editor.update(() => editor.dispatchCommand(DRAG_DROP_PASTE, [png()]), {
+      discrete: true,
+    });
+    await flush();
+    expect(calls).toHaveLength(0);
+    const state = uploads.value.get('blob:test/1');
+    expect(state?.status).toBe('error');
+    expect(state?.status === 'error' && state.error).toBeInstanceOf(
+      ImageTooLargeError,
+    );
+    editor.read(() => expect($getImages()[0].getSrc()).toBe('blob:test/1'));
   });
 
   it('uploads long data: URLs and leaves short ones inline', async () => {

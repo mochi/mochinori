@@ -102,7 +102,8 @@ const AppExtension = defineExtension({
 | `isHostedSrc` | `null` | Whether an `http(s)` image is already yours, so it is not mirrored. Images the extension uploaded or mirrored always are. When `null`, images from the editor's own origin are. |
 | `inlineDataUrlMaxLength` | `1024` | `data:` URLs up to this length stay inline in the document; longer ones are uploaded. `blob:` URLs are always uploaded. |
 | `accept` | PNG, JPEG, GIF, WebP, AVIF | MIME types accepted. SVG is left out because it can carry script. |
-| `maxFileSize` | 10 MB | Larger files are rejected. |
+| `maxFileSize` | 10 MB | Larger images are not uploaded. Without `prepareUpload`, larger files are rejected before they are inserted. With it, the limit applies to what `prepareUpload` returns, and an image still over it shows "Image is too large to upload." |
+| `prepareUpload` | `null` | `(image, {signal}) => Promise<Blob>`. Runs on each local image before upload. Use `createImageResizer()` to downscale photos. |
 | `onReject` | `null` | Called with the file and `'type'` or `'size'` for each file that is not inserted. |
 
 The output has signals `uploads` (state per local URL) and `pendingCount`,
@@ -123,6 +124,16 @@ with `{"error": "..."}`. `createHttpImageMirror` POSTs
 `{"url": "<remote url>"}` as JSON to the same kind of endpoint, which
 fetches the image itself and answers the same way. The demo site's Worker implements this endpoint on
 R2, and deletes uploads after an hour.
+
+### `createImageResizer({maxWidth, maxHeight, quality})`
+
+A `prepareUpload` function that downscales images larger than
+`maxWidth` × `maxHeight` (2048 × 2048 by default), keeping the aspect ratio
+and EXIF orientation. JPEG photos stay JPEG; other images become WebP where
+the browser can encode it. Images that already fit, GIFs (which may be
+animated) and images the browser can't decode are uploaded unchanged. Photos
+from a phone camera are often several megabytes, so use this whenever the
+server has an upload limit.
 
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 

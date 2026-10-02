@@ -3,6 +3,10 @@ export {
   createHttpImageUploader,
   type HttpImageUploaderOptions,
 } from './createHttpImageUploader.ts';
+export {
+  createImageResizer,
+  type ImageResizerOptions,
+} from './createImageResizer.ts';
 export {type ImageComponentProps} from './ImageComponent.tsx';
 export {
   $createImageNode,
@@ -24,7 +28,10 @@ export {
 export {
   type ImageMirror,
   type ImageMirrorOptions,
+  type ImagePrepareOptions,
+  type ImagePreparer,
   type ImageRejectionReason,
+  ImageTooLargeError,
   type ImageUploadConfig,
   type ImageUploader,
   ImageUploadExtension,

@@ -1,16 +1,22 @@
 import type {FormEvent, JSX} from 'react';
 
 import {ClipboardDOMImportExtension} from '@lexical/clipboard';
+import {signal} from '@lexical/extension';
 import {HistoryExtension} from '@lexical/history';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
 import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
-import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
+import {
+  useExtensionSignalValue,
+  useSignalValue,
+} from '@lexical/react/useExtensionSignalValue';
 import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
 import {
   createHttpImageMirror,
   createHttpImageUploader,
+  createImageResizer,
+  type ImageRejectionReason,
   ImagesExtension,
   ImagesImportExtension,
   ImageUploadExtension,
@@ -32,6 +38,16 @@ const SAMPLE_IMAGES = [
   {altText: 'The mochinori icon', src: '/img/logo/mochinori-icon.svg'},
 ];
 
+// The last file the editor turned away, shown under the toolbar
+const rejection = /* @__PURE__ */ signal<string | null>(null);
+
+function onReject(file: File, reason: ImageRejectionReason) {
+  rejection.value =
+    reason === 'type'
+      ? `${file.name || 'That file'} isn't a PNG, JPEG, GIF, WebP or AVIF image.`
+      : `${file.name || 'That image'} is too large to upload.`;
+}
+
 const ImagesDemoExtension = defineExtension({
   $initialEditorState: () => {
     $getRoot().append(
@@ -52,10 +68,13 @@ const ImagesDemoExtension = defineExtension({
     RichTextImportExtension,
     ImagesImportExtension,
     configExtension(ImageUploadExtension, {
-      // The same limit the site's Worker enforces
+      // The same limit the site's Worker enforces, checked after resizing
       maxFileSize: 5 * 1024 * 1024,
       // Images in HTML pasted from other sites are copied by the Worker
       mirror: createHttpImageMirror({url: '/api/images'}),
+      onReject,
+      // Photos from a phone are often bigger than the limit
+      prepareUpload: createImageResizer({maxHeight: 2048, maxWidth: 2048}),
       // The site's Worker stores uploads in R2 for one hour
       upload: createHttpImageUploader({url: '/api/images'}),
     }),
@@ -75,6 +94,7 @@ function Toolbar(): JSX.Element {
     ImageUploadExtension,
     'pendingCount',
   );
+  const rejected = useSignalValue(rejection);
   const [url, setUrl] = useState('');
   const [sample, setSample] = useState(0);
 
@@ -127,7 +147,7 @@ function Toolbar(): JSX.Element {
       <span aria-live="polite" className={styles.status}>
         {pendingCount > 0
           ? `Uploading ${pendingCount} image${pendingCount === 1 ? '' : 's'}…`
-          : null}
+          : rejected}
       </span>
     </div>
   );

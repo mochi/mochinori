@@ -58,6 +58,36 @@ export type ImageMirror = (
   options: ImageMirrorOptions,
 ) => Promise<{src: string}>;
 
+/** Options passed to an {@link ImagePreparer} */
+export interface ImagePrepareOptions {
+  /** Aborted when the editor is disposed */
+  signal: AbortSignal;
+}
+
+/**
+ * Turns a local image into the data to upload, for example by downscaling
+ * it (see {@link createImageResizer}). Return the image itself to upload it
+ * unchanged.
+ */
+export type ImagePreparer = (
+  image: Blob,
+  options: ImagePrepareOptions,
+) => Promise<Blob>;
+
+/**
+ * The error an upload fails with when the image is still larger than
+ * `maxFileSize` after `prepareUpload`
+ */
+export class ImageTooLargeError extends Error {
+  constructor(
+    readonly size: number,
+    readonly maxFileSize: number,
+  ) {
+    super(`The image is ${size} bytes, more than the limit of ${maxFileSize}`);
+    this.name = 'ImageTooLargeError';
+  }
+}
+
 /** Why a file was not inserted */
 export type ImageRejectionReason = 'type' | 'size';
 
@@ -92,8 +122,18 @@ export interface ImageUploadConfig {
   inlineDataUrlMaxLength: number;
   /** MIME types accepted from paste, drop and the file dialog */
   accept: readonly string[];
-  /** Largest accepted file, in bytes */
+  /**
+   * Largest image uploaded, in bytes. Without `prepareUpload`, larger files
+   * are rejected before they are inserted. With it, they are inserted, and
+   * the limit applies to what `prepareUpload` returns.
+   */
   maxFileSize: number;
+  /**
+   * Runs on each local image before it is uploaded. Use
+   * {@link createImageResizer} to downscale photos, which are often larger
+   * than an upload limit.
+   */
+  prepareUpload: ImagePreparer | null;
   /** Called for each pasted, dropped or chosen file that is not inserted */
   onReject: null | ((file: File, reason: ImageRejectionReason) => void);
 }
@@ -264,8 +304,16 @@ export const ImageUploadExtension = defineExtension({
       (async () => {
         let result: {src: string};
         if (upload && local) {
-          const blob =
+          const original =
             files.get(localSrc) ?? (await (await fetch(localSrc)).blob());
+          const prepare = configSignals.prepareUpload.peek();
+          const blob = prepare
+            ? await prepare(original, {signal: controller.signal})
+            : original;
+          const maxFileSize = configSignals.maxFileSize.peek();
+          if (blob.size > maxFileSize) {
+            throw new ImageTooLargeError(blob.size, maxFileSize);
+          }
           result = await upload(blob, {
             onProgress: progress => {
               if (uploads.peek().get(localSrc)?.status === 'uploading') {
@@ -296,12 +344,12 @@ export const ImageUploadExtension = defineExtension({
     };
 
     const $insertFiles = (fileList: readonly File[]): boolean => {
-      const {accept, maxFileSize, onReject} = configSignals;
+      const {accept, maxFileSize, onReject, prepareUpload} = configSignals;
       const nodes = [];
       for (const file of fileList) {
         if (!accept.peek().includes(file.type)) {
           onReject.peek()?.(file, 'type');
-        } else if (file.size > maxFileSize.peek()) {
+        } else if (!prepareUpload.peek() && file.size > maxFileSize.peek()) {
           onReject.peek()?.(file, 'size');
         } else {
           const localSrc = URL.createObjectURL(file);
@@ -372,6 +420,7 @@ export const ImageUploadExtension = defineExtension({
     maxFileSize: 10 * 1024 * 1024,
     mirror: null,
     onReject: null,
+    prepareUpload: null,
     upload: null,
   }),
   dependencies: [ImagesExtension],
