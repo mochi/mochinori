@@ -90,21 +90,29 @@ package. So:
 1. Extend a base node class (`TextNode`, `ElementNode`, `DecoratorNode`).
    The constructor must work with no arguments.
 2. Implement `$config()` with `this.config('type', {extends: BaseNode, json:
-   schema})`, where `schema` is built with `nodeSchema<YourNode>()({...})`.
-   Declare every property inherent to the node in it, and declare each one
-   stored verbatim in a field with
+   schema})`, where `schema` is built with `nodeSchema<YourNode>()({...})`
+   as a module-scope `const` above the class (like `imageNodeSchema`).
+   Written inline in `$config()`, it makes TypeScript skip checking the
+   class without a diagnostic. Declare every property inherent to the node
+   in it, and declare each one stored verbatim in a field with
    `withField(stringValue(), {field: '__name'})`. Initialize that field in
    the class (`__name: string = '';`) so it is an own property of a fresh
    node. Use `withAccessors` only where a property is not a plain field.
-3. Do not hand-write `clone`, `importJSON`, `exportJSON`, `updateFromJSON`
-   or `afterCloneFrom` for schema properties: `$config` derives all of them
-   from the schema. A field missing from the schema (or declared only through
-   accessors) is not carried across a clone, so it is lost the first time a
-   later update clones the node; declare it with `withField` rather than
-   writing `afterCloneFrom`. Ad-hoc data that is not inherent to the node
-   type belongs in NodeState (`createState`), which clones on its own. Test
-   that a property survives a later update (see "keeps its properties when
-   cloned by a later update").
+3. Do not hand-write `clone`, `importJSON`, `exportJSON` or
+   `updateFromJSON`: `$config` derives them from the schema, and it carries
+   every property declared with `withField` across a clone. A field missing
+   from the schema is not carried, so it is lost the first time a later
+   update clones the node; declare it with `withField` rather than writing
+   `afterCloneFrom`. Ad-hoc data that is not inherent to the node type
+   belongs in NodeState (`createState`), which clones on its own. Write
+   `afterCloneFrom` only for storage neither covers, such as a property
+   declared through accessors on both sides whose value is not one field
+   (one that is can name it, like Lexical's `MarkNode`:
+   `setter: {field: '__ids', method: 'setIDs'}`). Call
+   `super.afterCloneFrom(prevNode)` first, and copy every field of the
+   class, schema fields included: Lexical does not add to a class's own
+   `afterCloneFrom`. Test that a property survives a later update (see
+   "keeps its properties when cloned by a later update").
 4. Implement `createDOM()` and `updateDOM()` (and `decorate()` for a
    `DecoratorNode`). Keep `exportDOM()` on the class when the default export
    is not enough.

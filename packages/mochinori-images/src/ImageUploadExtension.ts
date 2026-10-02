@@ -62,6 +62,8 @@ export type ImageMirror = (
 export interface ImagePrepareOptions {
   /** Aborted when the editor is disposed */
   signal: AbortSignal;
+  /** The extension's `maxFileSize`: the largest image it will upload */
+  maxFileSize: number;
 }
 
 /**
@@ -307,10 +309,10 @@ export const ImageUploadExtension = defineExtension({
           const original =
             files.get(localSrc) ?? (await (await fetch(localSrc)).blob());
           const prepare = configSignals.prepareUpload.peek();
-          const blob = prepare
-            ? await prepare(original, {signal: controller.signal})
-            : original;
           const maxFileSize = configSignals.maxFileSize.peek();
+          const blob = prepare
+            ? await prepare(original, {maxFileSize, signal: controller.signal})
+            : original;
           if (blob.size > maxFileSize) {
             throw new ImageTooLargeError(blob.size, maxFileSize);
           }

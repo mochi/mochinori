@@ -233,6 +233,7 @@ describe('ImageUploadExtension', () => {
     await flush();
     expect(onReject).not.toHaveBeenCalled();
     expect(prepareUpload).toHaveBeenCalledWith(big, {
+      maxFileSize: 3,
       signal: expect.any(AbortSignal),
     });
     expect(calls.map(call => call.file)).toEqual([small]);

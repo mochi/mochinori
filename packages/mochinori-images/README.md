@@ -38,6 +38,6 @@ To upload pasted, dropped or chosen image files (and, with
 `mirror: createHttpImageMirror(...)`, copy images pasted from other sites),
 add
 `configExtension(ImageUploadExtension, {upload: createHttpImageUploader({url: '/api/images'})})`.
-Add `prepareUpload: createImageResizer()` to downscale large photos before
-they are uploaded.
+Add `prepareUpload: createImageResizer()` to upload images that fit
+`maxFileSize` unchanged and shrink only the ones that don't.
 See the [docs](https://github.com/mochi/mochinori/blob/main/packages/mochinori-website/docs/packages/images.md).
