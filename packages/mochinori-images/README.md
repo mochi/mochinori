@@ -2,8 +2,9 @@
 
 A full-featured image node for [Lexical](https://lexical.dev) editors.
 
-> **Status:** early scaffold. `ImageNode` and `ImagesExtension` work today;
-> resizing, captions and upload are on the way.
+> **Status:** early scaffold. `ImageNode`, `ImagesExtension` and
+> `ImageUploadExtension` (paste, drop and file dialog uploads) work today;
+> resizing and captions are on the way.
 
 ## Install
 
@@ -32,3 +33,7 @@ editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
   src: '/img/mochinori-mark.svg',
 });
 ```
+
+To upload pasted, dropped or chosen image files, add
+`configExtension(ImageUploadExtension, {upload: createHttpImageUploader({url: '/api/images'})})`.
+See the [docs](https://github.com/mochi/mochinori/blob/main/packages/mochinori-website/docs/packages/images.md).

@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "types": ["node"],
+    "types": ["node", "@cloudflare/workers-types"],
     "paths": {
       "void/routes": ["./.void/routes.d.ts"]
     }
@@ -17,6 +17,8 @@
   "include": [
     "routes",
     "durable-objects",
+    "crons",
+    "server",
     "vite.config.ts",
     "void.config.ts",
     ".void/routes.d.ts"

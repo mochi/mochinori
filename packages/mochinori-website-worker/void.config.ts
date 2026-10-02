@@ -3,6 +3,9 @@ import {defineConfig} from 'void/config';
 export default defineConfig({
   cloudflare: {
     name: 'mochinori-website',
+    // Demo image uploads (routes/api/images). Objects expire after an hour;
+    // see server/imageUploads.ts and crons/expire-demo-images.ts.
+    r2_buckets: [{binding: 'STORAGE', bucket_name: 'mochinori-demo-uploads'}],
   },
   inference: {
     // A Worker with routes/ and durable-objects/, whose static assets are

@@ -9,8 +9,9 @@ Lexical playground and packaged as a library.
 
 :::info Status
 
-This package is an early scaffold. `ImageNode`, `ImagesExtension` and
-`INSERT_IMAGE_COMMAND` work today. Upload, resizing and captions are next.
+This package is an early scaffold. `ImageNode`, `ImagesExtension`,
+`INSERT_IMAGE_COMMAND` and uploads (`ImageUploadExtension`) work today.
+Resizing and captions are next.
 
 :::
 
@@ -67,6 +68,54 @@ HTML and `$generateNodesFromDOM` turn `<img>` into `ImageNode`. It depends on
 `ImageNode` has no legacy `importDOM`, so add this extension wherever images
 should be imported from HTML.
 
+### `ImageUploadExtension`
+
+Inserts image files from paste, drag and drop, or a file dialog, and uploads
+them in the background. Each image appears right away with a local `blob:`
+URL, dimmed with a progress bar. When the upload finishes, the extension
+preloads the uploaded image and only then swaps the node's `src` to it, so
+the image never flickers. The swap is merged into the insertion's undo step.
+A failed upload shows an error with a Retry button.
+
+```ts
+import {configExtension, defineExtension} from 'lexical';
+import {
+  createHttpImageUploader,
+  ImageUploadExtension,
+} from '@mochinori/images';
+
+const AppExtension = defineExtension({
+  dependencies: [
+    configExtension(ImageUploadExtension, {
+      upload: createHttpImageUploader({url: '/api/images'}),
+    }),
+  ],
+  name: '@my-app/Editor',
+});
+```
+
+| Config | Default | Description |
+| --- | --- | --- |
+| `disabled` | `false` | When `true`, files are not inserted or uploaded. |
+| `upload` | `null` | `(file, {signal, onProgress}) => Promise<{src}>`. Without one, images keep their local URL. |
+| `inlineDataUrlMaxLength` | `1024` | `data:` URLs up to this length stay inline in the document; longer ones are uploaded. `blob:` URLs are always uploaded. |
+| `accept` | PNG, JPEG, GIF, WebP, AVIF | MIME types accepted. SVG is left out because it can carry script. |
+| `maxFileSize` | 10 MB | Larger files are rejected. |
+| `onReject` | `null` | Called with the file and `'type'` or `'size'` for each file that is not inserted. |
+
+The output has signals `uploads` (state per local URL) and `pendingCount`,
+and functions `openFileDialog()`, `retry(localSrc)` and `waitForUploads()`.
+Await `waitForUploads()` before saving, so the saved JSON has no local URLs.
+`INSERT_IMAGE_FILES_COMMAND` inserts a `File[]` directly.
+
+### `createHttpImageUploader({url})`
+
+An uploader that POSTs the file as the raw request body, with its type as
+`Content-Type`, and reports upload progress. The server answers with JSON
+`{"src": "..."}` (resolved against the response URL), or an error status
+with `{"error": "..."}`. The demo site's Worker implements this endpoint on
+R2, and deletes uploads after an hour.
+
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 
 Create an `ImageNode` from an `ImagePayload` (`src`, and optional `altText`,
@@ -74,7 +123,5 @@ Create an `ImageNode` from an `ImagePayload` (`src`, and optional `altText`,
 
 ## Roadmap
 
-- Upload: a pluggable uploader, with a Cloudflare R2 backed default
 - Resizing with handles, keeping the aspect ratio
 - Captions as nested editors
-- Drag and drop, and paste of image files

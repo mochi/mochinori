@@ -5,16 +5,21 @@ import {HistoryExtension} from '@lexical/history';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
+import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
+import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
 import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
 import {
+  createHttpImageUploader,
   ImagesExtension,
   ImagesImportExtension,
+  ImageUploadExtension,
   INSERT_IMAGE_COMMAND,
 } from '@mochinori/images';
 import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  configExtension,
   defineExtension,
 } from 'lexical';
 import {useState} from 'react';
@@ -31,7 +36,7 @@ const ImagesDemoExtension = defineExtension({
     $getRoot().append(
       $createParagraphNode().append(
         $createTextNode(
-          'Insert an image with the toolbar, or paste HTML that contains one. ',
+          'Paste or drop an image, upload one, or insert one with the toolbar. ',
         ),
       ),
     );
@@ -45,6 +50,12 @@ const ImagesDemoExtension = defineExtension({
     ClipboardDOMImportExtension,
     RichTextImportExtension,
     ImagesImportExtension,
+    configExtension(ImageUploadExtension, {
+      // The same limit the site's Worker enforces
+      maxFileSize: 5 * 1024 * 1024,
+      // The site's Worker stores uploads in R2 for one hour
+      upload: createHttpImageUploader({url: '/api/images'}),
+    }),
   ],
   name: '@mochinori/website/ImagesDemo',
   namespace: 'ImagesDemo',
@@ -56,6 +67,11 @@ const ImagesDemoExtension = defineExtension({
 
 function Toolbar(): JSX.Element {
   const [editor] = useLexicalComposerContext();
+  const {openFileDialog} = useExtensionDependency(ImageUploadExtension).output;
+  const pendingCount = useExtensionSignalValue(
+    ImageUploadExtension,
+    'pendingCount',
+  );
   const [url, setUrl] = useState('');
   const [sample, setSample] = useState(0);
 
@@ -79,6 +95,12 @@ function Toolbar(): JSX.Element {
     <div className={styles.toolbar}>
       <button
         className="button button--sm button--primary"
+        onClick={openFileDialog}
+        type="button">
+        Upload image
+      </button>
+      <button
+        className="button button--sm button--secondary"
         onClick={insertSample}
         type="button">
         Insert sample image
@@ -99,6 +121,11 @@ function Toolbar(): JSX.Element {
           Insert from URL
         </button>
       </form>
+      <span aria-live="polite" className={styles.status}>
+        {pendingCount > 0
+          ? `Uploading ${pendingCount} image${pendingCount === 1 ? '' : 's'}…`
+          : null}
+      </span>
     </div>
   );
 }

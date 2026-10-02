@@ -41,12 +41,14 @@
     "@lexical/extension": "^0.52.0",
     "@lexical/html": "^0.52.0",
     "@lexical/react": "^0.52.0",
+    "@lexical/rich-text": "^0.52.0",
     "lexical": "^0.52.0",
     "react": ">=18.3.1",
     "react-dom": ">=18.3.1"
   },
   "devDependencies": {
     "@lexical/extension": "catalog:",
+    "@lexical/history": "catalog:",
     "@lexical/html": "catalog:",
     "@lexical/react": "catalog:",
     "@lexical/rich-text": "catalog:",

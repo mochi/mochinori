@@ -56,3 +56,63 @@
 .image :global(.focused) {
   outline: 2px solid var(--ifm-color-primary);
 }
+
+.status {
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.image :global(.mochinori-image-frame) {
+  position: relative;
+  display: inline-block;
+}
+
+/* The local preview is shown dimmed until the upload finishes */
+.image :global(.mochinori-image--uploading) {
+  opacity: 0.6;
+}
+
+.image :global(.mochinori-image--error) {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.image :global(.mochinori-image-progress) {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: 0.15rem;
+  background: var(--ifm-color-emphasis-300);
+}
+
+.image :global(.mochinori-image-progress-bar) {
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--ifm-color-primary);
+  transition: width 120ms linear;
+}
+
+.image :global(.mochinori-image-error) {
+  position: absolute;
+  inset: auto 0.5rem 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  background: var(--ifm-color-danger-contrast-background);
+  color: var(--ifm-color-danger-contrast-foreground);
+  font-size: 0.8rem;
+}
+
+.image :global(.mochinori-image-retry) {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

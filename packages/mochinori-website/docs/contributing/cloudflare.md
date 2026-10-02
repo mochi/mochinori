@@ -30,6 +30,14 @@ In `packages/mochinori-website-worker/`:
   from the filename. `counter.ts` becomes the `COUNTER` binding and the
   `CounterDurableObject` class. Routes call it with
   `Counter.get(name).increment(1)`.
+- `routes/api/images/` stores demo image uploads in R2 (the `STORAGE`
+  binding, bucket `mochinori-demo-uploads`). `POST /api/images` checks the
+  file's magic bytes (PNG, JPEG, GIF, WebP or AVIF; never SVG), caps it at
+  5 MB and stores it under a random name. `GET /api/images/<name>` serves it
+  with `nosniff`, a sandboxing CSP and same-origin CORP. Uploads expire after
+  an hour: reads of an expired object delete it, and
+  `crons/expire-demo-images.ts` sweeps the bucket every 15 minutes. The
+  rules live in `server/imageUploads.ts`, which has unit tests.
 - `void.lock.json` records the generated bindings and Durable Object
   migrations. Commit it whenever it changes: Cloudflare migrations are
   append-only, and the lock keeps their order.
