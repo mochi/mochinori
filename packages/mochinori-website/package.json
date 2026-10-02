@@ -1,0 +1,56 @@
+{
+  "name": "@mochinori/website",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "dev": "docusaurus build && vite dev",
+    "build": "docusaurus build && vite build",
+    "preview": "vite preview",
+    "deploy": "void deploy",
+    "prepare": "void prepare",
+    "serve": "docusaurus serve",
+    "clear": "docusaurus clear",
+    "clean": "docusaurus clear",
+    "tsc": "tsc -p tsconfig.json",
+    "build:docs": "docusaurus build"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@lexical/clipboard": "catalog:",
+    "@lexical/extension": "catalog:",
+    "@lexical/history": "catalog:",
+    "@lexical/html": "catalog:",
+    "@lexical/react": "catalog:",
+    "@lexical/rich-text": "catalog:",
+    "@mdx-js/react": "^3.1.1",
+    "@mochinori/images": "workspace:*",
+    "clsx": "^2.1.1",
+    "lexical": "catalog:",
+    "prism-react-renderer": "^2.4.1",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "^3.10.2",
+    "@docusaurus/tsconfig": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.1",
+    "void": "0.22.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

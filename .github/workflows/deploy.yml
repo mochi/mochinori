@@ -1,0 +1,31 @@
+# Deploys the website (Docusaurus site, API routes and Durable Objects) to
+# Cloudflare with `void deploy`. Runs only when started by hand from the
+# Actions tab. Needs the CLOUDFLARE_API_TOKEN secret, CLOUDFLARE_ACCOUNT_ID
+# when the token can reach more than one account, and the
+# CLOUDFLARE_WORKERS_SUBDOMAIN variable if the Worker has no preview URL.
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+      - run: pnpm --filter @mochinori/website exec void deploy --platform cloudflare

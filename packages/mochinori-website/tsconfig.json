@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "customConditions": ["mochinori-source"],
+    "types": ["node", "@docusaurus/module-type-aliases"],
+    "paths": {
+      "@site/*": ["./*"],
+      "void/routes": ["./.void/routes.d.ts"]
+    }
+  },
+  "include": [
+    "src",
+    "routes",
+    "durable-objects",
+    "docusaurus.config.ts",
+    "sidebars.ts",
+    "vite.config.mts",
+    "void.config.ts",
+    ".void/routes.d.ts"
+  ]
+}

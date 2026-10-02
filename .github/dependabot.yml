@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    cooldown:
+      default-days: 7
+    groups:
+      # Every lexical and @lexical/* package must move together (one Lexical
+      # per app). Their versions live in the pnpm-workspace.yaml catalog.
+      lexical:
+        patterns:
+          - 'lexical'
+          - '@lexical/*'
+      docusaurus:
+        patterns:
+          - '@docusaurus/*'
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      void:
+        patterns:
+          - 'void'
+          - '@void/*'
+          - 'vite'
+          - '@cloudflare/*'
+          - 'wrangler'
+      dev-dependencies:
+        dependency-type: 'development'
+        patterns:
+          - '*'
+    ignore:
+      # typescript-eslint does not support the TypeScript 7 (Go) compiler yet
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
