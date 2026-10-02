@@ -9,7 +9,7 @@
     "build:worker": "vite build",
     "dev": "pnpm --filter @mochinori/website run build && vite dev",
     "preview": "vite preview",
-    "deploy": "void deploy",
+    "deploy": "void deploy --platform cloudflare",
     "prepare": "void prepare",
     "tsc": "tsc -p tsconfig.json"
   },
