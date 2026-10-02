@@ -11,4 +11,6 @@
 **/*.svg
 coverage
 pnpm-lock.yaml
+# Written by Void in its own format; reformatting it conflicts with every deploy
+**/void.lock.json
 .prettierignore

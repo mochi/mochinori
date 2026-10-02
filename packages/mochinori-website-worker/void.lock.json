@@ -22,7 +22,9 @@
     "migrations": [
       {
         "tag": "void-durable-counter-v1",
-        "new_sqlite_classes": ["CounterDurableObject"]
+        "new_sqlite_classes": [
+          "CounterDurableObject"
+        ]
       }
     ],
     "r2_buckets": [
@@ -30,7 +32,8 @@
         "binding": "STORAGE",
         "bucket_name": "mochinori-demo-uploads"
       }
-    ]
+    ],
+    "account_id": "990fc2498b5f89b53b522b08b3cc5942"
   },
-  "text": "{\n  \"name\": \"mochinori-website\",\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ],\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ]\n}\n"
+  "text": "{\n  \"name\": \"mochinori-website\",\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ],\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ],\n  \"account_id\": \"990fc2498b5f89b53b522b08b3cc5942\"\n}\n"
 }
