@@ -351,6 +351,30 @@ describe('ImageUploadExtension', () => {
     editor.read(() => expect($getImages()[0].getSrc()).toBe('blob:test/1'));
   });
 
+  it('opens a file dialog that stays in the document until a choice', async () => {
+    const {calls, upload} = manualUploader();
+    using editor = buildEditor({upload});
+    const {openFileDialog} = getExtensionDependencyFromEditor(
+      editor,
+      ImageUploadExtension,
+    ).output;
+    const click = vi
+      .spyOn(HTMLInputElement.prototype, 'click')
+      .mockImplementation(() => {});
+    openFileDialog();
+    const input = document.querySelector<HTMLInputElement>('input[type=file]');
+    expect(input?.hidden).toBe(true);
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
+
+    const file = png();
+    Object.defineProperty(input, 'files', {value: [file]});
+    input?.dispatchEvent(new Event('change'));
+    await flush();
+    expect(document.querySelector('input[type=file]')).toBeNull();
+    expect(calls.map(call => call.file)).toEqual([file]);
+  });
+
   it('ignores files when disabled', async () => {
     const {calls, upload} = manualUploader();
     using editor = buildEditor({disabled: true, upload});

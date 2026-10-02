@@ -372,12 +372,18 @@ export const ImageUploadExtension = defineExtension({
       input.type = 'file';
       input.accept = configSignals.accept.peek().join(',');
       input.multiple = true;
+      // In the document while the dialog is open: iOS Safari can drop the
+      // change event of a detached file input
+      input.hidden = true;
+      doc.body.append(input);
       input.addEventListener('change', () => {
+        input.remove();
         const chosen = Array.from(input.files ?? []);
         if (chosen.length > 0) {
           editor.dispatchCommand(INSERT_IMAGE_FILES_COMMAND, chosen);
         }
       });
+      input.addEventListener('cancel', () => input.remove());
       input.click();
     };
 
