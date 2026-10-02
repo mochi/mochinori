@@ -7,10 +7,29 @@
         "binding": "STORAGE",
         "bucket_name": "mochinori-demo-uploads"
       }
-    ]
+    ],
+    "routes": [
+      {
+        "custom_domain": true,
+        "pattern": "mochinori.com"
+      }
+    ],
+    "workers_dev": true
   },
   "resolved": {
     "name": "mochinori-website",
+    "r2_buckets": [
+      {
+        "binding": "STORAGE",
+        "bucket_name": "mochinori-demo-uploads"
+      }
+    ],
+    "routes": [
+      {
+        "custom_domain": true,
+        "pattern": "mochinori.com"
+      }
+    ],
     "durable_objects": {
       "bindings": [
         {
@@ -27,13 +46,7 @@
         ]
       }
     ],
-    "r2_buckets": [
-      {
-        "binding": "STORAGE",
-        "bucket_name": "mochinori-demo-uploads"
-      }
-    ],
-    "account_id": "990fc2498b5f89b53b522b08b3cc5942"
+    "workers_dev": true
   },
-  "text": "{\n  \"name\": \"mochinori-website\",\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ],\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ],\n  \"account_id\": \"990fc2498b5f89b53b522b08b3cc5942\"\n}\n"
+  "text": "{\n  \"name\": \"mochinori-website\",\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ],\n  \"routes\": [\n    {\n      \"custom_domain\": true,\n      \"pattern\": \"mochinori.com\"\n    }\n  ],\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ],\n  \"workers_dev\": true\n}\n"
 }

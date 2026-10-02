@@ -15,7 +15,11 @@ Void 0.22.0).
 
 In `packages/mochinori-website-worker/`:
 
-- `void.config.ts` sets the Worker name and compatibility date. It also tells
+- `void.config.ts` sets the Worker name and compatibility date, and serves
+  it at `mochinori.com` (a custom domain, so the Worker must deploy to the
+  Cloudflare account that holds the `mochinori.com` zone) as well as on
+  workers.dev. The account comes from `CLOUDFLARE_ACCOUNT_ID` or your Void
+  sign-in, not from the repo. It also tells
   Void to build the Docusaurus site first
   (`pnpm --filter @mochinori/website run build && vite build`) and to serve
   Docusaurus's own `404.html` for unknown URLs.

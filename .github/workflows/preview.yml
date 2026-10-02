@@ -62,13 +62,17 @@ jobs:
       - name: Deploy the preview Worker
         run: |
           set -o pipefail
-          # The built config, renamed, on workers.dev, without cron triggers.
-          # It stays next to the original so its relative paths still work.
+          # The built config, renamed, on workers.dev only (not production's
+          # custom domain), without cron triggers, in the account the secrets
+          # name. It stays next to the original so its relative paths work.
           node -e '
             const config = require("./dist/ssr/wrangler.json");
             config.name = process.env.PREVIEW_WORKER;
             config.workers_dev = true;
             config.triggers = {crons: []};
+            delete config.routes;
+            delete config.route;
+            delete config.account_id;
             require("fs").writeFileSync("dist/ssr/wrangler.preview.json", JSON.stringify(config));
           '
           pnpm exec wrangler deploy -c dist/ssr/wrangler.preview.json \

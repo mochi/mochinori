@@ -6,6 +6,12 @@ export default defineConfig({
     // Demo image uploads (routes/api/images). Objects expire after an hour;
     // see server/imageUploads.ts and crons/expire-demo-images.ts.
     r2_buckets: [{binding: 'STORAGE', bucket_name: 'mochinori-demo-uploads'}],
+    // Served at the apex of the zone in the same Cloudflare account. Pull
+    // request previews drop this (see .github/workflows/preview.yml).
+    routes: [{custom_domain: true, pattern: 'mochinori.com'}],
+    // Keep the workers.dev URL too (with routes it defaults to off); Void
+    // checks a new version there before sending it traffic.
+    workers_dev: true,
   },
   inference: {
     // A Worker with routes/ and durable-objects/, whose static assets are
