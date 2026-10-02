@@ -98,8 +98,9 @@ skips pull requests from forks, which get no secrets.
 
 A preview is a version of the production Worker, so it shares production's
 R2 bucket and Durable Objects. The workflow creates any R2 bucket the pull
-request adds. A pull request that adds a Durable Object migration gets no
-preview, because only a deploy can apply migrations.
+request adds. Previews are uploaded without Durable Object migrations,
+because only a deploy can apply them, so a pull request that adds a Durable
+Object class gets no preview until it is deployed from `main`.
 
 ## Add a Cloudflare feature
 

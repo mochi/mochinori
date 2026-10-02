@@ -5,9 +5,10 @@
 # `wrangler versions upload` creates a version without deploying it.
 #
 # Previews share production's bindings (the R2 bucket and Durable Objects),
-# so they see and write the same demo data. A pull request that adds a
-# Durable Object migration gets no preview until it is deployed from main,
-# because only a deploy can apply migrations.
+# so they see and write the same demo data. Previews are uploaded without
+# Durable Object migrations, which only a deploy can apply, so a pull request
+# that adds a Durable Object class gets no preview until it is deployed from
+# main.
 #
 # Needs the same CLOUDFLARE_API_TOKEN secret (and CLOUDFLARE_ACCOUNT_ID) as
 # the Deploy workflow. Pull requests from forks get no secrets, so they are
@@ -55,7 +56,16 @@ jobs:
           done
       - name: Upload preview version
         run: |
-          pnpm exec wrangler versions upload -c dist/ssr/wrangler.json \
+          set -o pipefail
+          # Only a deploy can apply Durable Object migrations, and a version
+          # upload refuses any it thinks are pending, so leave them out. The
+          # classes already exist on the deployed Worker.
+          node -e '
+            const config = require("./dist/ssr/wrangler.json");
+            delete config.migrations;
+            require("fs").writeFileSync("dist/ssr/wrangler.preview.json", JSON.stringify(config));
+          '
+          pnpm exec wrangler versions upload -c dist/ssr/wrangler.preview.json \
             --preview-alias "pr-$PR_NUMBER" \
             --message "PR #$PR_NUMBER at ${HEAD_SHA:0:7}" | tee upload.log
           url=$(grep -oE 'Version Preview Alias URL: https://[^ ]+' upload.log | cut -d' ' -f5)
