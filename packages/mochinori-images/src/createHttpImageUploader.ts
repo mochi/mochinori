@@ -1,7 +1,10 @@
-import type {ImageUploader} from './ImageUploadExtension.ts';
+import type {ImageMirror, ImageUploader} from './ImageUploadExtension.ts';
 
 export interface HttpImageUploaderOptions {
-  /** The endpoint that receives the image as the raw request body */
+  /**
+   * The endpoint that receives the image: the raw image as the request body
+   * for an upload, or `{"url": "<remote url>"}` as JSON for a mirror
+   */
   url: string;
   /** Extra request headers, such as an authorization token */
   headers?: Record<string, string>;
@@ -56,4 +59,37 @@ export function createHttpImageUploader({
       });
       xhr.send(file);
     });
+}
+
+/**
+ * Creates an {@link ImageMirror} that POSTs `{"url": "<remote url>"}` as
+ * JSON and expects the same `{"src": "<url>"}` response as
+ * {@link createHttpImageUploader}. The server fetches the remote image and
+ * stores its own copy.
+ */
+export function createHttpImageMirror({
+  url,
+  headers = {},
+}: HttpImageUploaderOptions): ImageMirror {
+  return async (src, {signal}) => {
+    const response = await fetch(url, {
+      body: JSON.stringify({url: src}),
+      headers: {...headers, 'Content-Type': 'application/json'},
+      method: 'POST',
+      signal,
+    });
+    const body: unknown = await response.json().catch(() => null);
+    const mirrored =
+      body !== null && typeof body === 'object' && 'src' in body
+        ? body.src
+        : undefined;
+    if (response.ok && typeof mirrored === 'string') {
+      return {src: new URL(mirrored, response.url || url).href};
+    }
+    throw new Error(
+      body !== null && typeof body === 'object' && 'error' in body
+        ? String(body.error)
+        : `Mirror failed with status ${response.status}`,
+    );
+  };
 }

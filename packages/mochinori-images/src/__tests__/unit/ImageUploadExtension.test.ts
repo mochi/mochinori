@@ -11,6 +11,7 @@ import {
   $isElementNode,
   configExtension,
   defineExtension,
+  type LexicalEditor,
   UNDO_COMMAND,
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -18,6 +19,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
   $createImageNode,
   $isImageNode,
+  type ImageMirror,
   type ImageNode,
   type ImageUploadConfig,
   type ImageUploader,
@@ -49,6 +51,17 @@ function manualUploader() {
     return result.promise;
   };
   return {calls, upload};
+}
+
+/** A mirror whose calls each wait for the test to settle them */
+function manualMirror() {
+  const calls: {src: string; result: Deferred<{src: string}>}[] = [];
+  const mirror: ImageMirror = src => {
+    const result = deferred<{src: string}>();
+    calls.push({result, src});
+    return result.promise;
+  };
+  return {calls, mirror};
 }
 
 function buildEditor(config: Partial<ImageUploadConfig>) {
@@ -298,5 +311,87 @@ describe('ImageUploadExtension', () => {
     await flush();
     expect(calls).toHaveLength(0);
     editor.read(() => expect($getImages()).toHaveLength(0));
+  });
+
+  describe('mirroring', () => {
+    const insert = (editor: LexicalEditor, srcs: string[]) =>
+      editor.update(
+        () => $insertNodes(srcs.map(src => $createImageNode({src}))),
+        {discrete: true},
+      );
+
+    it('mirrors images from other origins and leaves its own alone', async () => {
+      const {calls, mirror} = manualMirror();
+      using editor = buildEditor({mirror});
+      const own = new URL('/img/own.png', document.baseURI).href;
+      insert(editor, ['https://upload.wikimedia.org/mochi.jpg', own]);
+      await flush();
+      expect(calls.map(call => call.src)).toEqual([
+        'https://upload.wikimedia.org/mochi.jpg',
+      ]);
+
+      // The mirrored URL is on another origin too, but is never mirrored
+      calls[0].result.resolve({src: 'https://cdn.example.com/copy.jpg'});
+      await flush();
+      editor.read(() => {
+        expect($getImages().map(image => image.getSrc())).toEqual([
+          'https://cdn.example.com/copy.jpg',
+          own,
+        ]);
+      });
+      expect(calls).toHaveLength(1);
+    });
+
+    it('uses isHostedSrc to decide what is already hosted', async () => {
+      const {calls, mirror} = manualMirror();
+      using editor = buildEditor({
+        isHostedSrc: src => src.startsWith('https://images.example.com/'),
+        mirror,
+      });
+      insert(editor, [
+        'https://images.example.com/a.png',
+        new URL('/img/own.png', document.baseURI).href,
+      ]);
+      await flush();
+      expect(calls.map(call => call.src)).toEqual([
+        new URL('/img/own.png', document.baseURI).href,
+      ]);
+    });
+
+    it('keeps the remote URL when the mirror fails, and can retry', async () => {
+      const {calls, mirror} = manualMirror();
+      using editor = buildEditor({mirror});
+      const {retry, uploads} = getExtensionDependencyFromEditor(
+        editor,
+        ImageUploadExtension,
+      ).output;
+      const remote = 'https://example.org/mochi.gif';
+      insert(editor, [remote]);
+      await flush();
+      calls[0].result.reject(new Error('Not an image'));
+      await flush();
+      expect(uploads.value.get(remote)?.status).toBe('error');
+      editor.read(() => {
+        expect($getImages().map(image => image.getSrc())).toEqual([remote]);
+      });
+
+      retry(remote);
+      expect(calls).toHaveLength(2);
+      calls[1].result.resolve({src: 'https://cdn.example.com/m.gif'});
+      await flush();
+      editor.read(() => {
+        expect($getImages().map(image => image.getSrc())).toEqual([
+          'https://cdn.example.com/m.gif',
+        ]);
+      });
+    });
+
+    it('leaves remote images alone without a mirror', async () => {
+      const {calls, upload} = manualUploader();
+      using editor = buildEditor({upload});
+      insert(editor, ['https://example.org/mochi.gif']);
+      await flush();
+      expect(calls).toHaveLength(0);
+    });
   });
 });

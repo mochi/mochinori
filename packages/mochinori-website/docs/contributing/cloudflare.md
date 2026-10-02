@@ -33,7 +33,10 @@ In `packages/mochinori-website-worker/`:
 - `routes/api/images/` stores demo image uploads in R2 (the `STORAGE`
   binding, bucket `mochinori-demo-uploads`). `POST /api/images` checks the
   file's magic bytes (PNG, JPEG, GIF, WebP or AVIF; never SVG), caps it at
-  5 MB and stores it under a random name. `GET /api/images/<name>` serves it
+  5 MB and stores it under a random name. Posting JSON `{"url": ...}`
+  instead mirrors a remote image: the Worker fetches it (public `http(s)`
+  hosts only, each redirect checked the same way, 10 second timeout) and
+  applies the same checks. `GET /api/images/<name>` serves it
   with `nosniff`, a sandboxing CSP and same-origin CORP. Uploads expire after
   an hour: reads of an expired object delete it, and
   `crons/expire-demo-images.ts` sweeps the bucket every 15 minutes. The

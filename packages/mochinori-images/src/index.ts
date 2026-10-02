@@ -1,4 +1,5 @@
 export {
+  createHttpImageMirror,
   createHttpImageUploader,
   type HttpImageUploaderOptions,
 } from './createHttpImageUploader.ts';
@@ -21,6 +22,8 @@ export {
   ImagesImportRules,
 } from './ImagesImportExtension.ts';
 export {
+  type ImageMirror,
+  type ImageMirrorOptions,
   type ImageRejectionReason,
   type ImageUploadConfig,
   type ImageUploader,

@@ -34,6 +34,8 @@ editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
 });
 ```
 
-To upload pasted, dropped or chosen image files, add
+To upload pasted, dropped or chosen image files (and, with
+`mirror: createHttpImageMirror(...)`, copy images pasted from other sites),
+add
 `configExtension(ImageUploadExtension, {upload: createHttpImageUploader({url: '/api/images'})})`.
 See the [docs](https://github.com/mochi/mochinori/blob/main/packages/mochinori-website/docs/packages/images.md).

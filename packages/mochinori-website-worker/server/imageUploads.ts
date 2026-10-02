@@ -93,3 +93,131 @@ export function imageResponseHeaders(
     'X-Content-Type-Options': 'nosniff',
   });
 }
+
+/** How long a mirror may spend fetching the remote image */
+export const MIRROR_TIMEOUT_MS = 10_000;
+
+/** Redirects a mirror follows before giving up */
+export const MIRROR_MAX_REDIRECTS = 3;
+
+/**
+ * Validates a URL the client asked to mirror: absolute `http:` or `https:`,
+ * on the default port, with no credentials, and naming a host rather than
+ * `localhost` or an IP address.
+ */
+export function parseMirrorUrl(input: unknown): URL | null {
+  if (typeof input !== 'string' || input.length > 2048) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  if (
+    (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+    url.port !== '' ||
+    url.username !== '' ||
+    url.password !== '' ||
+    !host.includes('.') ||
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host.startsWith('[') ||
+    /^[\d.]+$/.test(host)
+  ) {
+    return null;
+  }
+  return url;
+}
+
+/** Why a mirror failed, with the status to answer the client with */
+export class MirrorError extends Error {
+  readonly status: 400 | 413 | 415 | 502;
+  constructor(message: string, status: MirrorError['status']) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/** Reads a body, giving up once it is longer than `maxBytes` */
+export async function readAtMost(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
+  const result = new Uint8Array(maxBytes);
+  let length = 0;
+  if (body) {
+    const reader = body.getReader();
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) {
+        break;
+      }
+      if (length + value.byteLength > maxBytes) {
+        await reader.cancel();
+        return null;
+      }
+      result.set(value, length);
+      length += value.byteLength;
+    }
+  }
+  return result.slice(0, length);
+}
+
+/**
+ * Fetches a remote image to mirror. Each redirect is validated like the
+ * original URL, and the body is capped at MAX_IMAGE_BYTES and must sniff
+ * as an accepted image.
+ */
+export async function fetchRemoteImage(
+  input: unknown,
+  fetchFn: typeof fetch,
+  signal: AbortSignal,
+): Promise<{bytes: Uint8Array; image: SniffedImage; url: URL}> {
+  let url = parseMirrorUrl(input);
+  for (let redirects = 0; ; redirects++) {
+    if (!url) {
+      throw new MirrorError('Only public http and https URLs', 400);
+    }
+    const response = await fetchFn(url, {
+      headers: {
+        Accept: 'image/avif,image/webp,image/png,image/jpeg,image/gif',
+        'User-Agent':
+          'mochinori-demo-image-mirror (+https://github.com/mochi/mochinori)',
+      },
+      redirect: 'manual',
+      signal,
+    });
+    const location = response.headers.get('Location');
+    if (response.status >= 300 && response.status < 400 && location) {
+      await response.body?.cancel();
+      if (redirects >= MIRROR_MAX_REDIRECTS) {
+        throw new MirrorError('Too many redirects', 502);
+      }
+      url = parseMirrorUrl(new URL(location, url).href);
+      continue;
+    }
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new MirrorError(
+        `The image server answered ${response.status}`,
+        502,
+      );
+    }
+    if (Number(response.headers.get('Content-Length')) > MAX_IMAGE_BYTES) {
+      await response.body?.cancel();
+      throw new MirrorError('Image is too large', 413);
+    }
+    const bytes = await readAtMost(response.body, MAX_IMAGE_BYTES);
+    if (!bytes) {
+      throw new MirrorError('Image is too large', 413);
+    }
+    const image = sniffImage(bytes);
+    if (!image) {
+      throw new MirrorError('Only PNG, JPEG, GIF, WebP and AVIF images', 415);
+    }
+    return {bytes, image, url};
+  }
+}

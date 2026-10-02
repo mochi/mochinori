@@ -42,6 +42,22 @@ export type ImageUploader = (
   options: ImageUploadOptions,
 ) => Promise<{src: string}>;
 
+/** Options passed to an {@link ImageMirror} */
+export interface ImageMirrorOptions {
+  /** Aborted when the editor is disposed */
+  signal: AbortSignal;
+}
+
+/**
+ * Copies a remote image (an `http:` or `https:` URL from another origin) to
+ * your own storage and resolves to the URL it is served from. The copy has
+ * to happen on a server: browsers can't read most cross-origin images.
+ */
+export type ImageMirror = (
+  src: string,
+  options: ImageMirrorOptions,
+) => Promise<{src: string}>;
+
 /** Why a file was not inserted */
 export type ImageRejectionReason = 'type' | 'size';
 
@@ -57,6 +73,18 @@ export interface ImageUploadConfig {
    */
   upload: ImageUploader | null;
   /**
+   * Copies remote images to your own storage. Without one, images keep
+   * their remote URL.
+   */
+  mirror: ImageMirror | null;
+  /**
+   * Whether an `http:` or `https:` image is already served from your own
+   * storage, so it is not mirrored. Images this extension uploaded or
+   * mirrored always count as hosted. When null, images from the editor's own
+   * origin count as hosted.
+   */
+  isHostedSrc: null | ((src: string) => boolean);
+  /**
    * `data:` URLs up to this many characters stay inline in the document;
    * longer ones are uploaded. `blob:` URLs are always uploaded, since they
    * only work in the page that created them.
@@ -70,24 +98,27 @@ export interface ImageUploadConfig {
   onReject: null | ((file: File, reason: ImageRejectionReason) => void);
 }
 
-/** The state of the upload for one local image URL */
+/** The state of the upload or mirror of one image URL */
 export type ImageUploadState =
   | {status: 'uploading'; progress: number | null}
   | {status: 'uploaded'; src: string}
   | {status: 'error'; error: unknown};
 
 export interface ImageUploadOutput {
-  /** Upload state, keyed by the local (`blob:` or `data:`) URL */
+  /**
+   * Upload state, keyed by the image's original URL: a local `blob:` or
+   * `data:` URL that is uploaded, or a remote URL that is mirrored
+   */
   uploads: ReadonlySignal<ReadonlyMap<string, ImageUploadState>>;
-  /** The number of uploads that are still in progress */
+  /** The number of uploads and mirrors that are still in progress */
   pendingCount: ReadonlySignal<number>;
   /**
    * Opens the browser's file dialog and inserts the chosen images at the
    * current selection
    */
   openFileDialog: () => void;
-  /** Starts a failed upload again */
-  retry: (localSrc: string) => void;
+  /** Starts a failed upload or mirror again */
+  retry: (src: string) => void;
   /**
    * Resolves once no upload is in progress. Wait for this before saving,
    * so the saved document does not contain local URLs.
@@ -110,6 +141,10 @@ const DEFAULT_ACCEPT = [
 
 function isLocalSrc(src: string): boolean {
   return src.startsWith('blob:') || src.startsWith('data:');
+}
+
+function isRemoteSrc(src: string): boolean {
+  return src.startsWith('https:') || src.startsWith('http:');
 }
 
 function $walkImageNodes(
@@ -148,7 +183,10 @@ async function preloadImage(editor: LexicalEditor, src: string): Promise<void> {
  *
  * Any {@link ImageNode} whose `src` is a `blob:` URL, or a `data:` URL
  * longer than `inlineDataUrlMaxLength`, is uploaded the same way, whether
- * it came from HTML paste, JSON or `$createImageNode`.
+ * it came from HTML paste, JSON or `$createImageNode`. With a `mirror`,
+ * an image from another origin (such as one in HTML pasted from another
+ * site) is copied to your storage and switched over the same way, while
+ * images already hosted by you (see `isHostedSrc`) are left alone.
  *
  * Depends on `RichTextExtension`'s `DRAG_DROP_PASTE` command for pasted and
  * dropped files, so add `RichTextExtension` (or another source of that
@@ -170,6 +208,25 @@ export const ImageUploadExtension = defineExtension({
     const controller = new AbortController();
     // Files inserted by this extension, by the object URL created for them
     const files = new Map<string, Blob>();
+    // URLs returned by the uploader or mirror
+    const hosted = new Set<string>();
+
+    const isHosted = (src: string): boolean => {
+      if (hosted.has(src)) {
+        return true;
+      }
+      const isHostedSrc = configSignals.isHostedSrc.peek();
+      if (isHostedSrc) {
+        return isHostedSrc(src);
+      }
+      const doc = editor.getRootElement()?.ownerDocument;
+      const origin = doc?.defaultView?.location.origin;
+      try {
+        return !!doc && new URL(src, doc.baseURI).origin === origin;
+      } catch {
+        return false;
+      }
+    };
 
     const setUpload = (localSrc: string, upload: ImageUploadState) => {
       const next = new Map(uploads.peek());
@@ -190,11 +247,14 @@ export const ImageUploadExtension = defineExtension({
       );
     };
 
+    // Uploads a local image, or mirrors a remote one
     const startUpload = (localSrc: string) => {
+      const local = isLocalSrc(localSrc);
       const upload = configSignals.upload.peek();
+      const mirror = configSignals.mirror.peek();
       const current = uploads.peek().get(localSrc);
       if (
-        !upload ||
+        !(local ? upload : mirror) ||
         controller.signal.aborted ||
         (current && current.status !== 'error')
       ) {
@@ -202,20 +262,28 @@ export const ImageUploadExtension = defineExtension({
       }
       setUpload(localSrc, {progress: null, status: 'uploading'});
       (async () => {
-        const blob =
-          files.get(localSrc) ?? (await (await fetch(localSrc)).blob());
-        const {src} = await upload(blob, {
-          onProgress: progress => {
-            if (uploads.peek().get(localSrc)?.status === 'uploading') {
-              setUpload(localSrc, {progress, status: 'uploading'});
-            }
-          },
-          signal: controller.signal,
-        });
-        await preloadImage(editor, src);
-        return src;
+        let result: {src: string};
+        if (upload && local) {
+          const blob =
+            files.get(localSrc) ?? (await (await fetch(localSrc)).blob());
+          result = await upload(blob, {
+            onProgress: progress => {
+              if (uploads.peek().get(localSrc)?.status === 'uploading') {
+                setUpload(localSrc, {progress, status: 'uploading'});
+              }
+            },
+            signal: controller.signal,
+          });
+        } else if (mirror) {
+          result = await mirror(localSrc, {signal: controller.signal});
+        } else {
+          throw new Error('No uploader');
+        }
+        await preloadImage(editor, result.src);
+        return result.src;
       })().then(
         src => {
+          hosted.add(src);
           setUpload(localSrc, {src, status: 'uploaded'});
           swapToUploaded(localSrc, src);
         },
@@ -282,11 +350,12 @@ export const ImageUploadExtension = defineExtension({
       $insertFiles,
       controller,
       files,
+      isHosted,
       openFileDialog,
       pendingCount,
-      retry: (localSrc: string) => {
-        if (uploads.peek().get(localSrc)?.status === 'error') {
-          startUpload(localSrc);
+      retry: (src: string) => {
+        if (uploads.peek().get(src)?.status === 'error') {
+          startUpload(src);
         }
       },
       startUpload,
@@ -299,7 +368,9 @@ export const ImageUploadExtension = defineExtension({
     accept: DEFAULT_ACCEPT,
     disabled: false,
     inlineDataUrlMaxLength: 1024,
+    isHostedSrc: null,
     maxFileSize: 10 * 1024 * 1024,
+    mirror: null,
     onReject: null,
     upload: null,
   }),
@@ -310,12 +381,13 @@ export const ImageUploadExtension = defineExtension({
     const {disabled, inlineDataUrlMaxLength, uploads} = output;
     const needsUpload = (src: string) =>
       src.startsWith('blob:') ||
-      (src.startsWith('data:') && src.length > inlineDataUrlMaxLength.peek());
+      (src.startsWith('data:') && src.length > inlineDataUrlMaxLength.peek()) ||
+      (isRemoteSrc(src) && !!output.mirror.peek() && !output.isHosted(src));
 
     // Called for every new or changed image, from a transform or after
     // undo/redo or setEditorState. Returns the uploaded URL to swap to.
     const check = (src: string): string | null => {
-      if (!isLocalSrc(src)) {
+      if (!isLocalSrc(src) && !isRemoteSrc(src)) {
         return null;
       }
       const upload = uploads.peek().get(src);

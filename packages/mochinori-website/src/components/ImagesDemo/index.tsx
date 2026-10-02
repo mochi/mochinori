@@ -9,6 +9,7 @@ import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
 import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
 import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
 import {
+  createHttpImageMirror,
   createHttpImageUploader,
   ImagesExtension,
   ImagesImportExtension,
@@ -53,6 +54,8 @@ const ImagesDemoExtension = defineExtension({
     configExtension(ImageUploadExtension, {
       // The same limit the site's Worker enforces
       maxFileSize: 5 * 1024 * 1024,
+      // Images in HTML pasted from other sites are copied by the Worker
+      mirror: createHttpImageMirror({url: '/api/images'}),
       // The site's Worker stores uploads in R2 for one hour
       upload: createHttpImageUploader({url: '/api/images'}),
     }),

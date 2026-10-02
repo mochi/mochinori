@@ -98,6 +98,8 @@ const AppExtension = defineExtension({
 | --- | --- | --- |
 | `disabled` | `false` | When `true`, files are not inserted or uploaded. |
 | `upload` | `null` | `(file, {signal, onProgress}) => Promise<{src}>`. Without one, images keep their local URL. |
+| `mirror` | `null` | `(src, {signal}) => Promise<{src}>`. Copies images from other origins (such as `<img>` in HTML pasted from another site) to your storage. Without one, they keep their remote URL. |
+| `isHostedSrc` | `null` | Whether an `http(s)` image is already yours, so it is not mirrored. Images the extension uploaded or mirrored always are. When `null`, images from the editor's own origin are. |
 | `inlineDataUrlMaxLength` | `1024` | `data:` URLs up to this length stay inline in the document; longer ones are uploaded. `blob:` URLs are always uploaded. |
 | `accept` | PNG, JPEG, GIF, WebP, AVIF | MIME types accepted. SVG is left out because it can carry script. |
 | `maxFileSize` | 10 MB | Larger files are rejected. |
@@ -108,12 +110,18 @@ and functions `openFileDialog()`, `retry(localSrc)` and `waitForUploads()`.
 Await `waitForUploads()` before saving, so the saved JSON has no local URLs.
 `INSERT_IMAGE_FILES_COMMAND` inserts a `File[]` directly.
 
-### `createHttpImageUploader({url})`
+A mirrored image keeps showing from its remote URL while the copy is made,
+and switches to the copy the same way an upload does. Mirroring happens on
+the server, because browsers can't read most images from other origins.
+
+### `createHttpImageUploader({url})` and `createHttpImageMirror({url})`
 
 An uploader that POSTs the file as the raw request body, with its type as
 `Content-Type`, and reports upload progress. The server answers with JSON
 `{"src": "..."}` (resolved against the response URL), or an error status
-with `{"error": "..."}`. The demo site's Worker implements this endpoint on
+with `{"error": "..."}`. `createHttpImageMirror` POSTs
+`{"url": "<remote url>"}` as JSON to the same kind of endpoint, which
+fetches the image itself and answers the same way. The demo site's Worker implements this endpoint on
 R2, and deletes uploads after an hour.
 
 ### `$createImageNode(payload)` and `$isImageNode(node)`
