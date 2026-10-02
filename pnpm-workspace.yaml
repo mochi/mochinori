@@ -1,21 +1,33 @@
 packages:
   - 'packages/*'
-  - 'cloudflare'
 
 engineStrict: true
 
 # Wait a week before adopting any newly published version, except for
-# Lexical itself, which we track closely.
+# Lexical and Void, which we track closely.
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@lexical/*'
   - 'lexical'
+  - '@void/*'
+  - 'void'
+  # Cloudflare's tooling, which void pins to its newest releases
+  - '@cloudflare/*'
+  - 'cf'
+  - 'miniflare'
+  - 'workerd'
+  - 'wrangler'
+  # Exact versions void 0.22.0 pins; later releases wait the full week
+  - 'hono@4.13.11'
+  - 'mysql2@3.24.5'
+  - 'postal-mime@4.0.0'
 
 # Lexical is a singleton within an app: every workspace package uses the
 # same exact version (devDependencies), and the published libraries declare
 # a compatible range in peerDependencies. Bump both together.
 catalog:
   lexical: '0.52.0'
+  '@lexical/clipboard': '0.52.0'
   '@lexical/eslint-plugin': '0.52.0'
   '@lexical/extension': '0.52.0'
   '@lexical/history': '0.52.0'
@@ -33,6 +45,7 @@ peerDependencyRules:
 # Dependency build scripts stay disabled unless a package needs one.
 allowBuilds:
   '@swc/core': false
+  better-sqlite3: false
   core-js: false
   esbuild: false
   sharp: false

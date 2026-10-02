@@ -41,7 +41,7 @@ export default [
       '**/*.d.ts',
       '**/node_modules/',
       '**/.docusaurus/',
-      '**/.alchemy/',
+      '**/.void/',
       '**/.wrangler/',
       'coverage/',
       'test-results/',
@@ -93,7 +93,59 @@ export default [
       'jsx-a11y/alt-text': ERROR,
       'jsx-a11y/aria-props': WARN,
       'jsx-a11y/aria-role': WARN,
+      'jsx-a11y/interactive-supports-focus': [
+        WARN,
+        {
+          tabbable: [
+            'button',
+            'checkbox',
+            'link',
+            'searchbox',
+            'spinbutton',
+            'switch',
+            'textbox',
+          ],
+        },
+      ],
+      'jsx-a11y/no-interactive-element-to-noninteractive-role': [
+        WARN,
+        {tr: ['none', 'presentation']},
+      ],
+      'jsx-a11y/no-noninteractive-element-interactions': [
+        WARN,
+        {handlers: ['onClick']},
+      ],
+      'jsx-a11y/no-noninteractive-element-to-interactive-role': [
+        WARN,
+        {
+          li: ['menuitem', 'option', 'row', 'tab', 'treeitem'],
+          ol: [
+            'listbox',
+            'menu',
+            'menubar',
+            'radiogroup',
+            'tablist',
+            'tree',
+            'treegrid',
+          ],
+          table: ['grid'],
+          td: ['gridcell'],
+          ul: [
+            'listbox',
+            'menu',
+            'menubar',
+            'radiogroup',
+            'tablist',
+            'tree',
+            'treegrid',
+          ],
+        },
+      ],
       'jsx-a11y/no-noninteractive-tabindex': WARN,
+      'jsx-a11y/no-static-element-interactions': [
+        WARN,
+        {handlers: ['onClick']},
+      ],
       'jsx-a11y/role-has-required-aria-props': WARN,
       'jsx-a11y/role-supports-aria-props': WARN,
       'jsx-a11y/tabindex-no-positive': WARN,
@@ -206,7 +258,9 @@ export default [
       '@typescript-eslint': tseslint.plugin,
     },
     rules: {
-      '@lexical/rules-of-lexical': WARN,
+      // Lexical runs this as a warning; here it is an error so that CI, which
+      // does not fail on warnings, enforces it.
+      '@lexical/rules-of-lexical': ERROR,
       '@typescript-eslint/array-type': [ERROR, {default: 'array'}],
       '@typescript-eslint/ban-ts-comment': OFF,
       // Type-only imports must say so, so that no type import ever emits a
@@ -239,17 +293,24 @@ export default [
 
   // Scripts and config files may log
   {
-    files: ['scripts/**', '**/alchemy.run.ts', '*.mjs', '*.mts'],
+    files: ['scripts/**', '*.mjs', '*.mts'],
     rules: {
       'no-console': OFF,
     },
   },
 
-  // Library sources: ban direct `document.X` and `window.X` member access so
-  // editors inside Shadow DOM or iframes use the correct realm. See AGENTS.md.
+  // Library sources and the website's editor demos: ban direct `document.X`
+  // and `window.X` member access so editors inside Shadow DOM or iframes use
+  // the correct realm. `typeof window` SSR guards are still allowed. See
+  // AGENTS.md "Shadow DOM and iframe realm safety".
   {
     files: ['packages/*/src/**'],
-    ignores: ['packages/**/__tests__/**', 'packages/mochinori-website/**'],
+    ignores: [
+      'packages/**/__tests__/**',
+      // Site pages and Node-side Docusaurus plugins are not editor code
+      'packages/mochinori-website/src/pages/**',
+      'packages/mochinori-website/src/plugins/**',
+    ],
     rules: {
       '@lexical/no-document-in-dom-methods': ERROR,
       'no-restricted-syntax': [
@@ -295,15 +356,6 @@ export default [
       '@mochinori/internal/no-imports-from-self': OFF,
       'react-hooks/globals': OFF,
       'react-hooks/immutability': OFF,
-    },
-  },
-
-  // Docusaurus resolves `@site/`, `@theme/` and `@docusaurus/` aliases and
-  // pages are default exports by convention.
-  {
-    files: ['packages/mochinori-website/**'],
-    rules: {
-      'no-restricted-syntax': OFF,
     },
   },
 

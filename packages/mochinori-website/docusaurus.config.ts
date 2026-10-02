@@ -68,7 +68,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     footer: {
-      copyright: `Copyright © ${new Date().getFullYear()} Mochi Media, Inc. Built on <a href="https://lexical.dev">Lexical</a>.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Bob Ippolito. Built on <a href="https://lexical.dev">Lexical</a>.`,
       links: [
         {
           items: [

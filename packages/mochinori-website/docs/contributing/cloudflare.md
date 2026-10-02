@@ -4,45 +4,68 @@ title: Cloudflare
 
 # Cloudflare
 
-Everything that runs on Cloudflare lives in `cloudflare/` and is managed by
-[alchemy](https://alchemy.run), infrastructure as TypeScript.
+This site runs on Cloudflare as a [Void](https://void.cloud) app. Void
+builds one Worker that serves the Docusaurus output as static assets, plus
+the site's API routes and Durable Objects. Everything lives in
+`packages/mochinori-website/`:
 
-- `cloudflare/alchemy.run.ts` declares every resource: the website Worker,
-  Durable Object namespaces, and anything added later (R2 buckets, D1, queues).
-- `cloudflare/src/website/` is the Worker that serves this site. The
-  Docusaurus build is uploaded as static assets; the Worker itself only
-  handles `/api/*`.
-- `cloudflare/src/durable-objects/` holds Durable Object classes. `Counter`
-  is an example, reachable at `/api/counter/<name>`.
+- `void.config.ts` sets the Worker name and compatibility date. It also tells
+  Void to build Docusaurus first (`docusaurus build && vite build`) and to
+  serve Docusaurus's own `404.html` for unknown URLs.
+- `vite.config.mts` adds `voidPlugin()` and uses `build/` (the Docusaurus
+  output) as the static assets. It is `.mts` because the package is not
+  `"type": "module"`.
+- `routes/` holds API routes. Each file exports Hono handlers per method,
+  wrapped in `defineHandler`, and `[name]` is a path parameter.
+  `routes/api/health.ts` serves `GET /api/health`, and
+  `routes/api/counter/[name].ts` serves `GET` and `POST /api/counter/<name>`.
+- `durable-objects/` holds Durable Objects. Each module default-exports a
+  `defineDurableState` definition, and Void derives the binding and class
+  from the filename. `counter.ts` becomes the `COUNTER` binding and the
+  `CounterDurableObject` class. Routes call it with
+  `Counter.get(name).increment(1)`.
+- `void.lock.json` records the generated bindings and Durable Object
+  migrations. Commit it whenever it changes: Cloudflare migrations are
+  append-only, and the lock keeps their order.
 
-## Running locally
+## Run it locally
 
 ```sh
-pnpm run cf:dev
+pnpm run dev:website
 ```
 
-This builds the site, then runs the Worker and its Durable Objects locally
-with Miniflare on http://localhost:1337. alchemy expects Cloudflare
-credentials to be configured even for local runs (see below), but nothing is
-deployed. For working on the site's content, `pnpm run start:website` is
-faster: it reloads as you edit.
+This builds the site, then serves it with the API routes and Durable Objects
+in Miniflare at http://localhost:5173. Use `pnpm run start:website` instead
+for live-reloading docs work; it runs Docusaurus alone, without the API.
 
-## Deploying
-
-Deploying needs a Cloudflare account and API token:
+To check a production build:
 
 ```sh
-# or run `pnpm exec alchemy login` in cloudflare/
-export CLOUDFLARE_API_TOKEN=...
-export CLOUDFLARE_ACCOUNT_ID=...
-pnpm run cf:deploy --stage prod
+pnpm --filter @mochinori/website run build
+pnpm --filter @mochinori/website run preview
 ```
 
-Each stage (`--stage`, defaulting to your username) is an independent copy of
-every resource, named `mochinori-website-<stage>`. `pnpm run cf:destroy`
-removes a stage.
+## Deploy
 
-By default alchemy keeps state in `cloudflare/.alchemy/` on your machine.
-To share state between machines or CI, set `ALCHEMY_STATE_TOKEN` (any long
-random secret, the same everywhere) and alchemy stores state in a Worker on
-your Cloudflare account instead.
+Deploys are manual. Run the **Deploy** workflow from the Actions tab, or
+deploy from your machine:
+
+```sh
+pnpm run deploy:website
+```
+
+The first local deploy signs you in to Cloudflare and saves the account in
+`.void/project.json`. The workflow needs the `CLOUDFLARE_API_TOKEN` secret.
+Set `CLOUDFLARE_ACCOUNT_ID` too when the token can reach more than one
+account. Set the `CLOUDFLARE_WORKERS_SUBDOMAIN` variable if the Worker has no
+preview URL.
+
+## Add a Cloudflare feature
+
+- **API route:** add a file under `routes/`. Routes under `/api` reach the
+  Worker before static assets.
+- **Durable Object:** add a module under `durable-objects/`, run
+  `pnpm --filter @mochinori/website run prepare` to regenerate types, and
+  commit the updated `void.lock.json`.
+- **KV, R2, D1, queues and crons** are inferred from how the code uses them.
+  See the [Void docs](https://void.cloud/guide) for each one.

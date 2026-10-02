@@ -24,15 +24,14 @@ into packages you can install. It builds on the published `lexical` and
 ```text
 packages/
   mochinori-images/                 @mochinori/images (published)
-  mochinori-website/                the docs and demos site (Docusaurus)
+  mochinori-website/                the docs and demos site (Docusaurus on Void)
   mochinori-eslint-plugin-internal/ lint rules for this repo
-cloudflare/                         Workers, Durable Objects and the alchemy app
 scripts/                            repo scripts and their tests
 ```
 
 ## Development
 
-Requires Node 24 (see `.nvmrc`) and pnpm 11.
+Requires Node 24.15 or later (see `.nvmrc`) and pnpm 11.
 
 ```sh
 pnpm install
@@ -42,9 +41,11 @@ pnpm run ci-check        # TypeScript, Prettier and ESLint
 pnpm run build           # build the published packages
 ```
 
-The website is served by a Cloudflare Worker; see
-[`cloudflare/README.md`](cloudflare/README.md) for running it locally and
-deploying.
+The website deploys to Cloudflare with [Void](https://void.cloud): the
+Docusaurus build is served as static assets, alongside API routes and Durable
+Objects. See the
+[Cloudflare guide](packages/mochinori-website/docs/contributing/cloudflare.md)
+for running it locally and deploying.
 
 ## License
 

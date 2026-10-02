@@ -5,7 +5,7 @@
 **/build/**
 **/node_modules
 **/.docusaurus
-**/.alchemy
+**/.void
 **/.wrangler
 **/*.md
 **/*.svg

@@ -10,9 +10,8 @@ workspace modeled on the Lexical monorepo's tooling.
 ```text
 packages/
   mochinori-images/                 @mochinori/images, a published library
-  mochinori-website/                this site (Docusaurus)
+  mochinori-website/                this site (Docusaurus, deployed with Void)
   mochinori-eslint-plugin-internal/ lint rules for the repo itself
-cloudflare/                         Workers, Durable Objects, and the alchemy app
 scripts/                            repo scripts and their tests
 ```
 
@@ -22,7 +21,8 @@ scripts/                            repo scripts and their tests
 | --- | --- |
 | `pnpm install` | Install everything |
 | `pnpm run build` | Build the published libraries into `dist/` |
-| `pnpm run start:website` | Run this site locally |
+| `pnpm run start:website` | Run this site locally with live reload |
+| `pnpm run dev:website` | Build this site and run it with its API routes and Durable Objects |
 | `pnpm run test-unit` | Run unit tests (Vitest) |
 | `pnpm run lint` / `lint:fix` | ESLint |
 | `pnpm run prettier` / `prettier:fix` | Prettier |

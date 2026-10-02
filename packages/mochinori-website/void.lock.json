@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "source": {
+    "name": "mochinori-website"
+  },
+  "resolved": {
+    "name": "mochinori-website",
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "COUNTER",
+          "class_name": "CounterDurableObject"
+        }
+      ]
+    },
+    "migrations": [
+      {
+        "tag": "void-durable-counter-v1",
+        "new_sqlite_classes": ["CounterDurableObject"]
+      }
+    ]
+  },
+  "text": "{\n  \"name\": \"mochinori-website\",\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ]\n}\n"
+}

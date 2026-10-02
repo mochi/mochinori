@@ -1,11 +1,16 @@
 import type {FormEvent, JSX} from 'react';
 
+import {ClipboardDOMImportExtension} from '@lexical/clipboard';
 import {HistoryExtension} from '@lexical/history';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
-import {RichTextExtension} from '@lexical/rich-text';
-import {ImagesExtension, INSERT_IMAGE_COMMAND} from '@mochinori/images';
+import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
+import {
+  ImagesExtension,
+  ImagesImportExtension,
+  INSERT_IMAGE_COMMAND,
+} from '@mochinori/images';
 import {
   $createParagraphNode,
   $createTextNode,
@@ -31,7 +36,16 @@ const ImagesDemoExtension = defineExtension({
       ),
     );
   },
-  dependencies: [RichTextExtension, HistoryExtension, ImagesExtension],
+  dependencies: [
+    RichTextExtension,
+    HistoryExtension,
+    ImagesExtension,
+    // Route HTML pastes through DOMImportExtension, where the import rules
+    // for rich text and images are registered
+    ClipboardDOMImportExtension,
+    RichTextImportExtension,
+    ImagesImportExtension,
+  ],
   name: '@mochinori/website/ImagesDemo',
   namespace: 'ImagesDemo',
   theme: {

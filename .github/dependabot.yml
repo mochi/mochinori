@@ -29,10 +29,13 @@ updates:
         patterns:
           - 'vitest'
           - '@vitest/*'
-      cloudflare:
+      void:
         patterns:
-          - 'alchemy'
+          - 'void'
+          - '@void/*'
+          - 'vite'
           - '@cloudflare/*'
+          - 'wrangler'
       dev-dependencies:
         dependency-type: 'development'
         patterns:

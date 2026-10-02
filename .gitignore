@@ -14,9 +14,10 @@ coverage
 test-results
 __screenshots__
 
-# Cloudflare / alchemy local state. Never commit .alchemy: it can hold
-# encrypted secrets and per-developer stage state.
-.alchemy
+# Void and Cloudflare local state. Void regenerates .void (types, the
+# generated Worker config); void.lock.json is committed.
+.void
+.void-wrangler.jsonc
 .wrangler
 .dev.vars*
 !.dev.vars.example

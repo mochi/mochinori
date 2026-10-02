@@ -7,17 +7,18 @@
   "type": "module",
   "packageManager": "pnpm@11.24.0",
   "engines": {
-    "node": "^22.22.2 || >=24.15.0",
+    "node": ">=24.15.0",
     "pnpm": ">=11.0.0"
   },
   "scripts": {
     "build": "pnpm -r --filter \"./packages/**\" --filter \"!@mochinori/website\" run build",
     "build-website": "pnpm --filter @mochinori/website run build",
     "start:website": "pnpm --filter @mochinori/website run start",
+    "dev:website": "pnpm --filter @mochinori/website run dev",
+    "deploy:website": "pnpm --filter @mochinori/website run deploy",
     "clean": "pnpm -r run clean",
     "tsc": "tsc",
     "tsc-website": "pnpm --filter @mochinori/website run tsc",
-    "tsc-cloudflare": "pnpm --filter @mochinori/cloudflare run tsc",
     "vitest": "vitest",
     "test-unit": "vitest --project unit --no-watch",
     "test-unit-watch": "vitest --project unit",
@@ -26,10 +27,7 @@
     "lint:fix": "eslint ./ --fix",
     "prettier": "prettier --list-different .",
     "prettier:fix": "prettier --write .",
-    "ci-check": "npm-run-all --parallel tsc tsc-website tsc-cloudflare prettier lint",
-    "cf:dev": "pnpm --filter @mochinori/cloudflare run dev",
-    "cf:deploy": "pnpm --filter @mochinori/cloudflare run deploy",
-    "cf:destroy": "pnpm --filter @mochinori/cloudflare run destroy",
+    "ci-check": "npm-run-all --parallel tsc tsc-website prettier lint",
     "prepare": "husky"
   },
   "devDependencies": {

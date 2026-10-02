@@ -1,22 +1,18 @@
-# Deploys the Cloudflare app (cloudflare/alchemy.run.ts). Runs only when
-# started by hand from the Actions tab, and needs these repository secrets:
-# CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and ALCHEMY_STATE_TOKEN.
+# Deploys the website (Docusaurus site, API routes and Durable Objects) to
+# Cloudflare with `void deploy`. Runs only when started by hand from the
+# Actions tab. Needs the CLOUDFLARE_API_TOKEN secret, CLOUDFLARE_ACCOUNT_ID
+# when the token can reach more than one account, and the
+# CLOUDFLARE_WORKERS_SUBDOMAIN variable if the Worker has no preview URL.
 name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      stage:
-        description: 'alchemy stage to deploy'
-        required: true
-        default: 'prod'
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ inputs.stage }}
+  group: deploy-website
   cancel-in-progress: false
 
 jobs:
@@ -24,13 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
-      ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      STAGE: ${{ inputs.stage }}
+      CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: 24.x
-      - run: pnpm run cf:deploy --stage "$STAGE"
+      - run: pnpm --filter @mochinori/website exec void deploy --platform cloudflare
