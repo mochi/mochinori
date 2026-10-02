@@ -2,9 +2,9 @@
 
 A full-featured image node for [Lexical](https://lexical.dev) editors.
 
-> **Status:** early scaffold. `ImageNode`, `ImagesExtension` and
-> `ImageUploadExtension` (paste, drop and file dialog uploads) work today;
-> resizing and captions are on the way.
+> **Status:** early scaffold. `ImageNode` (with captions in a named slot),
+> `ImagesExtension` (click to select, drag to move) and `ImageUploadExtension`
+> (paste, drop and file dialog uploads) work today; resizing is on the way.
 
 ## Install
 

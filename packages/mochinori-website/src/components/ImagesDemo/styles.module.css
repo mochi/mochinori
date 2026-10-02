@@ -57,14 +57,62 @@
   outline: 2px solid var(--ifm-color-primary);
 }
 
+.image img[draggable='true'] {
+  cursor: grab;
+}
+
 .status {
   font-size: 0.875rem;
   color: var(--ifm-color-emphasis-700);
 }
 
+/* A column: the image, then its caption, no wider than the image */
 .image :global(.mochinori-image-frame) {
+  display: inline-flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.image :global(.mochinori-image-media) {
   position: relative;
-  display: inline-block;
+  display: block;
+}
+
+.image :global(.mochinori-image-caption) {
+  position: relative;
+  display: block;
+  width: 0;
+  min-width: 100%;
+  padding-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+  text-align: center;
+}
+
+.image :global(.mochinori-image-caption) .paragraph {
+  margin: 0;
+}
+
+.image :global(.mochinori-image-caption-placeholder) {
+  position: absolute;
+  top: 0.25rem;
+  right: 0;
+  left: 0;
+  color: var(--ifm-color-emphasis-500);
+  pointer-events: none;
+}
+
+.image :global(.mochinori-image-caption-toggle) {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 
 /* The local preview is shown dimmed until the upload finishes */

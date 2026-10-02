@@ -13,6 +13,7 @@ import {
 } from '@lexical/react/useExtensionSignalValue';
 import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
 import {
+  $createImageNode,
   createHttpImageMirror,
   createHttpImageUploader,
   createImageResizer,
@@ -55,6 +56,18 @@ const ImagesDemoExtension = defineExtension({
         $createTextNode(
           'Paste or drop an image, upload one, or insert one with the toolbar. ',
         ),
+      ),
+      $createParagraphNode().append(
+        $createTextNode(
+          'Click an image to select it and add a caption, or drag it to move it: ',
+        ),
+        $createImageNode({
+          altText: 'The mochinori mark',
+          caption: 'The mochinori mark',
+          height: 96,
+          src: '/img/logo/mochinori-mark.svg',
+          width: 96,
+        }),
       ),
     );
   },

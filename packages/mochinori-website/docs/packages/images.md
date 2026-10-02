@@ -10,8 +10,8 @@ Lexical playground and packaged as a library.
 :::info Status
 
 This package is an early scaffold. `ImageNode`, `ImagesExtension`,
-`INSERT_IMAGE_COMMAND` and uploads (`ImageUploadExtension`) work today.
-Resizing and captions are next.
+`INSERT_IMAGE_COMMAND`, captions, selection, drag and drop, and uploads
+(`ImageUploadExtension`) work today. Resizing is next.
 
 :::
 
@@ -35,11 +35,22 @@ editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
 
 ### `ImagesExtension`
 
-Registers `ImageNode` and handles `INSERT_IMAGE_COMMAND`.
+Registers `ImageNode`, handles `INSERT_IMAGE_COMMAND`, and makes images
+interactive:
+
+- **Selection.** Clicking an image selects it, and shift-clicking adds it to
+  the selected nodes. Backspace or Delete removes the selected images.
+- **Drag and drop.** Drag an image to move it, caption and all, anywhere in
+  the text. Images can't be dropped into a caption. Dragged out of the
+  editor, an image carries its URL and an `<img>` as HTML, so another
+  editor with `ImagesImportExtension` imports it.
+- **Captions.** A selected image shows an *Add caption* button. In a caption,
+  Enter does nothing, Escape selects the image, the arrow keys leave the
+  caption at either end, and Backspace in an empty caption removes it.
 
 | Config | Default | Description |
 | --- | --- | --- |
-| `disabled` | `false` | When `true`, `INSERT_IMAGE_COMMAND` is not handled. Also exposed as a signal on the extension's output. |
+| `disabled` | `false` | When `true`, `INSERT_IMAGE_COMMAND` is not handled and images can't be selected by clicking or moved by dragging. Also exposed as a signal on the extension's output. |
 
 ### `ImageNode`
 
@@ -52,17 +63,36 @@ An inline `DecoratorNode` rendered as an `<img>`. It serializes as:
   "src": "https://example.com/mochi.png",
   "altText": "A mochi",
   "width": 320,
-  "height": 240
+  "height": 240,
+  "$slots": {
+    "caption": {"type": "paragraph", "version": 1, "children": [...]}
+  }
 }
 ```
 
-`width` and `height` are omitted when unknown. The node exports to `<img>`
-HTML. HTML import goes through `ImagesImportExtension` only.
+`width` and `height` are omitted when unknown, and `$slots` when there is
+no caption.
+
+The caption is a paragraph in the image's `caption`
+[named slot](https://lexical.dev/docs/concepts/named-slots), not a nested
+editor. It lives in the editor's own state, so its text is edited with the
+editor's own formatting, links and history, is part of the document's text
+content, and serializes and syncs (with `@lexical/yjs`) with everything
+else. `getCaption()` returns it, `hasCaption()` tests for it, and
+`setCaption()` adds an empty one, `setCaption(paragraph)` replaces it and
+`setCaption(null)` removes it. Named slots are `@experimental` in Lexical.
+
+The node exports to `<img>` HTML, or to `<figure>` with a `<figcaption>`
+when it has a caption. HTML import goes through `ImagesImportExtension`
+only.
 
 ### `ImagesImportExtension`
 
-Adds `ImageImportRule` to `@lexical/html`'s `DOMImportExtension`, so pasted
-HTML and `$generateNodesFromDOM` turn `<img>` into `ImageNode`. It depends on
+Adds `ImageImportRule` and `ImageFigureImportRule` to `@lexical/html`'s
+`DOMImportExtension`, so pasted HTML and `$generateNodesFromDOM` turn `<img>`
+into `ImageNode`, and a `<figure>` with one `<img>` into an `ImageNode` with
+the text of its `<figcaption>` as the caption (pasted from Wikipedia, for
+example). It depends on
 `ImagesExtension` and `CoreImportExtension`. Images whose `src` is a local
 `file:///` path are skipped, because they can never load in the editor.
 `ImageNode` has no legacy `importDOM`, so add this extension wherever images
@@ -159,9 +189,32 @@ larger ones to 1600 × 1600 WebP at quality 0.8, to keep its storage small.
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 
 Create an `ImageNode` from an `ImagePayload` (`src`, and optional `altText`,
-`width` and `height`), and test whether a node is one.
+`width`, `height` and `caption`), and test whether a node is one. Any
+`caption` string, even `''`, gives the image a caption.
+
+### Styling
+
+`ImageComponent` renders this markup inside the node's element (the
+`image` theme class):
+
+```html
+<span class="mochinori-image-frame" data-selected>
+  <span class="mochinori-image-media">
+    <img class="mochinori-image focused" />
+    <!-- progress bar, upload error and the caption button -->
+  </span>
+  <span class="mochinori-image-caption">
+    <span class="mochinori-image-caption-slot"><!-- the caption --></span>
+    <span class="mochinori-image-caption-placeholder">Write a caption…</span>
+  </span>
+</span>
+```
+
+`mochinori-image-media` is the box the progress bar, error and
+`mochinori-image-caption-toggle` button are positioned in. The demo's
+stylesheet keeps a caption no wider than its image with `width: 0;
+min-width: 100%` on `mochinori-image-caption`.
 
 ## Roadmap
 
 - Resizing with handles, keeping the aspect ratio
-- Captions as nested editors
