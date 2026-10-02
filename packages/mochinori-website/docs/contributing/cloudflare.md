@@ -15,7 +15,11 @@ Void 0.22.0).
 
 In `packages/mochinori-website-worker/`:
 
-- `void.config.ts` sets the Worker name and compatibility date. It also tells
+- `void.config.ts` sets the Worker name and compatibility date, and serves
+  it at `mochinori.com` (a custom domain, so the Worker must deploy to the
+  Cloudflare account that holds the `mochinori.com` zone) as well as on
+  workers.dev. The account comes from `CLOUDFLARE_ACCOUNT_ID` or your Void
+  sign-in, not from the repo. It also tells
   Void to build the Docusaurus site first
   (`pnpm --filter @mochinori/website run build && vite build`) and to serve
   Docusaurus's own `404.html` for unknown URLs.
@@ -30,6 +34,17 @@ In `packages/mochinori-website-worker/`:
   from the filename. `counter.ts` becomes the `COUNTER` binding and the
   `CounterDurableObject` class. Routes call it with
   `Counter.get(name).increment(1)`.
+- `routes/api/images/` stores demo image uploads in R2 (the `STORAGE`
+  binding, bucket `mochinori-demo-uploads`). `POST /api/images` checks the
+  file's magic bytes (PNG, JPEG, GIF, WebP or AVIF; never SVG), caps it at
+  5 MB and stores it under a random name. Posting JSON `{"url": ...}`
+  instead mirrors a remote image: the Worker fetches it (public `http(s)`
+  hosts only, each redirect checked the same way, 10 second timeout) and
+  applies the same checks. `GET /api/images/<name>` serves it
+  with `nosniff`, a sandboxing CSP and same-origin CORP. Uploads expire after
+  an hour: reads of an expired object delete it, and
+  `crons/expire-demo-images.ts` sweeps the bucket every 15 minutes. The
+  rules live in `server/imageUploads.ts`, which has unit tests.
 - `void.lock.json` records the generated bindings and Durable Object
   migrations. Commit it whenever it changes: Cloudflare migrations are
   append-only, and the lock keeps their order.
@@ -53,8 +68,9 @@ pnpm --filter @mochinori/website-worker run preview
 
 ## Deploy
 
-Deploys are manual. Run the **Deploy** workflow from the Actions tab, or
-deploy from your machine:
+Every push to `main` deploys the site through the **Deploy** workflow. You
+can also run that workflow from the Actions tab, or deploy from your
+machine:
 
 ```sh
 pnpm run deploy:website
@@ -69,10 +85,27 @@ deploy again.
 
 The first local deploy signs you in to Cloudflare and saves the account in
 `packages/mochinori-website-worker/.void/project.json`. The workflow needs
-the `CLOUDFLARE_API_TOKEN` secret.
-Set `CLOUDFLARE_ACCOUNT_ID` too when the token can reach more than one
-account. Set the `CLOUDFLARE_WORKERS_SUBDOMAIN` variable if the Worker has no
-preview URL.
+the `CLOUDFLARE_API_TOKEN` secret, from a token that can edit Workers
+Scripts and Workers R2 Storage. Set `CLOUDFLARE_ACCOUNT_ID` too when the
+token can reach more than one account, and the `CLOUDFLARE_WORKERS_SUBDOMAIN`
+variable to the account's workers.dev subdomain (the part before
+`.workers.dev`).
+
+## Pull request previews
+
+The **Preview** workflow deploys each pull request as its own Worker,
+`mochinori-website-pr-<number>`, and comments its URL on the pull request:
+`https://mochinori-website-pr-<number>.<subdomain>.workers.dev`. Each push
+redeploys it, and closing the pull request deletes it. It uses the same
+secrets as the Deploy workflow, and skips pull requests from forks, which get
+no secrets.
+
+A preview is a separate Worker rather than a preview version of
+`mochinori-website`, because Cloudflare gives no preview URL to versions of a
+Worker that defines Durable Objects. So each preview has its own Durable
+Objects and applies its own migrations. It shares production's R2 bucket
+(the workflow creates any bucket the pull request adds) and has no cron
+triggers; production's cron expires uploads for both.
 
 ## Add a Cloudflare feature
 

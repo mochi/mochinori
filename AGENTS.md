@@ -24,7 +24,9 @@ notice.
 - `pnpm run dev:website` - Build the site and run it with its API routes and
   Durable Objects in Vite/Miniflare (http://localhost:5173)
 - `pnpm run deploy:website` - `void deploy --platform cloudflare`. Never
-  deploy unless a person asked.
+  deploy unless a person asked. Pushes to `main` deploy through
+  `.github/workflows/deploy.yml`, and each pull request gets its own preview
+  Worker through `.github/workflows/preview.yml`.
 
 ## Layout
 

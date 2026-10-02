@@ -1,3 +1,8 @@
+export {
+  createHttpImageMirror,
+  createHttpImageUploader,
+  type HttpImageUploaderOptions,
+} from './createHttpImageUploader.ts';
 export {type ImageComponentProps} from './ImageComponent.tsx';
 export {
   $createImageNode,
@@ -16,3 +21,15 @@ export {
   ImagesImportExtension,
   ImagesImportRules,
 } from './ImagesImportExtension.ts';
+export {
+  type ImageMirror,
+  type ImageMirrorOptions,
+  type ImageRejectionReason,
+  type ImageUploadConfig,
+  type ImageUploader,
+  ImageUploadExtension,
+  type ImageUploadOptions,
+  type ImageUploadOutput,
+  type ImageUploadState,
+  INSERT_IMAGE_FILES_COMMAND,
+} from './ImageUploadExtension.ts';

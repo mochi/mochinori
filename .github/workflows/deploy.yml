@@ -1,11 +1,14 @@
 # Deploys the website (Docusaurus site, API routes and Durable Objects) to
-# Cloudflare with `void deploy`. Runs only when started by hand from the
-# Actions tab. Needs the CLOUDFLARE_API_TOKEN secret, CLOUDFLARE_ACCOUNT_ID
+# Cloudflare with `void deploy` on every push to main, or when started by
+# hand from the Actions tab. Needs the CLOUDFLARE_API_TOKEN secret, CLOUDFLARE_ACCOUNT_ID
 # when the token can reach more than one account, and the
 # CLOUDFLARE_WORKERS_SUBDOMAIN variable if the Worker has no preview URL.
 name: Deploy
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
