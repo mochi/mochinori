@@ -82,13 +82,21 @@ export function ImageComponent({
       ) : null}
       {upload?.status === 'error' && dep ? (
         <span className="mochinori-image-error" role="alert">
-          Upload failed.{' '}
-          <button
-            className="mochinori-image-retry"
-            onClick={() => dep.output.retry(src)}
-            type="button">
-            Retry
-          </button>
+          {/* By name: importing ImageTooLargeError would create the cycle */}
+          {upload.error instanceof Error &&
+          upload.error.name === 'ImageTooLargeError' ? (
+            'Image is too large to upload.'
+          ) : (
+            <>
+              Upload failed.{' '}
+              <button
+                className="mochinori-image-retry"
+                onClick={() => dep.output.retry(src)}
+                type="button">
+                Retry
+              </button>
+            </>
+          )}
         </span>
       ) : null}
     </span>
