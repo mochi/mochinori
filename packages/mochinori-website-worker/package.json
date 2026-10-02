@@ -1,0 +1,23 @@
+{
+  "name": "@mochinori/website-worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Cloudflare Worker that serves the mochinori website, its API routes and Durable Objects",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @mochinori/website run build && vite build",
+    "build:worker": "vite build",
+    "dev": "pnpm --filter @mochinori/website run build && vite dev",
+    "preview": "vite preview",
+    "deploy": "void deploy",
+    "prepare": "void prepare",
+    "tsc": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@mochinori/website": "workspace:*",
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.1",
+    "void": "0.22.0"
+  }
+}

@@ -28,4 +28,4 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: 24.x
-      - run: pnpm --filter @mochinori/website exec void deploy --platform cloudflare
+      - run: pnpm --filter @mochinori/website-worker exec void deploy --platform cloudflare

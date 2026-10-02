@@ -5,10 +5,12 @@ export default defineConfig({
     name: 'mochinori-website',
   },
   inference: {
-    // Docusaurus is detected as a static site; the routes/ and
-    // durable-objects/ backend makes it a Void app built after the site.
+    // A Worker with routes/ and durable-objects/, whose static assets are
+    // the Docusaurus build. Docusaurus lives in its own package
+    // (@mochinori/website) so that Void does not detect this package as a
+    // static site.
     appType: 'void',
-    build: 'docusaurus build && vite build',
+    build: 'pnpm --filter @mochinori/website run build && vite build',
   },
   routing: {
     // Unknown URLs get Docusaurus's own 404.html with a real 404 status

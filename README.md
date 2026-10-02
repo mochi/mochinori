@@ -24,7 +24,8 @@ into packages you can install. It builds on the published `lexical` and
 ```text
 packages/
   mochinori-images/                 @mochinori/images (published)
-  mochinori-website/                the docs and demos site (Docusaurus on Void)
+  mochinori-website/                the docs and demos site (Docusaurus)
+  mochinori-website-worker/         the Void app that serves the site on Cloudflare
   mochinori-eslint-plugin-internal/ lint rules for this repo
 scripts/                            repo scripts and their tests
 ```

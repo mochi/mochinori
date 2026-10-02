@@ -10,7 +10,8 @@ workspace modeled on the Lexical monorepo's tooling.
 ```text
 packages/
   mochinori-images/                 @mochinori/images, a published library
-  mochinori-website/                this site (Docusaurus, deployed with Void)
+  mochinori-website/                this site (Docusaurus)
+  mochinori-website-worker/         the Void app that serves this site
   mochinori-eslint-plugin-internal/ lint rules for the repo itself
 scripts/                            repo scripts and their tests
 ```
