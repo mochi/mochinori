@@ -1,16 +1,16 @@
 import type {ImagePreparer} from './ImageUploadExtension.ts';
 
 export interface ImageResizerOptions {
-  /** Widest image uploaded, in pixels (default 2048) */
-  maxWidth?: number;
-  /** Tallest image uploaded, in pixels (default 2048) */
-  maxHeight?: number;
   /**
-   * Largest image uploaded, in bytes (default no limit). A larger image is
-   * re-encoded, first at its full size and then smaller, until it fits.
-   * Images within every limit are uploaded byte for byte.
+   * Largest image uploaded, in bytes. Defaults to the extension's
+   * `maxFileSize`. An image that fits is uploaded byte for byte; a larger
+   * one is re-encoded until it fits.
    */
   maxBytes?: number;
+  /** Widest re-encoded image, in pixels (default no limit) */
+  maxWidth?: number;
+  /** Tallest re-encoded image, in pixels (default no limit) */
+  maxHeight?: number;
   /** Encoder quality from 0 to 1 for JPEG and WebP output (default 0.92) */
   quality?: number;
   /**
@@ -21,10 +21,10 @@ export interface ImageResizerOptions {
   type?: string;
 }
 
-// Each retry for maxBytes shrinks the image by at least this factor
+// Each retry shrinks the image by at least this factor
 const MIN_STEP = 0.5;
-// Re-encodes for maxBytes, after which the last attempt is returned (and
-// the extension's maxFileSize check rejects it if it is still too large)
+// Re-encodes, after which the last attempt is returned (and the
+// extension's maxFileSize check rejects it if it is still too large)
 const MAX_ATTEMPTS = 6;
 
 function drawingContext(
@@ -39,30 +39,29 @@ function drawingContext(
 }
 
 /**
- * Creates an {@link ImagePreparer} that re-encodes images that are larger
- * than `maxWidth` × `maxHeight` or `maxBytes`, keeping their aspect ratio,
- * EXIF orientation and (where the browser supports it) Display P3 color.
- * JPEG photos stay JPEG and other images become WebP where the browser can
- * encode it (else PNG), unless `type` asks for another format. Re-encoding drops EXIF metadata such as location.
- * Images within every limit, GIFs (which could be animated), and anything
- * the browser can't decode are uploaded unchanged.
- *
- * For uploads as close to lossless as possible, lift the dimension limits
- * and set only `maxBytes` to the server's limit:
- * `createImageResizer({maxBytes, maxHeight: Infinity, maxWidth: Infinity})`.
+ * Creates an {@link ImagePreparer} that uploads every image that fits
+ * `maxBytes` (by default the extension's `maxFileSize`) byte for byte, and
+ * re-encodes larger ones until they fit: first at full size (or at most
+ * `maxWidth` × `maxHeight`), then smaller step by step. Re-encoding keeps
+ * the aspect ratio, EXIF orientation and (where the browser supports it)
+ * Display P3 color, and drops EXIF metadata such as location. JPEG photos
+ * stay JPEG and other images become WebP where the browser can encode it
+ * (else PNG), unless `type` asks for another format. GIFs (which could be
+ * animated) and images the browser can't decode are never re-encoded.
  */
 export function createImageResizer(
   options: ImageResizerOptions = {},
 ): ImagePreparer {
   const {
-    maxBytes = Infinity,
-    maxHeight = 2048,
-    maxWidth = 2048,
+    maxHeight = Infinity,
+    maxWidth = Infinity,
     quality = 0.92,
     type: preferredType,
   } = options;
-  return async image => {
+  return async (image, {maxFileSize}) => {
+    const maxBytes = options.maxBytes ?? maxFileSize;
     if (
+      image.size <= maxBytes ||
       image.type === 'image/gif' ||
       typeof createImageBitmap !== 'function' ||
       typeof OffscreenCanvas !== 'function'
@@ -76,14 +75,6 @@ export function createImageResizer(
       return image;
     }
     try {
-      let scale = Math.min(
-        1,
-        maxWidth / bitmap.width,
-        maxHeight / bitmap.height,
-      );
-      if (scale === 1 && image.size <= maxBytes) {
-        return image;
-      }
       const defaultType =
         image.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp';
       const encode = async (canvas: OffscreenCanvas): Promise<Blob> => {
@@ -99,6 +90,11 @@ export function createImageResizer(
         }
         return canvas.convertToBlob({quality, type: defaultType});
       };
+      let scale = Math.min(
+        1,
+        maxWidth / bitmap.width,
+        maxHeight / bitmap.height,
+      );
       let result: Blob = image;
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         const width = Math.max(1, Math.round(bitmap.width * scale));

@@ -4,6 +4,8 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createImageResizer} from '../../index.ts';
 
 const signal = new AbortController().signal;
+// The extension's maxFileSize, passed to every preparer
+const limit = {maxFileSize: 20_000, signal};
 
 /**
  * Stubs createImageBitmap and OffscreenCanvas for a bitmap of this size.
@@ -48,35 +50,76 @@ function stubCanvas(
   return {close, contexts, drawn, encoded};
 }
 
-const photo = new Blob(['x'.repeat(100)], {type: 'image/jpeg'});
+// Over the 20,000-byte limit
+const photo = new Blob([new Uint8Array(50_000)], {type: 'image/jpeg'});
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('createImageResizer', () => {
-  it('downscales large images to fit, keeping the aspect ratio', async () => {
-    const {close, contexts, drawn, encoded} = stubCanvas(8064, 6048);
-    const resized = await createImageResizer()(photo, {signal});
-    expect(drawn).toEqual([[0, 0, 2048, 1536]]);
+  it('uploads an image that fits byte for byte, whatever its size', async () => {
+    const {drawn} = stubCanvas(8064, 6048);
+    const small = new Blob([new Uint8Array(10_000)], {type: 'image/jpeg'});
+    const resizer = createImageResizer({maxHeight: 1600, maxWidth: 1600});
+    expect(await resizer(small, limit)).toBe(small);
+    expect(drawn).toEqual([]);
+  });
+
+  it("uses the extension's maxFileSize unless maxBytes is set", async () => {
+    stubCanvas(4000, 3000);
+    expect(
+      await createImageResizer()(photo, {...limit, maxFileSize: 60_000}),
+    ).toBe(photo);
+    const resized = await createImageResizer({maxBytes: 40_000})(photo, {
+      ...limit,
+      maxFileSize: 60_000,
+    });
+    expect(resized).not.toBe(photo);
+  });
+
+  it('re-encodes a larger image at full size first', async () => {
+    // 4000 × 3000 encodes to 12,000 bytes
+    const {close, contexts, drawn, encoded} = stubCanvas(4000, 3000);
+    const result = await createImageResizer()(photo, limit);
+    expect(drawn).toEqual([[0, 0, 4000, 3000]]);
     expect(encoded).toEqual([{quality: 0.92, type: 'image/jpeg'}]);
     expect(contexts).toEqual([{colorSpace: 'display-p3'}]);
-    expect(resized.type).toBe('image/jpeg');
+    expect(result.size).toBe(12_000);
     expect(close).toHaveBeenCalled();
+  });
+
+  it('then shrinks it step by step until it fits', async () => {
+    const {drawn} = stubCanvas(4000, 3000, 100);
+    const result = await createImageResizer()(photo, limit);
+    expect(result.size).toBeLessThanOrEqual(20_000);
+    expect(drawn.length).toBeGreaterThan(1);
+    expect(drawn[0]).toEqual([0, 0, 4000, 3000]);
+    // Each step keeps the aspect ratio
+    for (const [, , width, height] of drawn) {
+      expect(width / height).toBeCloseTo(4 / 3, 2);
+    }
+  });
+
+  it('caps the dimensions of a re-encoded image', async () => {
+    const {drawn} = stubCanvas(8064, 6048);
+    await createImageResizer({maxHeight: 2048, maxWidth: 2048})(photo, limit);
+    expect(drawn).toEqual([[0, 0, 2048, 1536]]);
   });
 
   it('encodes images other than JPEG as WebP', async () => {
     const {encoded} = stubCanvas(4000, 1000);
-    const png = new Blob(['png'], {type: 'image/png'});
-    await createImageResizer({maxWidth: 1000, quality: 0.5})(png, {signal});
+    const png = new Blob([new Uint8Array(50_000)], {type: 'image/png'});
+    await createImageResizer({quality: 0.5})(png, limit);
     expect(encoded).toEqual([{quality: 0.5, type: 'image/webp'}]);
   });
 
   it('encodes to the requested type when the browser can', async () => {
     const {encoded} = stubCanvas(4000, 3000);
-    const resized = await createImageResizer({type: 'image/webp'})(photo, {
-      signal,
-    });
+    const resized = await createImageResizer({type: 'image/webp'})(
+      photo,
+      limit,
+    );
     expect(resized.type).toBe('image/webp');
     expect(encoded).toEqual([{quality: 0.92, type: 'image/webp'}]);
   });
@@ -88,9 +131,10 @@ describe('createImageResizer', () => {
       1000,
       type => type !== 'image/webp',
     );
-    const resized = await createImageResizer({type: 'image/webp'})(photo, {
-      signal,
-    });
+    const resized = await createImageResizer({type: 'image/webp'})(
+      photo,
+      limit,
+    );
     expect(resized.type).toBe('image/jpeg');
     expect(encoded).toEqual([
       {quality: 0.92, type: 'image/webp'},
@@ -98,59 +142,10 @@ describe('createImageResizer', () => {
     ]);
   });
 
-  it('returns images that already fit unchanged', async () => {
-    const {drawn} = stubCanvas(1024, 768);
-    expect(await createImageResizer()(photo, {signal})).toBe(photo);
-    expect(drawn).toEqual([]);
-  });
-
-  it('re-encodes an image over maxBytes at full size first', async () => {
-    // 4000 × 3000 encodes to 12,000 bytes
-    const {drawn} = stubCanvas(4000, 3000);
-    const big = new Blob([new Uint8Array(50_000)], {type: 'image/jpeg'});
-    const resizer = createImageResizer({
-      maxBytes: 20_000,
-      maxHeight: Infinity,
-      maxWidth: Infinity,
-    });
-    const result = await resizer(big, {signal});
-    expect(drawn).toEqual([[0, 0, 4000, 3000]]);
-    expect(result.size).toBe(12_000);
-  });
-
-  it('then shrinks it step by step until it fits maxBytes', async () => {
-    const {drawn} = stubCanvas(4000, 3000, 100);
-    const big = new Blob([new Uint8Array(500_000)], {type: 'image/jpeg'});
-    const resizer = createImageResizer({
-      maxBytes: 20_000,
-      maxHeight: Infinity,
-      maxWidth: Infinity,
-    });
-    const result = await resizer(big, {signal});
-    expect(result.size).toBeLessThanOrEqual(20_000);
-    expect(drawn.length).toBeGreaterThan(1);
-    expect(drawn[0]).toEqual([0, 0, 4000, 3000]);
-    // Each step keeps the aspect ratio
-    for (const [, , width, height] of drawn) {
-      expect(width / height).toBeCloseTo(4 / 3, 2);
-    }
-  });
-
-  it('leaves images within maxBytes and the dimensions alone', async () => {
-    const {drawn} = stubCanvas(4000, 3000);
-    const resizer = createImageResizer({
-      maxBytes: 1000,
-      maxHeight: Infinity,
-      maxWidth: Infinity,
-    });
-    expect(await resizer(photo, {signal})).toBe(photo);
-    expect(drawn).toEqual([]);
-  });
-
   it('returns GIFs unchanged, since they may be animated', async () => {
     const {drawn} = stubCanvas(4000, 4000);
-    const gif = new Blob(['gif'], {type: 'image/gif'});
-    expect(await createImageResizer()(gif, {signal})).toBe(gif);
+    const gif = new Blob([new Uint8Array(50_000)], {type: 'image/gif'});
+    expect(await createImageResizer()(gif, limit)).toBe(gif);
     expect(drawn).toEqual([]);
   });
 
@@ -162,6 +157,6 @@ describe('createImageResizer', () => {
         throw new Error('decode');
       }),
     );
-    expect(await createImageResizer()(photo, {signal})).toBe(photo);
+    expect(await createImageResizer()(photo, limit)).toBe(photo);
   });
 });
