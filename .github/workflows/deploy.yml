@@ -25,10 +25,13 @@ jobs:
       CI: true
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}
+      # A variable or a secret, whichever was set.
+      CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN || secrets.CLOUDFLARE_WORKERS_SUBDOMAIN }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: 24.x
-      - run: pnpm --filter @mochinori/website-worker exec void deploy --platform cloudflare
+      # The deploy script builds the Docusaurus site first: `void deploy` only
+      # runs `vite build`, which serves whatever is already in its build/.
+      - run: pnpm run deploy:website

@@ -19,12 +19,13 @@ In `packages/mochinori-website-worker/`:
   it at `mochinori.com` (a custom domain, so the Worker must deploy to the
   Cloudflare account that holds the `mochinori.com` zone) as well as on
   workers.dev. The account comes from `CLOUDFLARE_ACCOUNT_ID` or your Void
-  sign-in, not from the repo. It also tells
-  Void to build the Docusaurus site first
-  (`pnpm --filter @mochinori/website run build && vite build`) and to serve
-  Docusaurus's own `404.html` for unknown URLs.
+  sign-in, not from the repo. It also tells Void to serve Docusaurus's own
+  `404.html` for unknown URLs.
 - `vite.config.ts` adds `voidPlugin()` and uses
   `../mochinori-website/build` (the Docusaurus output) as the static assets.
+  `void deploy` only runs `vite build`, so the Docusaurus site has to be
+  built first. The `build` and `deploy` scripts do that, and `vite build`
+  stops with an error when there is no site build to serve.
 - `routes/` holds API routes. Each file exports Hono handlers per method,
   wrapped in `defineHandler`, and `[name]` is a path parameter.
   `routes/api/health.ts` serves `GET /api/health`, and
@@ -76,7 +77,8 @@ machine:
 pnpm run deploy:website
 ```
 
-The script runs `void deploy --platform cloudflare`, which creates the
+The script builds the Docusaurus site, then runs
+`void deploy --platform cloudflare`, which creates the
 `mochinori-website` Worker on the first deploy and updates it afterwards.
 Without `--platform`, Void offers to link an existing Worker, and that fails
 when the Worker doesn't exist yet. If an earlier run saved such a link,
@@ -87,9 +89,9 @@ The first local deploy signs you in to Cloudflare and saves the account in
 `packages/mochinori-website-worker/.void/project.json`. The workflow needs
 the `CLOUDFLARE_API_TOKEN` secret, from a token that can edit Workers
 Scripts and Workers R2 Storage. Set `CLOUDFLARE_ACCOUNT_ID` too when the
-token can reach more than one account, and the `CLOUDFLARE_WORKERS_SUBDOMAIN`
-variable to the account's workers.dev subdomain (the part before
-`.workers.dev`).
+token can reach more than one account, and `CLOUDFLARE_WORKERS_SUBDOMAIN`
+(a variable or a secret) to the account's workers.dev subdomain (the part
+before `.workers.dev`).
 
 ## Pull request previews
 
