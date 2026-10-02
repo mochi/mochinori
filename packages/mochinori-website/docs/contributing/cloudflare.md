@@ -60,8 +60,16 @@ deploy from your machine:
 pnpm run deploy:website
 ```
 
+The script runs `void deploy --platform cloudflare`, which creates the
+`mochinori-website` Worker on the first deploy and updates it afterwards.
+Without `--platform`, Void offers to link an existing Worker, and that fails
+when the Worker doesn't exist yet. If an earlier run saved such a link,
+delete `packages/mochinori-website-worker/.void/cloudflare-link.json` and
+deploy again.
+
 The first local deploy signs you in to Cloudflare and saves the account in
-`packages/mochinori-website-worker/.void/project.json`. The workflow needs the `CLOUDFLARE_API_TOKEN` secret.
+`packages/mochinori-website-worker/.void/project.json`. The workflow needs
+the `CLOUDFLARE_API_TOKEN` secret.
 Set `CLOUDFLARE_ACCOUNT_ID` too when the token can reach more than one
 account. Set the `CLOUDFLARE_WORKERS_SUBDOMAIN` variable if the Worker has no
 preview URL.

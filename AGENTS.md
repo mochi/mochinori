@@ -23,8 +23,8 @@ notice.
 - `pnpm run ci-check` - Everything CI checks except tests and builds
 - `pnpm run dev:website` - Build the site and run it with its API routes and
   Durable Objects in Vite/Miniflare (http://localhost:5173)
-- `pnpm run deploy:website` - `void deploy`. Never deploy unless a person
-  asked.
+- `pnpm run deploy:website` - `void deploy --platform cloudflare`. Never
+  deploy unless a person asked.
 
 ## Layout
 
