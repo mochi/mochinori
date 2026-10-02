@@ -1,0 +1,56 @@
+{
+  "name": "@mochinori/images",
+  "description": "A full-featured image node for Lexical editors.",
+  "keywords": [
+    "lexical",
+    "editor",
+    "rich-text",
+    "image",
+    "upload"
+  ],
+  "license": "MIT",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mochi/mochinori.git",
+    "directory": "packages/mochinori-images"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "mochinori-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "peerDependencies": {
+    "@lexical/extension": "^0.52.0",
+    "@lexical/react": "^0.52.0",
+    "lexical": "^0.52.0",
+    "react": ">=18.3.1",
+    "react-dom": ">=18.3.1"
+  },
+  "devDependencies": {
+    "@lexical/extension": "catalog:",
+    "@lexical/html": "catalog:",
+    "@lexical/react": "catalog:",
+    "@lexical/rich-text": "catalog:",
+    "lexical": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  }
+}

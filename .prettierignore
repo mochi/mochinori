@@ -1,0 +1,14 @@
+# NOTE: In general this should be kept in sync with the ignores in
+# eslint.config.mjs
+
+**/dist/**
+**/build/**
+**/node_modules
+**/.docusaurus
+**/.alchemy
+**/.wrangler
+**/*.md
+**/*.svg
+coverage
+pnpm-lock.yaml
+.prettierignore

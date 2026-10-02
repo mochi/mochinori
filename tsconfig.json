@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "module": "esnext",
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    // Relative imports name the file that is actually there (`./ImageNode.tsx`)
+    // so the packages build with plain `tsc` into ESM that Node can load:
+    // `rewriteRelativeImportExtensions` in each tsconfig.build.json turns them
+    // into `.js`.
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    // Workspace packages resolve to their TypeScript sources through the
+    // `mochinori-source` export condition, so nothing needs to be built to
+    // typecheck, test, or run the website in development. (Lexical's own
+    // packages export a `source` condition too; ours is namespaced so that
+    // Lexical always resolves to its published build.)
+    "customConditions": ["mochinori-source"],
+    "types": ["node"]
+  },
+  "include": ["packages/*/src/**/*", "scripts/**/*", "*.mts", "*.mjs", "*.ts"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "packages/mochinori-website/**"
+  ]
+}

@@ -1,0 +1,19 @@
+name: Setup node and pnpm
+description: Installs node and pnpm and the package.json dependencies, depends on actions/checkout
+inputs:
+  node-version:
+    required: true
+    description: 'Node version, e.g. 24.x'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: pnpm/action-setup@v6
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        cache: 'pnpm'
+        node-version: ${{ inputs.node-version }}
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

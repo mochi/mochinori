@@ -1,0 +1,45 @@
+.hero {
+  padding: 5rem 0 4rem;
+  text-align: center;
+  background: var(--mochinori-rice);
+  border-bottom: 1px solid var(--mochinori-mochi-shade);
+}
+
+[data-theme='dark'] .hero {
+  background: var(--ifm-background-surface-color);
+  border-bottom-color: transparent;
+}
+
+.mark {
+  width: 160px;
+  height: auto;
+}
+
+.title {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 3rem;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  margin: 0 auto 2rem;
+  max-width: 36rem;
+  font-size: 1.25rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.section {
+  padding: 4rem 0;
+}
+
+.sectionTitle {
+  margin-bottom: 2rem;
+  text-align: center;
+}
