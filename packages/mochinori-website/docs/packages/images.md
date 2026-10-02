@@ -125,7 +125,6 @@ const AppExtension = defineExtension({
 
 | Config | Default | Description |
 | --- | --- | --- |
-| `disabled` | `false` | When `true`, files are not inserted or uploaded. |
 | `upload` | `null` | `(file, {signal, onProgress}) => Promise<{src}>`. Without one, images keep their local URL. |
 | `mirror` | `null` | `(src, {signal}) => Promise<{src}>`. Copies images from other origins (such as `<img>` in HTML pasted from another site) to your storage. Without one, they keep their remote URL. |
 | `isHostedSrc` | `null` | Whether an `http(s)` image is already yours, so it is not mirrored. Images the extension uploaded or mirrored always are. When `null`, images from the editor's own origin are. |

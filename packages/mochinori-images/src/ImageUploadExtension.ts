@@ -95,11 +95,6 @@ export type ImageRejectionReason = 'type' | 'size';
 
 export interface ImageUploadConfig {
   /**
-   * When true, files are not inserted or uploaded. Images already uploading
-   * finish.
-   */
-  disabled: boolean;
-  /**
    * Uploads image data. Without one, images keep their local `blob:` or
    * `data:` URL.
    */
@@ -367,7 +362,7 @@ export const ImageUploadExtension = defineExtension({
 
     const openFileDialog = () => {
       const doc = editor.getRootElement()?.ownerDocument;
-      if (!doc || configSignals.disabled.peek()) {
+      if (!doc || !editor.isEditable()) {
         return;
       }
       const input = doc.createElement('input');
@@ -422,7 +417,6 @@ export const ImageUploadExtension = defineExtension({
   },
   config: safeCast<ImageUploadConfig>({
     accept: DEFAULT_ACCEPT,
-    disabled: false,
     inlineDataUrlMaxLength: 1024,
     isHostedSrc: null,
     maxFileSize: 10 * 1024 * 1024,
@@ -435,7 +429,7 @@ export const ImageUploadExtension = defineExtension({
   name: '@mochinori/images/ImageUpload',
   register: (editor, _config, state) => {
     const output = state.getOutput();
-    const {disabled, inlineDataUrlMaxLength, uploads} = output;
+    const {inlineDataUrlMaxLength, uploads} = output;
     const needsUpload = (src: string) =>
       src.startsWith('blob:') ||
       (src.startsWith('data:') && src.length > inlineDataUrlMaxLength.peek()) ||
@@ -451,7 +445,9 @@ export const ImageUploadExtension = defineExtension({
       if (upload?.status === 'uploaded') {
         return upload.src;
       }
-      if (!upload && !disabled.peek() && needsUpload(src)) {
+      // A read-only editor (a viewer of a shared document) leaves uploads
+      // and mirroring to the editors that can change the document
+      if (!upload && editor.isEditable() && needsUpload(src)) {
         // Uploads start after the update that created the image commits
         queueMicrotask(() => output.startUpload(src));
       }
@@ -491,27 +487,17 @@ export const ImageUploadExtension = defineExtension({
         },
         {skipInitialization: true},
       ),
-      effect(() => {
-        if (disabled.value) {
-          return;
-        }
-        return editor.registerCommand(
-          INSERT_IMAGE_FILES_COMMAND,
-          fileList => output.$insertFiles(fileList),
-          COMMAND_PRIORITY_EDITOR,
-        );
-      }),
-      effect(() => {
-        if (disabled.value) {
-          return;
-        }
-        return editor.registerCommand(
-          DRAG_DROP_PASTE,
-          fileList =>
-            editor.dispatchCommand(INSERT_IMAGE_FILES_COMMAND, fileList),
-          COMMAND_PRIORITY_LOW,
-        );
-      }),
+      editor.registerCommand(
+        INSERT_IMAGE_FILES_COMMAND,
+        fileList => output.$insertFiles(fileList),
+        COMMAND_PRIORITY_EDITOR,
+      ),
+      editor.registerCommand(
+        DRAG_DROP_PASTE,
+        fileList =>
+          editor.dispatchCommand(INSERT_IMAGE_FILES_COMMAND, fileList),
+        COMMAND_PRIORITY_LOW,
+      ),
     ];
     return () => {
       for (const fn of cleanup.reverse()) {
