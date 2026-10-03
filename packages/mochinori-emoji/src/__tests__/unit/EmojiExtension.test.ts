@@ -15,6 +15,8 @@ import {
   configExtension,
   defineExtension,
   IS_BOLD,
+  KEY_ARROW_LEFT_COMMAND,
+  KEY_ARROW_RIGHT_COMMAND,
   type LexicalEditor,
   TextNode,
 } from 'lexical';
@@ -76,10 +78,10 @@ function describeText(editor: LexicalEditor) {
       .getChildren()
       .flatMap(p => ($isElementNode(p) ? p.getChildren() : []))
       .map(node =>
-        $isEmojiNode(node)
-          ? {emoji: node.getTextContent(), shortcode: node.getShortcode()}
-          : $isCustomEmojiNode(node)
-            ? {custom: node.getName()}
+        $isCustomEmojiNode(node)
+          ? {custom: node.getName()}
+          : $isEmojiNode(node)
+            ? {emoji: node.getTextContent(), shortcode: node.getShortcode()}
             : node.getTextContent(),
       ),
   );
@@ -311,6 +313,51 @@ describe('EmojiExtension', () => {
       ]);
     });
 
+    it('is one caret position for the arrow keys', () => {
+      using editor = buildEditor({customEmoji: [PARROT]});
+      setText(editor, 'ab :partyparrot: cd');
+      const caret = () =>
+        editor.read(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return null;
+          }
+          const point = (p: typeof selection.anchor) =>
+            `${p.getNode().getTextContent()}@${p.offset}`;
+          return `${point(selection.anchor)}-${point(selection.focus)}`;
+        });
+      const press = (
+        command: typeof KEY_ARROW_LEFT_COMMAND,
+        key: string,
+        shiftKey = false,
+      ) =>
+        editor.update(
+          () => {
+            editor.dispatchCommand(
+              command,
+              new KeyboardEvent('keydown', {key, shiftKey}),
+            );
+          },
+          {discrete: true},
+        );
+      editor.update(
+        () => {
+          $getTextNodes()[0].select(3, 3);
+        },
+        {discrete: true},
+      );
+      expect(caret()).toBe('ab @3-ab @3');
+      press(KEY_ARROW_RIGHT_COMMAND, 'ArrowRight');
+      expect(caret()).toBe(' cd@0- cd@0');
+      press(KEY_ARROW_LEFT_COMMAND, 'ArrowLeft');
+      expect(caret()).toBe('ab @3-ab @3');
+      press(KEY_ARROW_RIGHT_COMMAND, 'ArrowRight', true);
+      expect(caret()).toBe('ab @3- cd@0');
+      expect(editor.read(() => $getSelection()?.getTextContent())).toBe(
+        ':partyparrot:',
+      );
+    });
+
     it('can be changed while the editor runs', () => {
       using editor = buildEditor();
       const root = document.createElement('div');
@@ -324,36 +371,59 @@ describe('EmojiExtension', () => {
       expect(describeText(editor)).toEqual(['so ', {custom: 'partyparrot'}]);
       const span = root.querySelector<HTMLElement>('[data-custom-emoji]');
       expect(span?.className).toBe('mochinori-custom-emoji');
-      expect(span?.contentEditable).toBe('false');
-      expect(span?.querySelector('img')?.getAttribute('src')).toBe(PARROT.src);
+      // The text is still there, at zero size, over the image
+      const text = span?.firstElementChild as HTMLElement;
+      expect(text.textContent).toBe(':partyparrot:');
+      expect(text.style.fontSize).toBe('0px');
+      expect(span?.getAttribute('role')).toBe('img');
+      expect(span?.getAttribute('aria-label')).toBe(':partyparrot:');
+      expect(span?.style.backgroundImage).toContain(PARROT.src);
 
       // A new image for the name
       getCustomEmoji(editor).value = [{...PARROT, src: 'new.gif'}];
-      expect(span?.querySelector('img')?.getAttribute('src')).toBe('new.gif');
+      expect(span?.style.backgroundImage).toContain('new.gif');
 
       // Removed: the node stays, and shows its name
       getCustomEmoji(editor).value = [];
-      expect(span?.querySelector('img')).toBe(null);
+      expect(span?.style.backgroundImage).toBe('');
+      expect(span?.hasAttribute('role')).toBe(false);
+      expect(text.style.fontSize).toBe('');
       expect(span?.textContent).toBe(':partyparrot:');
       expect(describeText(editor)).toEqual(['so ', {custom: 'partyparrot'}]);
       editor.setRootElement(null);
     });
 
-    it('serializes only the name', () => {
+    it('serializes as text with its name', () => {
       using editor = buildEditor({customEmoji: [PARROT]});
       setText(editor, ':partyparrot:');
-      const json = editor.getEditorState().toJSON();
-      const paragraph = json.root.children[0] as unknown as {
+      const json = editor.getEditorState().toJSON(true);
+      const paragraph = json.root.children![0] as unknown as {
         children: Record<string, unknown>[];
       };
       expect(paragraph.children[0]).toEqual({
+        mode: 'token',
         name: 'partyparrot',
-        type: 'mn:custom-emoji',
-        version: 1,
+        text: ':partyparrot:',
+        type: 'mn:emoji',
       });
       using other = buildEditor();
       other.setEditorState(other.parseEditorState(json));
       expect(describeText(other)).toEqual([{custom: 'partyparrot'}]);
+    });
+
+    it('keeps text formatting', () => {
+      using editor = buildEditor({customEmoji: [PARROT]});
+      setText(editor, ':partyparrot:', IS_BOLD);
+      const root = document.createElement('div');
+      editor.setRootElement(root);
+      editor.read(() => {
+        const [node] = $getTextNodes();
+        expect($isCustomEmojiNode(node) && node.hasFormat('bold')).toBe(true);
+      });
+      const el = root.querySelector<HTMLElement>('[data-custom-emoji]');
+      expect(el?.tagName).toBe('STRONG');
+      expect(el?.style.backgroundImage).toContain(PARROT.src);
+      editor.setRootElement(null);
     });
 
     it('round trips through HTML by name', () => {

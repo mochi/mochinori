@@ -1,16 +1,14 @@
 import type {CustomEmojiMap} from './customEmoji.ts';
 import type {EmojiEntryParser} from './emojiEntries.ts';
+import type {TextNode} from 'lexical';
 
-import {$getSelection, $isRangeSelection, type TextNode} from 'lexical';
-
-import {$createCustomEmojiNode} from './CustomEmojiNode.ts';
-import {$createEmojiNode} from './EmojiNode.ts';
+import {$createCustomEmojiNode, $createEmojiNode} from './EmojiNode.ts';
 import {createEmojiMatcher} from './findEmoji.ts';
 
 /**
  * Returns a {@link TextNode} transform that replaces the shortcodes that
  * `parseEntry` produces with an {@link EmojiNode}, and the `:name:` of each
- * of the `customEmoji` with a {@link CustomEmojiNode}
+ * of the `customEmoji` with a custom emoji
  */
 export function createTextNodeTransform(
   parseEntry: EmojiEntryParser,
@@ -39,25 +37,13 @@ export function createTextNodeTransform(
     if (targetNode === undefined) {
       return;
     }
-    if (custom) {
-      const selection = $getSelection();
-      const hadCaret =
-        $isRangeSelection(selection) &&
-        selection.isCollapsed() &&
-        selection.anchor.key === targetNode.getKey();
-      const customNode = targetNode.replace(
-        $createCustomEmojiNode(custom.name),
-      );
-      if (hadCaret) {
-        // A decorator can't hold the caret, so keep typing after it
-        customNode.selectNext(0, 0);
-      }
-    } else {
-      targetNode.replace(
-        $createEmojiNode(emoji, shortcode)
-          .setFormat(targetNode.getFormat())
-          .setStyle(targetNode.getStyle()),
-      );
-    }
+    targetNode.replace(
+      (custom
+        ? $createCustomEmojiNode(custom.name)
+        : $createEmojiNode(emoji, shortcode)
+      )
+        .setFormat(targetNode.getFormat())
+        .setStyle(targetNode.getStyle()),
+    );
   };
 }

@@ -21,12 +21,12 @@ import {
 
 import {loadTextNodeTransform} from '#loadTextNodeTransform';
 
-import {CustomEmojiNode, renderCustomEmoji} from './CustomEmojiNode.ts';
 import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
 } from './emojiEntries.ts';
-import {EmojiNode} from './EmojiNode.ts';
+import {EmojiNode, renderCustomEmoji} from './EmojiNode.ts';
+import {registerEmojiNavigation} from './registerEmojiNavigation.ts';
 import {unifiedIDFromText} from './unifiedID.ts';
 
 /**
@@ -126,7 +126,7 @@ function resolve<T extends (...args: never[]) => unknown>(
  * added.
  *
  * Custom emoji (`customEmoji`) extend the set beyond Unicode with images,
- * typed as `:name:` and stored as a {@link CustomEmojiNode}.
+ * typed as `:name:` and stored as an {@link EmojiNode} with that name.
  */
 export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
@@ -147,7 +147,7 @@ export const EmojiExtension = defineExtension({
   }),
   dependencies: [WatchEditableExtension],
   name: '@mochinori/emoji/Emoji',
-  nodes: () => [EmojiNode, CustomEmojiNode],
+  nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {
     const editable = state.getDependency(WatchEditableExtension).output;
     const {customEmojiByName} = state.getOutput();
@@ -170,6 +170,11 @@ export const EmojiExtension = defineExtension({
           runNodeCleanup(nodeKey);
           const dom =
             mutation === 'destroyed' ? null : editor.getElementByKey(nodeKey);
+          if (dom?.dataset.customEmoji !== undefined) {
+            customEmojiKeys.add(nodeKey);
+            continue;
+          }
+          customEmojiKeys.delete(nodeKey);
           if (!dom?.textContent) {
             continue;
           }
@@ -208,22 +213,14 @@ export const EmojiExtension = defineExtension({
         }
         nodeCleanup.clear();
       },
-      editor.registerMutationListener(CustomEmojiNode, nodes => {
-        for (const [nodeKey, mutation] of nodes) {
-          if (mutation === 'destroyed') {
-            customEmojiKeys.delete(nodeKey);
-          } else {
-            customEmojiKeys.add(nodeKey);
-          }
-        }
-      }),
+      registerEmojiNavigation(editor),
       // Show the current image of each custom emoji when the set changes
       effect(() => {
         const byName = customEmojiByName.value;
         for (const nodeKey of customEmojiKeys) {
           const dom = editor.getElementByKey(nodeKey);
-          const name = dom?.getAttribute('data-custom-emoji');
-          if (dom && name !== null && name !== undefined) {
+          const name = dom?.dataset.customEmoji;
+          if (dom && name !== undefined) {
             renderCustomEmoji(dom, name, byName.get(name));
           }
         }

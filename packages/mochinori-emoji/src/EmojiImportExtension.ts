@@ -6,9 +6,8 @@ import {
 } from '@lexical/html';
 import {$isTextNode, configExtension, defineExtension} from 'lexical';
 
-import {$createCustomEmojiNode} from './CustomEmojiNode.ts';
 import {EmojiExtension} from './EmojiExtension.ts';
-import {$createEmojiNode} from './EmojiNode.ts';
+import {$createCustomEmojiNode, $createEmojiNode} from './EmojiNode.ts';
 
 /**
  * Imports the element with a `data-emoji-shortcode` that {@link EmojiNode}
@@ -42,14 +41,23 @@ export const EmojiImportRule = defineImportRule({
 });
 
 /**
- * Imports the `<span data-custom-emoji>` that {@link CustomEmojiNode}
- * exports as a {@link CustomEmojiNode}, by name, so it shows the editor's
- * own image for that name
+ * Imports the element with a `data-custom-emoji` that a custom emoji exports
+ * as a custom emoji, by name, so it shows the editor's own image for that
+ * name. It keeps the text format and style that the rest of the import gives
+ * its text.
  */
 export const CustomEmojiImportRule = defineImportRule({
   $import: (_ctx, el, $next) => {
     const name = el.getAttribute('data-custom-emoji');
-    return name ? [$createCustomEmojiNode(name)] : $next();
+    const out = $next();
+    if (!name) {
+      return out;
+    }
+    const text = out.find($isTextNode);
+    const node = $createCustomEmojiNode(name);
+    return [
+      text ? node.setFormat(text.getFormat()).setStyle(text.getStyle()) : node,
+    ];
   },
   match: sel.any().attr('data-custom-emoji', true),
   name: '@mochinori/emoji/custom-emoji',

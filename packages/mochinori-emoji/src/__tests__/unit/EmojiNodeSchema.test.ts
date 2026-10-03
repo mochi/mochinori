@@ -16,7 +16,7 @@ import {
 } from 'lexical';
 import {describe, expect, it} from 'vitest';
 
-import {CustomEmojiNode, EmojiExtension, EmojiNode} from '../../index.ts';
+import {EmojiExtension, EmojiNode} from '../../index.ts';
 
 /**
  * Sets generated properties on a node, then checks that they survive a
@@ -71,14 +71,6 @@ describe('the serialization schemas', () => {
       fc.property(nodeArbitrary(EmojiNode), props => {
         // An empty TextNode is removed between the two updates
         expectSchemaRoundTrips(EmojiNode, {...props, text: '🙂'});
-      }),
-    );
-  });
-
-  it('CustomEmojiNode', () => {
-    fc.assert(
-      fc.property(nodeArbitrary(CustomEmojiNode), props => {
-        expectSchemaRoundTrips(CustomEmojiNode, props);
       }),
     );
   });

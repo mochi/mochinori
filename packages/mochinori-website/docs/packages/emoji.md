@@ -57,8 +57,8 @@ Then style the emoji, for example:
 
 ## Custom emoji
 
-A custom emoji is a name and an image. Typing `:name:` turns into a
-`CustomEmojiNode`:
+A custom emoji is a name and an image. Typing `:name:` turns into an
+`EmojiNode` with that name:
 
 ```ts
 configExtension(EmojiExtension, {
@@ -77,19 +77,24 @@ const {customEmoji} = getExtensionDependencyFromEditor(
 customEmoji.value = [...customEmoji.value, {name: 'mochi', src: mochiUrl}];
 ```
 
-- A `CustomEmojiNode` stores only the name, so documents show whatever
+- The node stores only the name, so documents show whatever
   image the app has for that name now. A name the app no longer has shows
   as `:name:` text, the way chat apps show a deleted emoji.
 - Shortcodes typed before their emoji existed turn into emoji once it is
   added.
 - A standard emoji with the same short name wins over a custom one.
 - In plain text (copy, `getTextContent()`) a custom emoji is `:name:`.
+- In the editor, the `:name:` text stays in the document at zero size, and
+  the image is the element's background, so the arrow keys, clicks and
+  Shift-selection treat the emoji as one character and screen readers read
+  its name (`role="img"`).
 - It exports to HTML as `<span data-custom-emoji="name"><img …></span>`,
   so other apps show the image, and `EmojiImportExtension` imports it back
   by name.
 
-Style it with `customEmojiClass`, for example
-`.mochinori-custom-emoji img { width: 1.25em; height: 1.25em; vertical-align: -0.25em; }`.
+The image's size and position are inline styles (1.25em square). The
+`customEmojiClass` class is there for anything else, such as a hover
+effect.
 
 ## How it loads
 
@@ -127,38 +132,32 @@ editor runs, and `customEmojiByName`, the same as a `Map`.
 
 Adds import rules to `DOMImportExtension` that turn the
 `data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`,
-and the `data-custom-emoji` element back into a `CustomEmojiNode`.
+and the `data-custom-emoji` element back into a custom emoji.
 HTML paste uses it when the editor also has `ClipboardDOMImportExtension`.
 
 ### `EmojiNode`
 
-A `TextNode` (type `mn:emoji`) whose text is the emoji, in token mode so it is
-deleted as a unit. Its `$config` schema adds one property to the ones it
-inherits from `TextNode` (`text`, `format`, `style`, `mode`, `detail`):
+A `TextNode` (type `mn:emoji`) in token mode, so it is deleted as a unit and
+the caret moves across it in one step. It is either a Unicode emoji, whose
+text is the emoji, or a custom emoji, whose text is `:name:`. Its `$config`
+schema adds two properties to the ones it inherits from `TextNode` (`text`,
+`format`, `style`, `mode`, `detail`):
 
 | Property | Schema | Default |
 | --- | --- | --- |
 | `shortcode` | `optional(stringValue())` | absent |
+| `name` | `optional(stringValue())` | absent |
 
-`shortcode` is what was typed, such as `:)`. Create one with
-`$createEmojiNode(emoji, shortcode)`, which also sets `mode` to `token`, and
-test for one with `$isEmojiNode(node)`.
+`shortcode` is what was typed for a Unicode emoji, such as `:)`. `name` is
+set only on a custom emoji; its image is not stored, it comes from
+`customEmoji` when the node renders.
 
-### `CustomEmojiNode`
+Create one with `$createEmojiNode(emoji, shortcode)` or
+`$createCustomEmojiNode(name)`, both of which set `mode` to `token`. Test for
+one with `$isEmojiNode(node)` (either kind) or `$isCustomEmojiNode(node)`.
 
-An inline `DecoratorNode` (type `mn:custom-emoji`), rendered without React. Its
-schema has one property:
-
-| Property | Schema | Default |
-| --- | --- | --- |
-| `name` | `stringValue()` | `''` |
-
-The image is not stored; it comes from `customEmoji` when the node renders.
-Create one with `$createCustomEmojiNode(name)` and test for one with
-`$isCustomEmojiNode(node)`.
-
-Neither node has serialization code of its own, as with Lexical's own nodes:
-JSON is read and written from the schemas, and the compact form
+The node has no serialization code of its own, as with Lexical's own nodes:
+JSON is read and written from the schema, and the compact form
 (`editorState.toJSON(true)`) leaves out every property at its default.
 
 ### `findEmoji(text)` and `createEmojiMatcher(parser, customEmoji?)`

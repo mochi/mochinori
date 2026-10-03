@@ -1,11 +1,5 @@
 export {type CustomEmoji, type CustomEmojiMap} from './customEmoji.ts';
 export {
-  $createCustomEmojiNode,
-  $isCustomEmojiNode,
-  CustomEmojiNode,
-  type SerializedCustomEmojiNode,
-} from './CustomEmojiNode.ts';
-export {
   type EmojiEntry,
   type EmojiEntryParser,
   type MatchEmojiPair,
@@ -26,7 +20,9 @@ export {
   EmojiImportRules,
 } from './EmojiImportExtension.ts';
 export {
+  $createCustomEmojiNode,
   $createEmojiNode,
+  $isCustomEmojiNode,
   $isEmojiNode,
   EmojiNode,
   type SerializedEmojiNode,

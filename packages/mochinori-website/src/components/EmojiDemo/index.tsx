@@ -53,7 +53,6 @@ const EmojiDemoExtension = defineExtension({
     HistoryExtension,
     configExtension(EmojiExtension, {
       customEmoji: CUSTOM_EMOJI,
-      customEmojiClass: styles.customEmoji,
       emojiClass: styles.emoji,
       emojiLoadedClass: styles.emojiLoaded,
     }),
