@@ -8,10 +8,13 @@ export {
   parseEmojiTexts,
 } from './emojiEntries.ts';
 export {
+  $createEmojiNodeFromSuggestion,
   EMOJI_DATASOURCE_VERSION,
   EmojiExtension,
   type EmojiExtensionConfig,
   type EmojiExtensionOutput,
+  INSERT_EMOJI_COMMAND,
+  type SearchEmoji,
 } from './EmojiExtension.ts';
 export {
   CustomEmojiImportRule,
@@ -28,10 +31,22 @@ export {
   type SerializedEmojiNode,
 } from './EmojiNode.ts';
 export {
+  type EmojiTypeaheadConfig,
+  EmojiTypeaheadExtension,
+  type EmojiTypeaheadOutput,
+  type EmojiTypeaheadState,
+  type EmojiTypeaheadSuggestion,
+} from './EmojiTypeaheadExtension.ts';
+export {
   createEmojiMatcher,
   type EmojiMatch,
   type EmojiMatcher,
   findEmoji,
 } from './findEmoji.ts';
 export {type CustomEmojiLookup} from './registerCustomEmojiLookup.ts';
+export {
+  type EmojiSuggestion,
+  searchEmoji,
+  type SearchEmojiOptions,
+} from './searchEmoji.ts';
 export {textFromUnifiedID, unifiedIDFromText} from './unifiedID.ts';

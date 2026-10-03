@@ -118,6 +118,83 @@ The image's size and position are inline styles (1.25em square). The
 `customEmojiClass` class is there for anything else, such as a hover
 effect.
 
+## Suggestions and pickers
+
+Like Slack and Discord, the editor can suggest emoji while `:app` is typed,
+and an emoji picker can insert them. Both are headless: the package keeps
+the state and handles the keys, and the app draws the UI with React,
+Svelte, plain DOM or anything else.
+
+Add `EmojiTypeaheadExtension` for suggestions. Its `state` output signal is
+null while the menu is closed; otherwise it has the `query`, the
+`suggestions` (each with a `name`, the Unicode `emoji` or the `custom`
+emoji, and the `src` of its image), the `selectedIndex`, and `getRect()`
+for where the `:query` is on screen. It opens once two characters follow
+the `:` (`minLength`), shows up to eight (`limit`), and handles Up, Down,
+Enter, Tab and Escape itself. Picking replaces the `:query` with the emoji
+and a space. With plain DOM:
+
+```ts
+const {state, select, setSelectedIndex} = getExtensionDependencyFromEditor(
+  editor,
+  EmojiTypeaheadExtension,
+).output;
+const menu = document.createElement('ul');
+menu.role = 'listbox';
+document.body.append(menu);
+effect(() => {
+  const current = state.value;
+  menu.hidden = current === null;
+  const rect = current?.getRect();
+  if (!current || !rect) {
+    return;
+  }
+  Object.assign(menu.style, {
+    left: `${rect.left}px`,
+    position: 'fixed',
+    top: `${rect.bottom + 4}px`,
+  });
+  menu.replaceChildren(
+    ...current.suggestions.map((suggestion, index) => {
+      const item = document.createElement('li');
+      item.role = 'option';
+      item.ariaSelected = String(index === current.selectedIndex);
+      const img = document.createElement('img');
+      img.src = suggestion.src;
+      img.alt = '';
+      item.append(img, `:${suggestion.name}:`);
+      // Keep the caret in the editor
+      item.onmousedown = event => event.preventDefault();
+      item.onclick = () => select(index);
+      item.onmouseenter = () => setSelectedIndex(index);
+      return item;
+    }),
+  );
+});
+```
+
+The [demo](/demos#emoji) renders the same state with React, and marks the
+editor as a combobox for screen readers (`aria-expanded`,
+`aria-activedescendant`).
+
+For a picker, `EmojiExtension`'s `searchEmoji` output signal holds a search
+over the standard and custom emoji once the database has loaded (null
+before), and `getEmojiSrc(suggestion)` gives each one's image. Insert the
+emoji the person picks with `INSERT_EMOJI_COMMAND`:
+
+```ts
+const {searchEmoji, getEmojiSrc} = getExtensionDependencyFromEditor(
+  editor,
+  EmojiExtension,
+).output;
+const results = searchEmoji.value?.('pizza', {limit: 40}) ?? [];
+editor.dispatchCommand(INSERT_EMOJI_COMMAND, results[0]);
+```
+
+Search ranks a name that is the query first, then names that start with
+it, then names with a word that starts with it (`green_apple`), then names
+that contain it (`pineapple`); custom emoji come first within each.
+
 ## How it loads
 
 The emoji database (about 36 KB) is loaded with a dynamic `import()`, so
@@ -155,7 +232,9 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
 
 Its output has `customEmoji`, a signal of the custom emoji to set while the
-editor runs, and `customEmojiByName`, the same as a `Map`.
+editor runs, `customEmojiByName`, the same as a `Map`, `searchEmoji`, a
+signal of a search over both (null until the database loads), and
+`getEmojiSrc(suggestion)`, the image of a search result.
 
 ### `EmojiImportExtension`
 
@@ -188,6 +267,30 @@ one with `$isEmojiNode(node)` (either kind) or `$isCustomEmojiNode(node)`.
 The node has no serialization code of its own, as with Lexical's own nodes:
 JSON is read and written from the schema, and the compact form
 (`editorState.toJSON(true)`) leaves out every property at its default.
+
+### `EmojiTypeaheadExtension`
+
+Suggests emoji while `:name` is typed; see
+[Suggestions and pickers](#suggestions-and-pickers).
+
+| Config | Default | Description |
+| --- | --- | --- |
+| `minLength` | `2` | How much of a name follows the `:` before it opens |
+| `limit` | `8` | The most suggestions to show |
+
+Its output has `state` (a signal of the menu, or null), `select(index?)`,
+`setSelectedIndex(index)` and `dismiss()`.
+
+### `searchEmoji(query, options?)`
+
+Searches the standard emoji, and `customEmoji` if given, by short name, up
+to `limit` (default 8). It needs the emoji database, so importing it puts
+the database in your bundle; in an editor, use `EmojiExtension`'s
+`searchEmoji` signal, which loads it lazily.
+
+### `INSERT_EMOJI_COMMAND`
+
+Inserts an emoji found by a search at the selection.
 
 ### `findEmoji(text)` and `createEmojiMatcher(parser, customEmoji?)`
 

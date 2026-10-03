@@ -57,3 +57,89 @@
   color: var(--ifm-font-color-base);
   font: inherit;
 }
+
+.form {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* The typeahead menu, placed under the typed :query */
+.menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 14rem;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.6rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: var(--ifm-global-shadow-md);
+}
+
+.menuItem {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.menuItem[aria-selected='true'] {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.suggestionImage {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+}
+
+.picker {
+  position: relative;
+}
+
+.pickerPanel {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  width: 18rem;
+  padding: 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.6rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: var(--ifm-global-shadow-md);
+}
+
+.pickerPanel .input {
+  width: 100%;
+}
+
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.125rem;
+  max-height: 12rem;
+  margin-top: 0.5rem;
+  overflow-y: auto;
+}
+
+.pickerItem {
+  padding: 0.25rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pickerItem:hover,
+.pickerItem:focus-visible {
+  background: var(--ifm-color-emphasis-200);
+}

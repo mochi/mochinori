@@ -1,4 +1,5 @@
 import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
+import type {EmojiSuggestion, SearchEmojiOptions} from './searchEmoji.ts';
 
 import {
   computed,
@@ -9,7 +10,11 @@ import {
   WatchEditableExtension,
 } from '@lexical/extension';
 import {
+  $getSelection,
+  $isRangeSelection,
   addClassNamesToElement,
+  COMMAND_PRIORITY_EDITOR,
+  createCommand,
   defineExtension,
   type LexicalEditor,
   mergeRegister,
@@ -19,13 +24,18 @@ import {
   TextNode,
 } from 'lexical';
 
-import {loadTextNodeTransform} from '#loadTextNodeTransform';
+import {loadEmojiDatabase} from '#loadEmojiDatabase';
 
 import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
 } from './emojiEntries.ts';
-import {EmojiNode, renderCustomEmoji} from './EmojiNode.ts';
+import {
+  $createCustomEmojiNode,
+  $createEmojiNode,
+  EmojiNode,
+  renderCustomEmoji,
+} from './EmojiNode.ts';
 import {
   type CustomEmojiLookup,
   registerCustomEmojiLookup,
@@ -129,18 +139,59 @@ export interface EmojiExtensionOutput {
   customEmoji: Signal<readonly CustomEmoji[]>;
   /** {@link EmojiExtensionOutput.customEmoji} by name */
   customEmojiByName: ReadonlySignal<CustomEmojiMap>;
+  /**
+   * Searches the standard and custom emoji by short name (see
+   * {@link searchEmoji}), for an emoji picker. It is null until the emoji
+   * database has loaded, and changes when the custom emoji do, so a picker
+   * that reads it searches again then.
+   */
+  searchEmoji: ReadonlySignal<SearchEmoji | null>;
+  /** The URL of the image of an emoji that {@link searchEmoji} found */
+  getEmojiSrc: (suggestion: EmojiSuggestion) => string;
 }
 
-function resolve<T extends (...args: never[]) => unknown>(
+/** {@link searchEmoji} over the standard and custom emoji of an editor */
+export type SearchEmoji = (
+  query: string,
+  options?: Omit<SearchEmojiOptions, 'customEmoji'>,
+) => EmojiSuggestion[];
+
+type EmojiDatabase = typeof import('./emojiDatabase.ts');
+
+// The database once register() has loaded it, for each editor's output
+const loadedDatabases = new WeakMap<
+  EmojiExtensionOutput,
+  Signal<EmojiDatabase | null>
+>();
+
+function resolve<T>(
   arg: Promise<T> | T,
   fn: (v: T) => void,
   onError: (error: unknown) => void,
 ) {
-  if (typeof arg === 'function') {
-    fn(arg);
-  } else {
+  if (arg instanceof Promise) {
     arg.then(fn, onError);
+  } else {
+    fn(arg);
   }
+}
+
+/**
+ * Inserts an emoji, such as one picked from an emoji picker, at the
+ * selection: a {@link EmojiSuggestion} from
+ * {@link EmojiExtensionOutput.searchEmoji}.
+ */
+export const INSERT_EMOJI_COMMAND = createCommand<EmojiSuggestion>(
+  'INSERT_EMOJI_COMMAND',
+);
+
+/** A new node for an emoji that {@link searchEmoji} found */
+export function $createEmojiNodeFromSuggestion(
+  suggestion: EmojiSuggestion,
+): EmojiNode {
+  return suggestion.custom
+    ? $createCustomEmojiNode(suggestion.custom.name)
+    : $createEmojiNode(suggestion.emoji ?? '', `:${suggestion.name}:`);
 }
 
 /**
@@ -167,7 +218,25 @@ export const EmojiExtension = defineExtension({
     const customEmojiByName = computed<CustomEmojiMap>(
       () => new Map(customEmoji.value.map(emoji => [emoji.name, emoji])),
     );
-    return {customEmoji, customEmojiByName};
+    const database = signal<EmojiDatabase | null>(null);
+    const output: EmojiExtensionOutput = {
+      customEmoji,
+      customEmojiByName,
+      getEmojiSrc: suggestion =>
+        suggestion.custom
+          ? suggestion.custom.src
+          : `${config.emojiBaseUrl}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
+      searchEmoji: computed(() => {
+        const db = database.value;
+        const custom = customEmoji.value;
+        return db
+          ? (query, options) =>
+              db.searchEmoji(query, {...options, customEmoji: custom})
+          : null;
+      }),
+    };
+    loadedDatabases.set(output, database);
+    return output;
   },
   config: safeCast<EmojiExtensionConfig>({
     customEmoji: [],
@@ -186,7 +255,8 @@ export const EmojiExtension = defineExtension({
   nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {
     const editable = state.getDependency(WatchEditableExtension).output;
-    const {customEmoji, customEmojiByName} = state.getOutput();
+    const output = state.getOutput();
+    const {customEmoji, customEmojiByName} = output;
     const customEmojiKeys = new Set<NodeKey>();
     const nodeCleanup = new Map<NodeKey, () => void>();
     const runNodeCleanup = (nodeKey: NodeKey) => {
@@ -250,6 +320,21 @@ export const EmojiExtension = defineExtension({
         nodeCleanup.clear();
       },
       registerEmojiNavigation(editor),
+      editor.registerCommand(
+        INSERT_EMOJI_COMMAND,
+        suggestion => {
+          const selection = $getSelection();
+          if (!editor.isEditable() || !$isRangeSelection(selection)) {
+            return false;
+          }
+          const node = $createEmojiNodeFromSuggestion(suggestion)
+            .setFormat(selection.format)
+            .setStyle(selection.style);
+          selection.insertNodes([node]);
+          return true;
+        },
+        COMMAND_PRIORITY_EDITOR,
+      ),
       // Show the current image of each custom emoji when the set changes
       effect(() => {
         const byName = customEmojiByName.value;
@@ -303,10 +388,15 @@ export const EmojiExtension = defineExtension({
       );
     }
     resolve(
-      loadTextNodeTransform(),
-      createTextNodeTransform => {
+      loadEmojiDatabase(),
+      db => {
         if (abortSignal.aborted) {
           return;
+        }
+        const {createTextNodeTransform} = db;
+        const loaded = loadedDatabases.get(output);
+        if (loaded) {
+          loaded.value = db;
         }
         abortSignal.addEventListener(
           'abort',

@@ -27,14 +27,14 @@
     }
   },
   "imports": {
-    "#loadTextNodeTransform": {
+    "#loadEmojiDatabase": {
       "mochinori-source": {
-        "browser": "./src/loadTextNodeTransform.ts",
-        "default": "./src/loadTextNodeTransform.node.ts"
+        "browser": "./src/loadEmojiDatabase.ts",
+        "default": "./src/loadEmojiDatabase.node.ts"
       },
-      "types": "./dist/loadTextNodeTransform.d.ts",
-      "browser": "./dist/loadTextNodeTransform.js",
-      "default": "./dist/loadTextNodeTransform.node.js"
+      "types": "./dist/loadEmojiDatabase.d.ts",
+      "browser": "./dist/loadEmojiDatabase.js",
+      "default": "./dist/loadEmojiDatabase.node.js"
     }
   },
   "files": [

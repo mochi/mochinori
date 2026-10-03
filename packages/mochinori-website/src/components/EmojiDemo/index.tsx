@@ -3,6 +3,7 @@ import type {FormEvent, JSX} from 'react';
 
 import {ClipboardDOMImportExtension} from '@lexical/clipboard';
 import {HistoryExtension} from '@lexical/history';
+import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
 import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
@@ -12,15 +13,20 @@ import {
   type CustomEmoji,
   EmojiExtension,
   EmojiImportExtension,
+  type EmojiSuggestion,
+  EmojiTypeaheadExtension,
+  INSERT_EMOJI_COMMAND,
 } from '@mochinori/emoji';
 import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $getSelection,
   configExtension,
   defineExtension,
 } from 'lexical';
-import {useState} from 'react';
+import {useEffect, useId, useMemo, useReducer, useState} from 'react';
+import {createPortal} from 'react-dom';
 
 import styles from './styles.module.css';
 
@@ -62,6 +68,11 @@ const EmojiDemoExtension = defineExtension({
           'Custom emoji go beyond Unicode: :mochinori: and :mochi: ',
         ),
       ),
+      $createParagraphNode().append(
+        $createTextNode(
+          'Type :app to pick from suggestions, or use the emoji button. ',
+        ),
+      ),
     );
   },
   dependencies: [
@@ -72,6 +83,8 @@ const EmojiDemoExtension = defineExtension({
       emojiLoadedClass: styles.emojiLoaded,
       lookupCustomEmoji,
     }),
+    // Suggestions as `:app` is typed, rendered by EmojiTypeaheadMenu
+    EmojiTypeaheadExtension,
     // Pasted emoji keep their shortcode
     ClipboardDOMImportExtension,
     RichTextImportExtension,
@@ -111,7 +124,7 @@ function CustomEmojiForm(): JSX.Element {
     }
   };
   return (
-    <form className={styles.toolbar} onSubmit={onSubmit}>
+    <form className={styles.form} onSubmit={onSubmit}>
       <span className={styles.label}>
         Custom emoji:{' '}
         {emoji.map(e => (
@@ -144,17 +157,178 @@ function CustomEmojiForm(): JSX.Element {
   );
 }
 
+// An image for each suggestion, so emoji look the same as in the editor
+function SuggestionImage({src}: {src: string}): JSX.Element {
+  return <img alt="" className={styles.suggestionImage} src={src} />;
+}
+
+// Renders the headless typeahead's state as a menu under the `:query`
+function EmojiTypeaheadMenu({id}: {id: string}): JSX.Element | null {
+  const [editor] = useLexicalComposerContext();
+  const {select, setSelectedIndex} = useExtensionDependency(
+    EmojiTypeaheadExtension,
+  ).output;
+  const state = useExtensionSignalValue(EmojiTypeaheadExtension, 'state');
+  // Moves the menu with the text when the page scrolls
+  const [, reposition] = useReducer((n: number) => n + 1, 0);
+  const view = editor.getRootElement()?.ownerDocument.defaultView;
+  useEffect(() => {
+    if (!state || !view) {
+      return;
+    }
+    view.addEventListener('scroll', reposition, true);
+    view.addEventListener('resize', reposition);
+    return () => {
+      view.removeEventListener('scroll', reposition, true);
+      view.removeEventListener('resize', reposition);
+    };
+  }, [state, view]);
+  const rect = state?.getRect();
+  const body = editor.getRootElement()?.ownerDocument.body;
+  if (!state || !rect || !body) {
+    return null;
+  }
+  return createPortal(
+    <ul
+      aria-label="Emoji suggestions"
+      className={styles.menu}
+      id={id}
+      role="listbox"
+      style={{left: rect.left, top: rect.bottom + 4}}>
+      {state.suggestions.map((suggestion, index) => (
+        <li
+          aria-selected={index === state.selectedIndex}
+          className={styles.menuItem}
+          id={`${id}-${index}`}
+          key={suggestion.custom ? `:${suggestion.name}` : suggestion.emoji}
+          // Keep the focus (and the caret) in the editor
+          onMouseDown={event => event.preventDefault()}
+          onClick={() => select(index)}
+          onMouseEnter={() => setSelectedIndex(index)}
+          role="option">
+          <SuggestionImage src={suggestion.src} />:{suggestion.name}:
+        </li>
+      ))}
+    </ul>,
+    body,
+  );
+}
+
+// Shown in the picker before anything is searched
+const POPULAR = ['+1', 'joy', 'heart', 'tada', 'fire', 'eyes', 'pray', 'wave'];
+
+// An emoji picker built on the extension's searchEmoji
+function EmojiPicker(): JSX.Element {
+  const [editor] = useLexicalComposerContext();
+  const {getEmojiSrc} = useExtensionDependency(EmojiExtension).output;
+  const search = useExtensionSignalValue(EmojiExtension, 'searchEmoji');
+  const customEmoji = useExtensionSignalValue(EmojiExtension, 'customEmoji');
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const results = useMemo((): EmojiSuggestion[] => {
+    if (!search) {
+      return [];
+    }
+    if (query) {
+      return search(query, {limit: 40});
+    }
+    return [
+      ...customEmoji.map(custom => ({custom, name: custom.name})),
+      ...POPULAR.flatMap(name => search(name, {limit: 1})),
+    ];
+  }, [customEmoji, query, search]);
+  const pick = (suggestion: EmojiSuggestion) => {
+    editor.update(() => {
+      if (!$getSelection()) {
+        $getRoot().selectEnd();
+      }
+    });
+    editor.dispatchCommand(INSERT_EMOJI_COMMAND, suggestion);
+    setOpen(false);
+    setQuery('');
+    editor.focus();
+  };
+  return (
+    <div className={styles.picker}>
+      <button
+        aria-expanded={open}
+        className="button button--sm button--secondary"
+        onClick={() => setOpen(!open)}
+        type="button">
+        Emoji
+      </button>
+      {open && (
+        <div className={styles.pickerPanel}>
+          <input
+            aria-label="Search emoji"
+            autoFocus={true}
+            className={styles.input}
+            onChange={event => setQuery(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                setOpen(false);
+                editor.focus();
+              } else if (event.key === 'Enter' && results[0]) {
+                pick(results[0]);
+              }
+            }}
+            placeholder="Search emoji"
+            value={query}
+          />
+          <div className={styles.pickerGrid}>
+            {results.map(suggestion => (
+              <button
+                aria-label={`:${suggestion.name}:`}
+                className={styles.pickerItem}
+                key={
+                  suggestion.custom ? `:${suggestion.name}` : suggestion.emoji
+                }
+                onClick={() => pick(suggestion)}
+                title={`:${suggestion.name}:`}
+                type="button">
+                <SuggestionImage src={getEmojiSrc(suggestion)} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The editor, announced as a combobox while the typeahead is open
+function EmojiEditor(): JSX.Element {
+  const id = useId();
+  const state = useExtensionSignalValue(EmojiTypeaheadExtension, 'state');
+  return (
+    <>
+      <ContentEditable
+        aria-activedescendant={
+          state ? `${id}-${state.selectedIndex}` : undefined
+        }
+        aria-autocomplete="list"
+        aria-controls={state ? id : undefined}
+        aria-expanded={state !== null}
+        aria-label="Emoji demo editor"
+        className={styles.editor}
+        role="combobox"
+      />
+      <EmojiTypeaheadMenu id={id} />
+    </>
+  );
+}
+
 export default function EmojiDemo(): JSX.Element {
   return (
     <div className={styles.demo}>
       <LexicalExtensionComposer
         contentEditable={null}
         extension={EmojiDemoExtension}>
-        <CustomEmojiForm />
-        <ContentEditable
-          aria-label="Emoji demo editor"
-          className={styles.editor}
-        />
+        <div className={styles.toolbar}>
+          <EmojiPicker />
+          <CustomEmojiForm />
+        </div>
+        <EmojiEditor />
       </LexicalExtensionComposer>
     </div>
   );

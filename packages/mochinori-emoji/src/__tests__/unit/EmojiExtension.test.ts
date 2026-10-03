@@ -33,7 +33,7 @@ import {
   EmojiImportExtension,
   parseEmojiShortNames,
 } from '../../index.ts';
-import {loadTextNodeTransform} from '../../loadTextNodeTransform.ts';
+import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
 
 function buildEditor(config: Partial<EmojiExtensionConfig> = {}) {
   return buildEditorFromExtensions(
@@ -95,7 +95,7 @@ function getCustomEmoji(editor: LexicalEditor) {
 describe('EmojiExtension', () => {
   // In a browser the emoji database loads as a separate chunk
   beforeAll(async () => {
-    await loadTextNodeTransform();
+    await loadEmojiDatabase();
   });
 
   it('replaces shortcodes and texts with emoji', () => {
