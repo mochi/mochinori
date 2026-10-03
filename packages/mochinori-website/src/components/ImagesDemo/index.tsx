@@ -58,17 +58,25 @@ const ImagesDemoExtension = defineExtension({
         ),
       ),
       $createParagraphNode().append(
-        $createTextNode(
-          'Click an image to select it and add a caption, or drag it to move it: ',
-        ),
+        $createTextNode('An inline image sits in the text, like this '),
         $createImageNode({
           altText: 'The mochinori mark',
-          caption: 'The mochinori mark',
-          height: 96,
+          height: 24,
           src: '/img/logo/mochinori-mark.svg',
-          width: 96,
+          width: 24,
         }),
+        $createTextNode(
+          '. Select an image to edit its alt text, give it a caption, or make it a block; drag it to move it.',
+        ),
       ),
+      $createImageNode({
+        altText: 'The mochinori mark',
+        caption: 'A figure is a block with an optional caption',
+        height: 96,
+        src: '/img/logo/mochinori-mark.svg',
+        width: 96,
+      }),
+      $createParagraphNode(),
     );
   },
   dependencies: [

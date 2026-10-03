@@ -94,9 +94,13 @@ package. So:
 
 `ImageNode` in `@mochinori/images` is the reference.
 
+Node types start with `mn:` (`mn:image`), so they never collide with a
+third-party or in-house node of the same name, and an app can move from
+its own `image` node to ours one document at a time.
+
 1. Extend a base node class (`TextNode`, `ElementNode`, `DecoratorNode`).
    The constructor must work with no arguments.
-2. Implement `$config()` with `this.config('type', {extends: BaseNode, json:
+2. Implement `$config()` with `this.config('mn:type', {extends: BaseNode, json:
    schema})`, where `schema` is built with `nodeSchema<YourNode>()({...})`
    as a module-scope `const` above the class (like `imageNodeSchema`).
    Written inline in `$config()`, it makes TypeScript skip checking the

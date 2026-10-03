@@ -9,9 +9,10 @@ Lexical playground and packaged as a library.
 
 :::info Status
 
-This package is an early scaffold. `ImageNode`, `ImagesExtension`,
-`INSERT_IMAGE_COMMAND`, captions, selection, drag and drop, and uploads
-(`ImageUploadExtension`) work today. Resizing is next.
+This package is an early scaffold. `ImageNode` (inline and block images),
+`ImagesExtension`, `INSERT_IMAGE_COMMAND`, captions, alt text editing,
+selection, drag and drop, and uploads (`ImageUploadExtension`) work today.
+Resizing is next.
 
 :::
 
@@ -31,6 +32,23 @@ editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
 });
 ```
 
+## Inline and block images
+
+An image is either inline, part of a paragraph's text like a word, or a
+block: a figure of its own between paragraphs, which can have a caption.
+CKEditor 5 and WordPress work the same way. Inline images never have
+captions, because a `<figure>`
+can't go inside a paragraph.
+
+The `block` property says which an image is. Changing it moves the image:
+a block image dropped or inserted into a paragraph splits the paragraph,
+and an inline image left between paragraphs gets one of its own. Giving an
+image a caption makes it a block, and making it inline removes its caption.
+
+`INSERT_IMAGE_COMMAND`, paste and the file dialog insert a block image when
+the caret is on an empty line, and an inline image in text, unless the
+payload sets `block`.
+
 ## API
 
 ### `ImagesExtension`
@@ -44,22 +62,30 @@ interactive:
   the text. Images can't be dropped into a caption. Dragged out of the
   editor, an image carries its URL and an `<img>` as HTML, so another
   editor with `ImagesImportExtension` imports it.
-- **Captions.** A selected image shows an *Add caption* button. In a caption,
-  Enter does nothing, Escape selects the image, the arrow keys leave the
-  caption at either end, and Backspace in an empty caption removes it.
+- **Image tools.** A selected image shows *Alt text*, *Add caption* (or
+  *Remove caption*) and *Make block* (or *Make inline*) buttons. *Alt text*
+  opens a field: Enter saves, Escape cancels, and leaving the field saves.
+  The buttons dispatch `SET_IMAGE_CAPTION_COMMAND` and
+  `SET_IMAGE_BLOCK_COMMAND`, which apps can dispatch too.
+- **Captions.** In a caption, Enter does nothing, Escape selects the image,
+  the arrow keys leave the caption at either end, and Backspace in an empty
+  caption removes it.
 
 None of these work while the editor is read-only. The extension has no
 configuration.
 
 ### `ImageNode`
 
-An inline `DecoratorNode` rendered as an `<img>`, of type `image`. Its JSON
-follows this [schema](https://lexical.dev/docs/serialization/), which
-`$config` derives `exportJSON` and `importJSON` from:
+A `DecoratorNode` of type `mn:image` (mochinori's node types all start
+with `mn:`, so they don't collide with an app's own `image` node while it
+moves to this one). Its JSON follows this
+[schema](https://lexical.dev/docs/serialization/), which `$config` derives
+`exportJSON` and `importJSON` from:
 
 ```ts
 const imageNodeSchema = nodeSchema<ImageNode>()({
   altText: withField(stringValue(), {field: '__altText'}),
+  block: withField(booleanValue(), {field: '__block'}),
   height: withField(optional(numberValue()), {field: '__height'}),
   src: withField(stringValue(), {field: '__src'}),
   width: withField(optional(numberValue()), {field: '__width'}),
@@ -70,9 +96,10 @@ const imageNodeSchema = nodeSchema<ImageNode>()({
 | --- | --- | --- |
 | `src` | string | `''` |
 | `altText` | string | `''` |
+| `block` | boolean | `false` (inline) |
 | `width` | number, CSS pixels | absent (natural size) |
 | `height` | number, CSS pixels | absent (natural size) |
-| `$slots.caption` | a paragraph node | absent (no caption) |
+| `$slots.caption` | a paragraph node | absent (no caption); block images only |
 
 The [compact JSON](https://lexical.dev/docs/serialization/#compact-json)
 form (`editorState.toJSON(true)`) leaves out every property at its default.
@@ -84,19 +111,21 @@ editor's own formatting, links and history, is part of the document's text
 content, and serializes and syncs (with `@lexical/yjs`) with everything
 else. `getCaption()` returns it, `hasCaption()` tests for it, and
 `setCaption()` adds an empty one, `setCaption(paragraph)` replaces it and
-`setCaption(null)` removes it. Named slots are `@experimental` in Lexical.
+`setCaption(null)` removes it; adding one makes the image a block.
+`isBlock()` and `setBlock(block)` read and change the kind. Named slots are
+`@experimental` in Lexical.
 
-The node exports to `<img>` HTML, or to `<figure>` with a `<figcaption>`
-when it has a caption. HTML import goes through `ImagesImportExtension`
-only.
+An inline image exports to `<img>` HTML, and a block image to `<figure>`,
+with a `<figcaption>` when it has a caption. HTML import goes through
+`ImagesImportExtension` only.
 
 ### `ImagesImportExtension`
 
 Adds `ImageImportRule` and `ImageFigureImportRule` to `@lexical/html`'s
 `DOMImportExtension`, so pasted HTML and `$generateNodesFromDOM` turn `<img>`
-into `ImageNode`, and a `<figure>` with one `<img>` into an `ImageNode` with
-the text of its `<figcaption>` as the caption (pasted from Wikipedia, for
-example). It depends on
+into an inline `ImageNode`, and a `<figure>` with one `<img>` into a block
+`ImageNode` with the text of its `<figcaption>`, if any, as the caption
+(pasted from Wikipedia, for example). It depends on
 `ImagesExtension` and `CoreImportExtension`. Images whose `src` is a local
 `file:///` path are skipped, because they can never load in the editor.
 `ImageNode` has no legacy `importDOM`, so add this extension wherever images
@@ -192,32 +221,41 @@ larger ones to 1600 × 1600 WebP at quality 0.8, to keep its storage small.
 ### `$createImageNode(payload)` and `$isImageNode(node)`
 
 Create an `ImageNode` from an `ImagePayload` (`src`, and optional `altText`,
-`width`, `height` and `caption`), and test whether a node is one. Any
-`caption` string, even `''`, gives the image a caption.
+`width`, `height`, `block` and `caption`), and test whether a node is one.
+Any `caption` string, even `''`, gives the image a caption and makes it a
+block.
 
 ### Styling
 
-`ImageComponent` renders this markup inside the node's element (the
-`image` theme class):
+The node's element has the `image` theme class: a `<div>` for a block
+image and a `<span>` for an inline one. Inside it, `ImageComponent` renders
+this markup for a block image with a caption:
 
 ```html
-<span class="mochinori-image-frame" data-selected>
+<figure class="mochinori-image-frame" data-selected>
   <span class="mochinori-image-media">
     <img class="mochinori-image focused" />
-    <!-- progress bar, upload error and the caption button -->
+    <!-- progress bar, upload error, and the image tools while selected -->
   </span>
-  <span class="mochinori-image-caption">
+  <figcaption class="mochinori-image-caption">
     <span class="mochinori-image-caption-slot"><!-- the caption --></span>
     <span class="mochinori-image-caption-placeholder">Write a caption…</span>
-  </span>
-</span>
+  </figcaption>
+</figure>
 ```
 
-`mochinori-image-media` is the box the progress bar, error and
-`mochinori-image-caption-toggle` button are positioned in. The demo's
+The `<figcaption>` names the figure for screen readers. An inline image
+renders `<span class="mochinori-image-frame">` instead of a `<figure>`,
+since it is just an image in the text. Reset the browser's default `figure`
+margin on `mochinori-image-frame`.
+
+`mochinori-image-media` is the box the progress bar, error, the
+`mochinori-image-tools` buttons and the `mochinori-image-alt-editor` form
+are positioned in. The demo's
 stylesheet keeps a caption no wider than its image with `width: 0;
 min-width: 100%` on `mochinori-image-caption`.
 
 ## Roadmap
 
 - Resizing with handles, keeping the aspect ratio
+- Suggested alt text from a vision model, for the demo

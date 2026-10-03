@@ -25,7 +25,7 @@ import {
 } from 'lexical';
 
 import {$createImageNode, $isImageNode, ImageNode} from './ImageNode.tsx';
-import {ImagesExtension} from './ImagesExtension.ts';
+import {$isBlockImagePlace, ImagesExtension} from './ImagesExtension.ts';
 
 /** Options passed to an {@link ImageUploader} */
 export interface ImageUploadOptions {
@@ -345,6 +345,8 @@ export const ImageUploadExtension = defineExtension({
     const $insertFiles = (fileList: readonly File[]): boolean => {
       const {accept, maxFileSize, onReject, prepareUpload} = configSignals;
       const nodes = [];
+      // On a line of their own, images are blocks; in text, inline
+      const block = $isBlockImagePlace();
       for (const file of fileList) {
         if (!accept.peek().includes(file.type)) {
           onReject.peek()?.(file, 'type');
@@ -353,7 +355,7 @@ export const ImageUploadExtension = defineExtension({
         } else {
           const localSrc = URL.createObjectURL(file);
           files.set(localSrc, file);
-          nodes.push($createImageNode({src: localSrc}));
+          nodes.push($createImageNode({block, src: localSrc}));
         }
       }
       if (nodes.length > 0) {

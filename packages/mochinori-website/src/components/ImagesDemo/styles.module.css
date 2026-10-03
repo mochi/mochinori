@@ -66,9 +66,15 @@
   color: var(--ifm-color-emphasis-700);
 }
 
+/* A figure is a block of its own between paragraphs */
+div.image {
+  margin: 0 0 var(--ifm-paragraph-margin-bottom);
+}
+
 /* A column: the image, then its caption, no wider than the image */
 .image :global(.mochinori-image-frame) {
   display: inline-flex;
+  margin: 0;
   flex-direction: column;
   max-width: 100%;
 }
@@ -102,17 +108,43 @@
   pointer-events: none;
 }
 
-.image :global(.mochinori-image-caption-toggle) {
+.image :global(.mochinori-image-tools),
+.image :global(.mochinori-image-alt-editor) {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.1rem 0.5rem;
-  border: 0;
+  z-index: 1;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
   border-radius: 0.4rem;
-  background: rgb(0 0 0 / 60%);
+  background: rgb(0 0 0 / 75%);
   color: #fff;
   font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.image :global(.mochinori-image-tools) button,
+.image :global(.mochinori-image-alt-editor) button {
+  padding: 0.1rem 0.5rem;
+  border: 0;
+  border-radius: 0.3rem;
+  background: rgb(255 255 255 / 15%);
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+}
+
+.image :global(.mochinori-image-alt-editor) {
+  align-items: center;
+}
+
+.image :global(.mochinori-image-alt-editor) input {
+  width: 16rem;
+  padding: 0.1rem 0.3rem;
+  border: 0;
+  border-radius: 0.3rem;
+  font: inherit;
 }
 
 /* The local preview is shown dimmed until the upload finishes */

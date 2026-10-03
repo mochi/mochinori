@@ -13,7 +13,7 @@ import {
   type LexicalNode,
 } from 'lexical';
 
-import {$createImageNode} from './ImageNode.tsx';
+import {$createImageNode, type ImagePayload} from './ImageNode.tsx';
 import {ImagesExtension} from './ImagesExtension.ts';
 
 function parseDimension(value: string | null): number | undefined {
@@ -21,18 +21,18 @@ function parseDimension(value: string | null): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
-function $imageFromElement(el: Element) {
+function $imageFromElement(el: Element): ImagePayload | null {
   const src = el.getAttribute('src');
   // A local file path from a pasted document can never load in the editor
   if (!src || src.startsWith('file:///')) {
     return null;
   }
-  return $createImageNode({
+  return {
     altText: el.getAttribute('alt') || '',
     height: parseDimension(el.getAttribute('height')),
     src,
     width: parseDimension(el.getAttribute('width')),
-  });
+  };
 }
 
 /** The inline content of `nodes`: a caption is one line of text */
@@ -50,28 +50,29 @@ function $flattenInline(nodes: LexicalNode[], output: LexicalNode[] = []) {
   return output;
 }
 
-/** Imports `<img>` as an {@link ImageNode} */
+/** Imports `<img>` as an inline {@link ImageNode} */
 export const ImageImportRule = defineImportRule({
   $import: (_ctx, el, $next) => {
     const image = $imageFromElement(el);
-    return image ? [image] : $next();
+    return image ? [$createImageNode(image)] : $next();
   },
   match: sel.tag('img'),
   name: '@mochinori/images/img',
 });
 
 /**
- * Imports a `<figure>` holding one `<img>` as an {@link ImageNode}, with the
- * text of its `<figcaption>` as the caption. Other figures are left to the
- * rules after this one.
+ * Imports a `<figure>` holding one `<img>` as a block {@link ImageNode},
+ * with the text of its `<figcaption>`, if any, as the caption. Other figures
+ * are left to the rules after this one.
  */
 export const ImageFigureImportRule = defineImportRule({
   $import: (ctx, el, $next) => {
     const imgs = el.querySelectorAll('img');
-    const image = imgs.length === 1 ? $imageFromElement(imgs[0]) : null;
-    if (image === null) {
+    const payload = imgs.length === 1 ? $imageFromElement(imgs[0]) : null;
+    if (payload === null) {
       return $next();
     }
+    const image = $createImageNode({...payload, block: true});
     const figcaption = el.querySelector('figcaption');
     if (figcaption !== null) {
       const caption = $createParagraphNode();

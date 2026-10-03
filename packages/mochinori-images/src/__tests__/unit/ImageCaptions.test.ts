@@ -12,6 +12,7 @@ import {
   $insertNodes,
   $isElementNode,
   $isNodeSelection,
+  $isParagraphNode,
   $isRangeSelection,
   $isTextNode,
   CLICK_COMMAND,
@@ -29,6 +30,9 @@ import {
   $isImageNode,
   type ImageNode,
   ImagesImportExtension,
+  INSERT_IMAGE_COMMAND,
+  SET_IMAGE_BLOCK_COMMAND,
+  SET_IMAGE_CAPTION_COMMAND,
 } from '../../index.ts';
 
 function buildEditor() {
@@ -55,23 +59,57 @@ function update(editor: LexicalEditor, fn: () => void) {
   editor.update(fn, {discrete: true});
 }
 
+/** Block images in the root and inline images in paragraphs, in order */
 function $images(): ImageNode[] {
   return $getRoot()
     .getChildren()
     .flatMap(child =>
-      $isElementNode(child) ? child.getChildren().filter($isImageNode) : [],
+      $isImageNode(child)
+        ? [child]
+        : $isElementNode(child)
+          ? child.getChildren().filter($isImageNode)
+          : [],
     );
 }
 
+/** The first block image */
+function $figure(): ImageNode {
+  const figure = $images().find(image => image.isBlock());
+  if (!figure) {
+    throw new Error('no block image');
+  }
+  return figure;
+}
+
+/** The root's children: each paragraph's content, or a block image */
+function $outline(): string[] {
+  return $getRoot()
+    .getChildren()
+    .map(child =>
+      $isParagraphNode(child)
+        ? `p:${child
+            .getChildren()
+            .map(node => ($isImageNode(node) ? '[img]' : node.getTextContent()))
+            .join('|')}`
+        : $isImageNode(child)
+          ? '[block]'
+          : child.getType(),
+    );
+}
+
+/** The paragraph at `index`, counting only paragraphs */
 function $paragraph(index: number): ElementNode {
-  const node = $getRoot().getChildAtIndex(index);
-  if (!$isElementNode(node)) {
+  const node = $getRoot().getChildren().filter($isParagraphNode)[index];
+  if (!node) {
     throw new Error(`no paragraph ${index}`);
   }
   return node;
 }
 
-/** Inserts a captioned image at the end of the first paragraph */
+/**
+ * Inserts an image at the end of the first paragraph: a block with a
+ * caption when `caption` is given, otherwise an inline image.
+ */
 function insertImage(editor: LexicalEditor, caption?: string) {
   update(editor, () => {
     $paragraph(0).selectEnd();
@@ -88,31 +126,29 @@ describe('image captions', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     editor.read(() => {
-      const [image] = $images();
+      const image = $figure();
       expect(image.hasCaption()).toBe(true);
       expect(image.getCaption()?.getTextContent()).toBe('A mochi');
       // Slot text is part of the document's text
-      expect($paragraph(0).getTextContent()).toContain('A mochi');
+      expect($getRoot().getTextContent()).toContain('A mochi');
     });
     const json = editor.getEditorState().toJSON();
-    const [paragraph] = json.root.children as unknown as [
-      {children: Record<string, unknown>[]},
-    ];
-    expect(paragraph.children[1]).toMatchObject({
+    expect(json.root.children[1]).toMatchObject({
       $slots: {
         caption: {
           children: [expect.objectContaining({text: 'A mochi'})],
           type: 'paragraph',
         },
       },
+      block: true,
       src: 'a.png',
-      type: 'image',
+      type: 'mn:image',
     });
 
     using other = buildEditor();
     other.setEditorState(other.parseEditorState(json));
     other.read(() => {
-      expect($images()[0].getCaption()?.getTextContent()).toBe('A mochi');
+      expect($figure().getCaption()?.getTextContent()).toBe('A mochi');
     });
   });
 
@@ -120,18 +156,19 @@ describe('image captions', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     update(editor, () => {
-      $images()[0].setAltText('mochi');
+      $figure().setAltText('mochi');
     });
     editor.read(() => {
-      expect($images()[0].getCaption()?.getTextContent()).toBe('A mochi');
+      expect($figure().getCaption()?.getTextContent()).toBe('A mochi');
     });
   });
 
   it('adds, keeps and removes a caption with setCaption', () => {
     using editor = buildEditor();
-    insertImage(editor);
+    insertImage(editor, '');
     update(editor, () => {
-      const [image] = $images();
+      const image = $figure();
+      image.setCaption(null);
       expect(image.hasCaption()).toBe(false);
       image.setCaption();
       const caption = image.getCaption();
@@ -147,8 +184,9 @@ describe('image captions', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     const html = editor.read(() => $generateHtmlFromNodes(editor));
+    // The figure is a block between the paragraphs, not inside one
     expect(html).toContain(
-      '<figure><img src="a.png" alt=""><figcaption><span style="white-space: pre-wrap;">A mochi</span></figcaption></figure>',
+      '</p><figure><img src="a.png" alt=""><figcaption><span style="white-space: pre-wrap;">A mochi</span></figcaption></figure><p',
     );
 
     using other = buildEditor();
@@ -165,7 +203,7 @@ describe('image captions', () => {
       $insertNodes($generateNodesFromDOM(dom));
     });
     other.read(() => {
-      const [image] = $images();
+      const image = $figure();
       expect(image.getSrc()).toBe('b.png');
       expect(image.getCaption()?.getTextContent()).toBe('From Wikipedia');
     });
@@ -175,7 +213,7 @@ describe('image captions', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     update(editor, () => {
-      const caption = $images()[0].getCaption() as ElementNode;
+      const caption = $figure().getCaption() as ElementNode;
       caption.selectEnd();
     });
     update(editor, () => {
@@ -186,7 +224,7 @@ describe('image captions', () => {
     editor.read(() => {
       const selection = $getSelection();
       expect($isNodeSelection(selection)).toBe(true);
-      expect(selection?.getNodes()[0].is($images()[0])).toBe(true);
+      expect(selection?.getNodes()[0].is($figure())).toBe(true);
     });
   });
 
@@ -194,11 +232,11 @@ describe('image captions', () => {
     using editor = buildEditor();
     insertImage(editor, 'x');
     update(editor, () => {
-      ($images()[0].getCaption() as ElementNode).selectEnd();
+      ($figure().getCaption() as ElementNode).selectEnd();
       // Rich text deletes the character; the caption stays
       editor.dispatchCommand(KEY_BACKSPACE_COMMAND, keyEvent('Backspace'));
-      expect($images()[0].hasCaption()).toBe(true);
-      ($images()[0].getCaption() as ElementNode).clear().selectEnd();
+      expect($figure().hasCaption()).toBe(true);
+      ($figure().getCaption() as ElementNode).clear().selectEnd();
     });
     update(editor, () => {
       expect(
@@ -206,7 +244,7 @@ describe('image captions', () => {
       ).toBe(true);
     });
     editor.read(() => {
-      expect($images()[0].hasCaption()).toBe(false);
+      expect($figure().hasCaption()).toBe(false);
       expect($isNodeSelection($getSelection())).toBe(true);
     });
   });
@@ -216,7 +254,7 @@ describe('image selection', () => {
   it('selects an image when it is clicked, but not its caption', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
-    const key = editor.read(() => $images()[0].getKey());
+    const key = editor.read(() => $figure().getKey());
     const dom = editor.getElementByKey(key)!;
     update(editor, () => {
       $paragraph(1).selectEnd();
@@ -245,12 +283,10 @@ describe('read-only editors', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     update(editor, () => {
-      ($images()[0].getCaption() as ElementNode).selectEnd();
+      ($figure().getCaption() as ElementNode).selectEnd();
     });
     editor.setEditable(false);
-    const dom = editor.read(() =>
-      editor.getElementByKey($images()[0].getKey()),
-    )!;
+    const dom = editor.read(() => editor.getElementByKey($figure().getKey()))!;
     update(editor, () => {
       const event = new MouseEvent('click');
       Object.defineProperty(event, 'target', {value: dom});
@@ -279,25 +315,31 @@ describe('moving images', () => {
     return editor.getElementByKey(key)!.firstChild as Text;
   }
 
-  it('moves an image, with its caption, to another paragraph', () => {
+  it('moves a block image, with its caption, splitting the paragraph', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
+    const point = {node: textDOM(editor, 1), offset: 1};
+    update(editor, () => {
+      expect($moveImageToPoint($figure(), point)).toBe(true);
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one ', 'p:t', '[block]', 'p:wo']);
+      const image = $figure();
+      expect(image.getCaption()?.getTextContent()).toBe('A mochi');
+      const selection = $getSelection();
+      expect(selection?.getNodes()[0].is(image)).toBe(true);
+    });
+  });
+
+  it('moves an inline image to another paragraph', () => {
+    using editor = buildEditor();
+    insertImage(editor);
     const point = {node: textDOM(editor, 1), offset: 1};
     update(editor, () => {
       expect($moveImageToPoint($images()[0], point)).toBe(true);
     });
     editor.read(() => {
-      expect($paragraph(0).getTextContent()).toBe('one ');
-      const children = $paragraph(1).getChildren();
-      expect(children.map(child => child.getType())).toEqual([
-        'text',
-        'image',
-        'text',
-      ]);
-      const image = children[1] as ImageNode;
-      expect(image.getCaption()?.getTextContent()).toBe('A mochi');
-      const selection = $getSelection();
-      expect(selection?.getNodes()[0].is(image)).toBe(true);
+      expect($outline()).toEqual(['p:one ', 'p:t|[img]|wo']);
     });
   });
 
@@ -323,7 +365,7 @@ describe('moving images', () => {
     using editor = buildEditor();
     insertImage(editor, 'A mochi');
     const captionText = editor.read(() => {
-      const caption = $images()[0].getCaption() as ElementNode;
+      const caption = $figure().getCaption() as ElementNode;
       return caption.getFirstChildOrThrow().getKey();
     });
     update(editor, () => {
@@ -339,6 +381,114 @@ describe('moving images', () => {
       expect($moveImageToPoint(moving, point)).toBe(false);
       const selection = $getSelection();
       expect($isRangeSelection(selection)).toBe(true);
+    });
+  });
+});
+
+describe('inline images and figures', () => {
+  it('puts a block image between paragraphs and an inline one in the text', () => {
+    using editor = buildEditor();
+    insertImage(editor, 'A mochi');
+    update(editor, () => {
+      $paragraph(1).selectEnd();
+      $insertNodes([$createImageNode({src: 'b.png'})]);
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one ', '[block]', 'p:two|[img]']);
+    });
+  });
+
+  it('gives an inline image left in the root a paragraph', () => {
+    using editor = buildEditor();
+    update(editor, () => {
+      $getRoot().append($createImageNode({src: 'a.png'}));
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one ', 'p:two', 'p:[img]']);
+    });
+  });
+
+  it('makes a block image inside a caption inline', () => {
+    using editor = buildEditor();
+    insertImage(editor, 'A mochi');
+    update(editor, () => {
+      ($figure().getCaption() as ElementNode).append(
+        $createImageNode({block: true, src: 'b.png'}),
+      );
+    });
+    editor.read(() => {
+      const caption = $figure().getCaption() as ElementNode;
+      const [, image] = caption.getChildren();
+      expect($isImageNode(image) && image.isInline()).toBe(true);
+    });
+  });
+
+  it('inserts a block image on an empty line and an inline one in text', () => {
+    using editor = buildEditor();
+    update(editor, () => {
+      $paragraph(0).selectEnd();
+      editor.dispatchCommand(INSERT_IMAGE_COMMAND, {src: 'a.png'});
+      $getRoot().append($createParagraphNode()).selectEnd();
+      editor.dispatchCommand(INSERT_IMAGE_COMMAND, {src: 'b.png'});
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one |[img]', 'p:two', '[block]', 'p:']);
+    });
+  });
+
+  it('adding a caption makes an inline image a block', () => {
+    using editor = buildEditor();
+    insertImage(editor);
+    const key = editor.read(() => $images()[0].getKey());
+    update(editor, () => {
+      editor.dispatchCommand(SET_IMAGE_CAPTION_COMMAND, {
+        caption: true,
+        nodeKey: key,
+      });
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one ', '[block]', 'p:two']);
+      const caption = $figure().getCaption();
+      const selection = $getSelection();
+      expect($isRangeSelection(selection)).toBe(true);
+      expect(selection?.getNodes()[0].is(caption)).toBe(true);
+    });
+  });
+
+  it('switches between inline and block, keeping the image properties', () => {
+    using editor = buildEditor();
+    insertImage(editor, 'A mochi');
+    update(editor, () => {
+      $figure().setAltText('mochi').setWidth(10);
+    });
+    update(editor, () => {
+      editor.dispatchCommand(SET_IMAGE_BLOCK_COMMAND, {
+        block: false,
+        nodeKey: $figure().getKey(),
+      });
+    });
+    const key = editor.read(() => {
+      expect($outline()).toEqual(['p:one ', 'p:[img]', 'p:two']);
+      const [image] = $images();
+      expect(image.getAltText()).toBe('mochi');
+      expect(image.getWidth()).toBe(10);
+      // The caption does not survive becoming inline
+      expect($getRoot().getTextContent()).not.toContain('A mochi');
+      expect($getSelection()?.getNodes()[0].is(image)).toBe(true);
+      return image.getKey();
+    });
+    update(editor, () => {
+      editor.dispatchCommand(SET_IMAGE_BLOCK_COMMAND, {
+        block: true,
+        nodeKey: key,
+      });
+    });
+    editor.read(() => {
+      expect($outline()).toEqual(['p:one ', '[block]', 'p:two']);
+      expect($figure().getAltText()).toBe('mochi');
+      expect($figure().hasCaption()).toBe(false);
+      // It is the same node throughout
+      expect($figure().getKey()).toBe(key);
     });
   });
 });

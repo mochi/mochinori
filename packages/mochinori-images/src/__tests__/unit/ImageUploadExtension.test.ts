@@ -92,7 +92,11 @@ function $getImages(): ImageNode[] {
   return $getRoot()
     .getChildren()
     .flatMap(child =>
-      $isElementNode(child) ? child.getChildren().filter($isImageNode) : [],
+      $isImageNode(child)
+        ? [child]
+        : $isElementNode(child)
+          ? child.getChildren().filter($isImageNode)
+          : [],
     );
 }
 

@@ -40,7 +40,11 @@ function $getImages(): ImageNode[] {
   return $getRoot()
     .getChildren()
     .flatMap(child =>
-      $isElementNode(child) ? child.getChildren().filter($isImageNode) : [],
+      $isImageNode(child)
+        ? [child]
+        : $isElementNode(child)
+          ? child.getChildren().filter($isImageNode)
+          : [],
     );
 }
 
@@ -108,9 +112,10 @@ describe('ImagesExtension', () => {
     ];
     expect(paragraph.children[0]).toEqual({
       altText: 'a',
+      block: false,
       height: 20,
       src: 'a.png',
-      type: 'image',
+      type: 'mn:image',
       version: 1,
       width: 10,
     });

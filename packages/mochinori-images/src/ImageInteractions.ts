@@ -46,16 +46,28 @@ interface ImageDragData {
   nodeKey: string;
 }
 
+/** True for the image's own buttons and alt text form */
+function isImageControl(target: EventTarget | null): boolean {
+  return (
+    isHTMLElement(target) &&
+    target.closest('button, input, form') !== null &&
+    target.closest('.mochinori-image-frame') !== null
+  );
+}
+
 /**
  * The image a pointer event targets, or null when it targets something else,
  * including the image's caption (where the caret must go into the text) and
- * its buttons.
+ * its buttons and alt text form.
  */
 function $getImageFromTarget(
   editor: LexicalEditor,
   target: EventTarget | null,
 ): ImageNode | null {
-  if (!isHTMLElement(target) || target.closest('button') !== null) {
+  if (
+    !isHTMLElement(target) ||
+    target.closest('button, input, form') !== null
+  ) {
     return null;
   }
   const node = $getNearestNodeFromDOMNode(target);
@@ -112,6 +124,12 @@ function registerImageClick(editor: LexicalEditor): () => void {
   return editor.registerCommand(
     CLICK_COMMAND,
     event => {
+      if (isImageControl(event.target)) {
+        // The control has done its work (and may have been replaced, when
+        // the image became a block or inline). Rich text would otherwise
+        // see a click outside the selected image and clear the selection.
+        return true;
+      }
       const image = $getImageFromTarget(editor, event.target);
       if (image === null) {
         return $enterCaption(editor, event);

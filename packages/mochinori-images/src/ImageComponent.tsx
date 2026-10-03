@@ -1,5 +1,6 @@
 // Type-only, so this module does not import the extension and create a
 // module cycle through ImageNode
+import type {ImageNode} from './ImageNode.tsx';
 import type {
   ImageUploadExtension,
   ImageUploadState,
@@ -13,19 +14,25 @@ import {useSignalValue} from '@lexical/react/useExtensionSignalValue';
 import {useLexicalEditable} from '@lexical/react/useLexicalEditable';
 import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {useLexicalSlotRef} from '@lexical/react/useLexicalSlotRef';
-import {type LexicalEditor, type NodeKey} from 'lexical';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {$getNodeByKey, type LexicalEditor, type NodeKey} from 'lexical';
+import {useCallback, useEffect, useId, useRef, useState} from 'react';
 
 import {
   $isImageCaptionEmpty,
-  $setImageCaptionShown,
+  $selectCaptionEnd,
+  $selectImage,
   IMAGE_CAPTION_SLOT,
+  SET_IMAGE_BLOCK_COMMAND,
+  SET_IMAGE_CAPTION_COMMAND,
+  takeCaptionFocus,
 } from './ImageCaption.ts';
 
 export interface ImageComponentProps {
   altText: string;
   hasCaption: boolean;
   height: number | undefined;
+  /** True for a block image (a figure), false for an inline image */
+  isBlock: boolean;
   nodeKey: NodeKey;
   src: string;
   width: number | undefined;
@@ -53,15 +60,7 @@ function useCaptionIsEmpty(editor: LexicalEditor, nodeKey: NodeKey): boolean {
   return isEmpty;
 }
 
-function ImageCaption({
-  autoFocus,
-  nodeKey,
-  onFocus,
-}: {
-  autoFocus: boolean;
-  nodeKey: NodeKey;
-  onFocus: () => void;
-}): JSX.Element {
+function ImageCaption({nodeKey}: {nodeKey: NodeKey}): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const isEditable = useLexicalEditable();
   const slotRef = useLexicalSlotRef<HTMLSpanElement>(
@@ -81,17 +80,17 @@ function ImageCaption({
   // A new caption gets the caret once its text is in the document; before
   // the slot is mounted here, the browser has nowhere to put it
   useEffect(() => {
-    if (autoFocus) {
-      onFocus(); // The caption is editable inside the image, which is not, so it is
+    if (takeCaptionFocus(editor, nodeKey)) {
+      // The caption is editable inside the image, which is not, so it is
       // focused on its own rather than through the editor's root
       wrapperRef.current
         ?.querySelector<HTMLElement>('[data-lexical-slot]')
         ?.focus({preventScroll: true});
-      editor.update(() => $setImageCaptionShown(nodeKey, true));
+      editor.update(() => $selectCaptionEnd(nodeKey));
     }
-  }, [autoFocus, editor, nodeKey, onFocus]);
+  }, [editor, nodeKey]);
   return (
-    <span className="mochinori-image-caption">
+    <figcaption className="mochinori-image-caption">
       <span className="mochinori-image-caption-slot" ref={captionRef} />
       {isEmpty && isEditable ? (
         <span
@@ -100,7 +99,80 @@ function ImageCaption({
           Write a caption…
         </span>
       ) : null}
-    </span>
+    </figcaption>
+  );
+}
+
+/**
+ * A form for the image's alt text. Enter or Save stores it, Escape cancels,
+ * and either way the image is selected again.
+ */
+function AltTextEditor({
+  altText,
+  nodeKey,
+  onClose,
+}: {
+  altText: string;
+  nodeKey: NodeKey;
+  onClose: () => void;
+}): JSX.Element {
+  const [editor] = useLexicalComposerContext();
+  const [value, setValue] = useState(altText);
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+  // Leaving the form by focusing something else saves without taking the
+  // focus back
+  const close = (save: boolean, reselect = true) => {
+    editor.update(() => {
+      const image = $getNodeByKey<ImageNode>(nodeKey);
+      if (image === null) {
+        return;
+      }
+      if (save && image.getAltText() !== value.trim()) {
+        image.setAltText(value.trim());
+      }
+      if (reselect) {
+        $selectImage(nodeKey);
+      }
+    });
+    if (reselect) {
+      editor.focus();
+    }
+    onClose();
+  };
+  return (
+    <form
+      className="mochinori-image-alt-editor"
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          close(true, false);
+        }
+      }}
+      onKeyDown={event => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          close(false);
+        }
+      }}
+      onSubmit={event => {
+        event.preventDefault();
+        close(true);
+      }}>
+      <label htmlFor={inputId}>Alt text</label>
+      <input
+        id={inputId}
+        onChange={event => setValue(event.target.value)}
+        placeholder="Describe the image"
+        ref={inputRef}
+        type="text"
+        value={value}
+      />
+      <button type="submit">Save</button>
+    </form>
   );
 }
 
@@ -108,6 +180,7 @@ export function ImageComponent({
   altText,
   hasCaption,
   height,
+  isBlock,
   nodeKey,
   src,
   width,
@@ -115,8 +188,7 @@ export function ImageComponent({
   const [editor] = useLexicalComposerContext();
   const isEditable = useLexicalEditable();
   const [isSelected] = useLexicalNodeSelection(nodeKey);
-  const [focusCaption, setFocusCaption] = useState(false);
-  const onCaptionFocus = useCallback(() => setFocusCaption(false), []);
+  const [isEditingAltText, setEditingAltText] = useState(false);
   const dep = useImageUploadExtension();
   const upload = useSignalValue(dep ? dep.output.uploads : NO_UPLOADS).get(src);
   const classNames = ['mochinori-image'];
@@ -126,8 +198,12 @@ export function ImageComponent({
   if (upload && upload.status !== 'uploaded') {
     classNames.push(`mochinori-image--${upload.status}`);
   }
+  // A block image is a figure, named by its caption for assistive
+  // technology; an inline image is just an image in the text
+  const Frame = isBlock ? 'figure' : 'span';
+  const showTools = isSelected && isEditable;
   return (
-    <span
+    <Frame
       className="mochinori-image-frame"
       data-selected={isSelected || undefined}
       data-upload-status={upload?.status}>
@@ -183,27 +259,48 @@ export function ImageComponent({
             )}
           </span>
         ) : null}
-        {isSelected && isEditable ? (
-          <button
-            className="mochinori-image-caption-toggle"
-            onClick={() => {
-              setFocusCaption(!hasCaption);
-              editor.update(() => $setImageCaptionShown(nodeKey, !hasCaption));
-            }}
-            // Keep the focus in the editor
-            onMouseDown={event => event.preventDefault()}
-            type="button">
-            {hasCaption ? 'Remove caption' : 'Add caption'}
-          </button>
+        {showTools && !isEditingAltText ? (
+          // Buttons keep the focus in the editor (onMouseDown)
+          <span className="mochinori-image-tools">
+            <button
+              onClick={() => setEditingAltText(true)}
+              onMouseDown={event => event.preventDefault()}
+              type="button">
+              Alt text
+            </button>
+            <button
+              onClick={() =>
+                editor.dispatchCommand(SET_IMAGE_CAPTION_COMMAND, {
+                  caption: !hasCaption,
+                  nodeKey,
+                })
+              }
+              onMouseDown={event => event.preventDefault()}
+              type="button">
+              {hasCaption ? 'Remove caption' : 'Add caption'}
+            </button>
+            <button
+              onClick={() =>
+                editor.dispatchCommand(SET_IMAGE_BLOCK_COMMAND, {
+                  block: !isBlock,
+                  nodeKey,
+                })
+              }
+              onMouseDown={event => event.preventDefault()}
+              type="button">
+              {isBlock ? 'Make inline' : 'Make block'}
+            </button>
+          </span>
+        ) : null}
+        {isEditable && isEditingAltText ? (
+          <AltTextEditor
+            altText={altText}
+            nodeKey={nodeKey}
+            onClose={() => setEditingAltText(false)}
+          />
         ) : null}
       </span>
-      {hasCaption ? (
-        <ImageCaption
-          autoFocus={focusCaption}
-          nodeKey={nodeKey}
-          onFocus={onCaptionFocus}
-        />
-      ) : null}
-    </span>
+      {hasCaption ? <ImageCaption nodeKey={nodeKey} /> : null}
+    </Frame>
   );
 }
