@@ -77,6 +77,19 @@ const {customEmoji} = getExtensionDependencyFromEditor(
 customEmoji.value = [...customEmoji.value, {name: 'mochi', src: mochiUrl}];
 ```
 
+To fetch the set when an editor is created instead of configuring it up
+front, give `loadCustomEmoji`. Shortcodes typed while it loads convert once
+it arrives:
+
+```ts
+configExtension(EmojiExtension, {
+  loadCustomEmoji: async signal => {
+    const response = await fetch('/api/emoji', {signal});
+    return response.json();
+  },
+});
+```
+
 - The node stores only the name, so documents show whatever
   image the app has for that name now. A name the app no longer has shows
   as `:name:` text, the way chat apps show a deleted emoji.
@@ -126,6 +139,7 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `emojiLoadingClass` | `''` | Added until the image loads |
 | `emojiLoadedClass` | `'mochinori-emoji--loaded'` | Added once the image loads |
 | `customEmoji` | `[]` | Custom emoji (`{name, src}`), the initial value of the `customEmoji` output signal |
+| `loadCustomEmoji` | `undefined` | `(abortSignal) => Promise<CustomEmoji[]>`, called when an editor is created; the result is added to `customEmoji`. The signal aborts on dispose, and a rejection goes to the editor's `onError` |
 | `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
 

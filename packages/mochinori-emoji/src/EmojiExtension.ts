@@ -81,8 +81,19 @@ export interface EmojiExtensionConfig {
    */
   customEmoji: readonly CustomEmoji[];
   /**
-   * The class to use for custom emoji. The element holds an `<img>`, or the
-   * `:name:` text for a name that is not in `customEmoji`.
+   * Loads custom emoji when an editor is created, such as with a `fetch` of
+   * the app's emoji list, so they don't have to be known when the editor is
+   * configured. The result is added to `customEmoji` (replacing any with the
+   * same name), and shortcodes typed while it loads convert once it arrives.
+   * `abortSignal` is aborted when the editor is disposed; a rejection goes
+   * to the editor's `onError`.
+   */
+  loadCustomEmoji:
+    ((abortSignal: AbortSignal) => Promise<readonly CustomEmoji[]>) | undefined;
+  /**
+   * The class to use for custom emoji. The image is the element's background
+   * and its `:name:` text is shrunk to nothing; a name that is not in
+   * `customEmoji` shows its text instead.
    */
   customEmojiClass: string;
 }
@@ -144,6 +155,7 @@ export const EmojiExtension = defineExtension({
     emojiClass: 'mochinori-emoji',
     emojiLoadedClass: 'mochinori-emoji--loaded',
     emojiLoadingClass: '',
+    loadCustomEmoji: undefined,
     parseEmojiReplacementEntry: parseEmojiShortNamesAndTexts,
   }),
   dependencies: [WatchEditableExtension],
@@ -151,7 +163,7 @@ export const EmojiExtension = defineExtension({
   nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {
     const editable = state.getDependency(WatchEditableExtension).output;
-    const {customEmojiByName} = state.getOutput();
+    const {customEmoji, customEmojiByName} = state.getOutput();
     const customEmojiKeys = new Set<NodeKey>();
     const nodeCleanup = new Map<NodeKey, () => void>();
     const runNodeCleanup = (nodeKey: NodeKey) => {
@@ -231,6 +243,25 @@ export const EmojiExtension = defineExtension({
     // The editor may be disposed before it arrives, so check the abort
     // signal, which is aborted when this registration is cleaned up.
     const abortSignal = state.getSignal();
+    const reportError = (error: unknown) => {
+      if (!abortSignal.aborted) {
+        editor._onError(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    };
+    if (config.loadCustomEmoji) {
+      config.loadCustomEmoji(abortSignal).then(loaded => {
+        if (abortSignal.aborted) {
+          return;
+        }
+        const names = new Set(loaded.map(emoji => emoji.name));
+        customEmoji.value = [
+          ...customEmoji.value.filter(emoji => !names.has(emoji.name)),
+          ...loaded,
+        ];
+      }, reportError);
+    }
     resolve(
       loadTextNodeTransform(),
       createTextNodeTransform => {
@@ -255,13 +286,7 @@ export const EmojiExtension = defineExtension({
           {once: true},
         );
       },
-      error => {
-        if (!abortSignal.aborted) {
-          editor._onError(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
-      },
+      reportError,
     );
     return cleanup;
   },

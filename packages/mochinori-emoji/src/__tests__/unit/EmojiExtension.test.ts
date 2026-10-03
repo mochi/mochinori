@@ -20,7 +20,7 @@ import {
   type LexicalEditor,
   TextNode,
 } from 'lexical';
-import {beforeAll, describe, expect, it} from 'vitest';
+import {beforeAll, describe, expect, it, vi} from 'vitest';
 
 import {
   $createCustomEmojiNode,
@@ -274,6 +274,73 @@ describe('EmojiExtension', () => {
   });
 
   describe('custom emoji', () => {
+    describe('loadCustomEmoji', () => {
+      function buildLoadingEditor(
+        load: Promise<readonly CustomEmoji[]>,
+        onError: (error: Error) => void = vi.fn(),
+      ) {
+        let loadSignal: AbortSignal | undefined;
+        const editor = buildEditorFromExtensions(
+          defineExtension({
+            dependencies: [
+              configExtension(EmojiExtension, {
+                customEmoji: [{name: 'mochi', src: 'mochi.png'}],
+                loadCustomEmoji: signal => {
+                  loadSignal = signal;
+                  return load;
+                },
+              }),
+            ],
+            name: '[root]',
+            onError,
+          }),
+        );
+        return {editor, getSignal: () => loadSignal};
+      }
+
+      it('adds what it loads, converting text typed meanwhile', async () => {
+        const load = Promise.withResolvers<readonly CustomEmoji[]>();
+        const {editor} = buildLoadingEditor(load.promise);
+        using _editor = editor;
+        setText(editor, 'so :partyparrot:');
+        expect(describeText(editor)).toEqual(['so :partyparrot:']);
+        load.resolve([PARROT, {name: 'mochi', src: 'loaded.png'}]);
+        await load.promise;
+        editor.update(() => {}, {discrete: true});
+        expect(describeText(editor)).toEqual(['so ', {custom: 'partyparrot'}]);
+        // Loaded emoji replace configured ones with the same name
+        expect(getCustomEmoji(editor).value).toEqual([
+          PARROT,
+          {name: 'mochi', src: 'loaded.png'},
+        ]);
+      });
+
+      it('is aborted and ignored when the editor is disposed', async () => {
+        const load = Promise.withResolvers<readonly CustomEmoji[]>();
+        const onError = vi.fn();
+        const {editor, getSignal} = buildLoadingEditor(load.promise, onError);
+        const output = getCustomEmoji(editor);
+        expect(getSignal()?.aborted).toBe(false);
+        editor.dispose();
+        expect(getSignal()?.aborted).toBe(true);
+        load.reject(new DOMException('Aborted', 'AbortError'));
+        await load.promise.catch(() => {});
+        expect(onError).not.toHaveBeenCalled();
+        expect(output.value).toEqual([{name: 'mochi', src: 'mochi.png'}]);
+      });
+
+      it("reports a failure to the editor's onError", async () => {
+        const load = Promise.withResolvers<readonly CustomEmoji[]>();
+        const onError = vi.fn();
+        const {editor} = buildLoadingEditor(load.promise, onError);
+        using _editor = editor;
+        const error = new Error('offline');
+        load.reject(error);
+        await load.promise.catch(() => {});
+        expect(onError).toHaveBeenCalledWith(error, editor);
+      });
+    });
+
     it('replaces :name: with a custom emoji', () => {
       using editor = buildEditor({customEmoji: [PARROT]});
       setText(editor, 'so :partyparrot: wow');
