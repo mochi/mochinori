@@ -35,6 +35,7 @@ catalog:
   '@lexical/html': '0.52.0'
   '@lexical/react': '0.52.0'
   '@lexical/rich-text': '0.52.0'
+  '@lexical/selection': '0.52.0'
   '@lexical/utils': '0.52.0'
   react: '^19.2.5'
   react-dom: '^19.2.5'

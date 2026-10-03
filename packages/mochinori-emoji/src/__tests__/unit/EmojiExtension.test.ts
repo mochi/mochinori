@@ -175,6 +175,13 @@ describe('EmojiExtension', () => {
     expect(span?.style.backgroundImage).toBe(
       'url("https://example.com/emoji/1f604.png")',
     );
+    // Sized and aligned like a custom emoji, whatever the font
+    expect(span?.style).toMatchObject({
+      height: '1.25em',
+      overflow: 'hidden',
+      verticalAlign: '-0.25em',
+      width: '1.25em',
+    });
     editor.setRootElement(null);
   });
 
@@ -597,6 +604,11 @@ describe('EmojiExtension', () => {
       expect(span?.getAttribute('role')).toBe('img');
       expect(span?.getAttribute('aria-label')).toBe(':partyparrot:');
       expect(span?.style.backgroundImage).toContain(PARROT.src);
+      expect(span?.style).toMatchObject({
+        height: '1.25em',
+        overflow: 'hidden',
+        verticalAlign: '-0.25em',
+      });
 
       // A new image for the name
       getCustomEmoji(editor).value = [{...PARROT, src: 'new.gif'}];

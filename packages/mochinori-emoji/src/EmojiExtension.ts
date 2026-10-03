@@ -33,6 +33,7 @@ import {
 import {
   $createCustomEmojiNode,
   $createEmojiNode,
+  EMOJI_BOX_STYLE,
   EmojiNode,
   renderCustomEmoji,
 } from './EmojiNode.ts';
@@ -60,18 +61,9 @@ export interface EmojiExtensionConfig {
    */
   emojiBaseUrl: string;
   /**
-   * The class to use for emoji nodes. Style it to show the background image
-   * at the size of the text, such as:
-   *
-   * ```css
-   * .mochinori-emoji {
-   *   display: inline-block;
-   *   width: 1em;
-   *   height: 1em;
-   *   background: center / 1em 1em no-repeat;
-   *   vertical-align: top;
-   * }
-   * ```
+   * The class to use for emoji nodes. The image's size and position are
+   * inline styles (1.25em square, sitting on the baseline like a glyph), so
+   * this is for anything else.
    */
   emojiClass: string;
   /**
@@ -294,7 +286,13 @@ export const EmojiExtension = defineExtension({
             config.emojiClass,
             config.emojiLoadingClass,
           );
-          dom.style.backgroundImage = `url(${imageUrl})`;
+          Object.assign(dom.style, EMOJI_BOX_STYLE, {
+            backgroundImage: `url(${imageUrl})`,
+            // The font's emoji, until the image loads, centered in the box
+            lineHeight: '1.25em',
+            textAlign: 'center',
+            width: '1.25em',
+          });
           const img = dom.ownerDocument.createElement('img');
           const cleanupImg = () => {
             img.onload = img.onerror = null;

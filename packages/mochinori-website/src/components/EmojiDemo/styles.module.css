@@ -15,15 +15,9 @@
   margin: 0 0 0.75rem;
 }
 
-/* The image from emoji-datasource-facebook, at the size of the text */
+/* The size and position of the image are inline styles; the font's emoji
+   is hidden once it loads, so keep the caret visible */
 .emoji {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 1em 1em;
-  vertical-align: top;
   caret-color: var(--ifm-font-color-base);
 }
 

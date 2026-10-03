@@ -43,6 +43,22 @@ export interface EmojiNode {
 }
 
 /**
+ * The box every emoji image is drawn in: 1.25em square, its bottom 0.25em
+ * below the baseline, so it sits on the text the way an emoji glyph does.
+ * `overflow: hidden` makes the box's bottom edge its baseline, whatever
+ * text is inside, so Unicode and custom emoji line up the same in any font.
+ */
+export const EMOJI_BOX_STYLE = {
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: 'contain',
+  display: 'inline-block',
+  height: '1.25em',
+  overflow: 'hidden',
+  verticalAlign: '-0.25em',
+} as const satisfies Partial<CSSStyleDeclaration>;
+
+/**
  * Shows a custom emoji's image as the background of its element. Its
  * `:name:` text stays inside, at zero size, with the letters spread across
  * the image (by an inherited `letter-spacing`) so that the caret before the
@@ -65,15 +81,9 @@ export function renderCustomEmoji(
     dom.setAttribute('role', 'img');
     dom.setAttribute('aria-label', label);
     dom.setAttribute('title', label);
-    Object.assign(dom.style, {
+    Object.assign(dom.style, EMOJI_BOX_STYLE, {
       backgroundImage: `url(${JSON.stringify(emoji.src)})`,
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: 'contain',
-      display: 'inline-block',
-      height: '1.25em',
       letterSpacing: `calc(1.25em / ${length})`,
-      verticalAlign: '-0.25em',
     });
     Object.assign(text.style, {color: 'transparent', fontSize: '0'});
   } else {
@@ -88,6 +98,7 @@ export function renderCustomEmoji(
       'display',
       'height',
       'letter-spacing',
+      'overflow',
       'vertical-align',
     ]) {
       dom.style.removeProperty(prop);

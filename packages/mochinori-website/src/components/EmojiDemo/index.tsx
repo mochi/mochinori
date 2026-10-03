@@ -10,6 +10,10 @@ import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
 import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
 import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
 import {
+  $getSelectionStyleValueForProperty,
+  $patchStyleText,
+} from '@lexical/selection';
+import {
   type CustomEmoji,
   EmojiExtension,
   EmojiImportExtension,
@@ -22,6 +26,7 @@ import {
   $createTextNode,
   $getRoot,
   $getSelection,
+  $isRangeSelection,
   configExtension,
   defineExtension,
 } from 'lexical';
@@ -214,6 +219,78 @@ function EmojiTypeaheadMenu({id}: {id: string}): JSX.Element | null {
   );
 }
 
+const FONT_FAMILIES = [
+  'Arial',
+  'Courier New',
+  'Georgia',
+  'Times New Roman',
+  'Trebuchet MS',
+  'Verdana',
+];
+const FONT_SIZES = ['10px', '12px', '15px', '18px', '24px', '32px', '48px'];
+
+// Font family and size for the selected text, as in the Lexical playground,
+// to check that emoji sit right in any font and at any size
+function FontControls(): JSX.Element {
+  const [editor] = useLexicalComposerContext();
+  const [fontFamily, setFontFamily] = useState('');
+  const [fontSize, setFontSize] = useState('');
+  useEffect(
+    () =>
+      editor.registerUpdateListener(({editorState}) => {
+        editorState.read(() => {
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) {
+            setFontFamily(
+              $getSelectionStyleValueForProperty(selection, 'font-family', ''),
+            );
+            setFontSize(
+              $getSelectionStyleValueForProperty(selection, 'font-size', ''),
+            );
+          }
+        });
+      }),
+    [editor],
+  );
+  const apply = (property: 'font-family' | 'font-size', value: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        $patchStyleText(selection, {[property]: value || null});
+      }
+    });
+    editor.focus();
+  };
+  return (
+    <>
+      <select
+        aria-label="Font family"
+        className={styles.input}
+        onChange={event => apply('font-family', event.target.value)}
+        value={fontFamily}>
+        <option value="">Default font</option>
+        {FONT_FAMILIES.map(family => (
+          <option key={family} value={family}>
+            {family}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label="Font size"
+        className={styles.input}
+        onChange={event => apply('font-size', event.target.value)}
+        value={fontSize}>
+        <option value="">Default size</option>
+        {FONT_SIZES.map(size => (
+          <option key={size} value={size}>
+            {size}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
 // Shown in the picker before anything is searched
 const POPULAR = ['+1', 'joy', 'heart', 'tada', 'fire', 'eyes', 'pray', 'wave'];
 
@@ -326,6 +403,7 @@ export default function EmojiDemo(): JSX.Element {
         extension={EmojiDemoExtension}>
         <div className={styles.toolbar}>
           <EmojiPicker />
+          <FontControls />
           <CustomEmojiForm />
         </div>
         <EmojiEditor />

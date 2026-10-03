@@ -30,15 +30,14 @@ const AppExtension = defineExtension({
 });
 ```
 
-Then style the emoji, for example:
+Each emoji is drawn as a 1.25em image sitting on the baseline, like a
+glyph, at any font and size; those styles are inline. Until its image loads
+the font's emoji shows, so hide it once the image has loaded, keeping the
+caret visible:
 
 ```css
 .mochinori-emoji {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  background: center / 1em 1em no-repeat;
-  vertical-align: top;
+  caret-color: CanvasText;
 }
 
 /* The image has loaded: hide the font's emoji behind it */
