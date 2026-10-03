@@ -53,29 +53,29 @@ configuration.
 
 ### `ImageNode`
 
-An inline `DecoratorNode` rendered as an `<img>`. In Lexical's
-[compact JSON](https://lexical.dev/docs/serialization/#compact-json)
-(`editorState.toJSON(true)`), a captioned image serializes as:
+An inline `DecoratorNode` rendered as an `<img>`, of type `image`. Its JSON
+follows this [schema](https://lexical.dev/docs/serialization/), which
+`$config` derives `exportJSON` and `importJSON` from:
 
-```json
-{
-  "type": "image",
-  "altText": "A mochi",
-  "height": 240,
-  "src": "https://example.com/mochi.png",
-  "width": 320,
-  "$slots": {
-    "caption": {
-      "type": "paragraph",
-      "children": [{"type": "text", "text": "A mochi on a plate"}]
-    }
-  }
-}
+```ts
+const imageNodeSchema = nodeSchema<ImageNode>()({
+  altText: withField(stringValue(), {field: '__altText'}),
+  height: withField(optional(numberValue()), {field: '__height'}),
+  src: withField(stringValue(), {field: '__src'}),
+  width: withField(optional(numberValue()), {field: '__width'}),
+});
 ```
 
-and an image with only a `src` as `{"type": "image", "src": "..."}`.
-Properties left at their defaults are omitted: `altText` when empty, `width`
-and `height` when unknown, and `$slots` when there is no caption.
+| Property | Type | Default |
+| --- | --- | --- |
+| `src` | string | `''` |
+| `altText` | string | `''` |
+| `width` | number, CSS pixels | absent (natural size) |
+| `height` | number, CSS pixels | absent (natural size) |
+| `$slots.caption` | a paragraph node | absent (no caption) |
+
+The [compact JSON](https://lexical.dev/docs/serialization/#compact-json)
+form (`editorState.toJSON(true)`) leaves out every property at its default.
 
 The caption is a paragraph in the image's `caption`
 [named slot](https://lexical.dev/docs/concepts/named-slots), not a nested
