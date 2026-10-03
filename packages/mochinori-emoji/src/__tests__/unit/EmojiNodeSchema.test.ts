@@ -14,9 +14,10 @@ import {
   type LexicalParseJSON,
   type NodeKey,
 } from 'lexical';
-import {describe, expect, it} from 'vitest';
+import {beforeAll, describe, expect, it} from 'vitest';
 
 import {EmojiExtension, EmojiNode} from '../../index.ts';
+import {loadTextNodeTransform} from '../../loadTextNodeTransform.ts';
 
 /**
  * Sets generated properties on a node, then checks that they survive a
@@ -66,6 +67,12 @@ function expectSchemaRoundTrips<T extends LexicalNode>(
 }
 
 describe('the serialization schemas', () => {
+  // EmojiExtension loads its transform asynchronously; wait for it here so
+  // it can't finish after the test file has been torn down
+  beforeAll(async () => {
+    await loadTextNodeTransform();
+  });
+
   it('EmojiNode', () => {
     fc.assert(
       fc.property(nodeArbitrary(EmojiNode), props => {
