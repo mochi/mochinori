@@ -16,7 +16,7 @@ import {
   defineExtension,
   IS_BOLD,
   type LexicalEditor,
-  type TextNode,
+  TextNode,
 } from 'lexical';
 import {beforeAll, describe, expect, it} from 'vitest';
 
@@ -193,6 +193,23 @@ describe('EmojiExtension', () => {
     });
   });
 
+  it('has a prefixed type, so an app can keep its own emoji node', () => {
+    class InHouseEmojiNode extends TextNode {
+      $config() {
+        return this.config('emoji', {extends: TextNode});
+      }
+    }
+    using editor = buildEditorFromExtensions(
+      defineExtension({
+        dependencies: [EmojiExtension],
+        name: '[root]',
+        nodes: () => [InHouseEmojiNode],
+      }),
+    );
+    setText(editor, ':smile:');
+    expect(describeText(editor)).toEqual([{emoji: '😄', shortcode: ':smile:'}]);
+  });
+
   it('serializes the shortcode as a top-level property', () => {
     using editor = buildEditor();
     setText(editor, ':smile:');
@@ -204,7 +221,7 @@ describe('EmojiExtension', () => {
       mode: 'token',
       shortcode: ':smile:',
       text: '😄',
-      type: 'emoji',
+      type: 'mn:emoji',
     });
 
     using other = buildEditor();
@@ -331,7 +348,7 @@ describe('EmojiExtension', () => {
       };
       expect(paragraph.children[0]).toEqual({
         name: 'partyparrot',
-        type: 'custom-emoji',
+        type: 'mn:custom-emoji',
         version: 1,
       });
       using other = buildEditor();

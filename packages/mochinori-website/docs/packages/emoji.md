@@ -132,7 +132,7 @@ HTML paste uses it when the editor also has `ClipboardDOMImportExtension`.
 
 ### `EmojiNode`
 
-A `TextNode` (type `emoji`) whose text is the emoji, in token mode so it is
+A `TextNode` (type `mn:emoji`) whose text is the emoji, in token mode so it is
 deleted as a unit. Its `$config` schema adds one property to the ones it
 inherits from `TextNode` (`text`, `format`, `style`, `mode`, `detail`):
 
@@ -146,7 +146,7 @@ test for one with `$isEmojiNode(node)`.
 
 ### `CustomEmojiNode`
 
-An inline `DecoratorNode` (type `custom-emoji`), rendered without React. Its
+An inline `DecoratorNode` (type `mn:custom-emoji`), rendered without React. Its
 schema has one property:
 
 | Property | Schema | Default |

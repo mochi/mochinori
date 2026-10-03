@@ -53,7 +53,7 @@ export class EmojiNode extends TextNode {
   __shortcode: string | undefined = undefined;
 
   $config() {
-    return this.config('emoji', {
+    return this.config('mn:emoji', {
       extends: TextNode,
       json: emojiNodeSchema,
     });

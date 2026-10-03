@@ -82,7 +82,7 @@ export class CustomEmojiNode extends DecoratorNode<null> {
   __name: string = '';
 
   $config() {
-    return this.config('custom-emoji', {
+    return this.config('mn:custom-emoji', {
       extends: DecoratorNode,
       json: customEmojiNodeSchema,
     });
