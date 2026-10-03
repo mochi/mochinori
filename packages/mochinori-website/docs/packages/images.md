@@ -53,24 +53,29 @@ configuration.
 
 ### `ImageNode`
 
-An inline `DecoratorNode` rendered as an `<img>`. It serializes as:
+An inline `DecoratorNode` rendered as an `<img>`. In Lexical's
+[compact JSON](https://lexical.dev/docs/serialization/#compact-json)
+(`editorState.toJSON(true)`), a captioned image serializes as:
 
 ```json
 {
   "type": "image",
-  "version": 1,
-  "src": "https://example.com/mochi.png",
   "altText": "A mochi",
-  "width": 320,
   "height": 240,
+  "src": "https://example.com/mochi.png",
+  "width": 320,
   "$slots": {
-    "caption": {"type": "paragraph", "version": 1, "children": [...]}
+    "caption": {
+      "type": "paragraph",
+      "children": [{"type": "text", "text": "A mochi on a plate"}]
+    }
   }
 }
 ```
 
-`width` and `height` are omitted when unknown, and `$slots` when there is
-no caption.
+and an image with only a `src` as `{"type": "image", "src": "..."}`.
+Properties left at their defaults are omitted: `altText` when empty, `width`
+and `height` when unknown, and `$slots` when there is no caption.
 
 The caption is a paragraph in the image's `caption`
 [named slot](https://lexical.dev/docs/concepts/named-slots), not a nested
