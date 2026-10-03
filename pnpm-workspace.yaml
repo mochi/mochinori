@@ -17,7 +17,7 @@ minimumReleaseAgeExclude:
   - 'miniflare'
   - 'workerd'
   - 'wrangler'
-  # Exact versions void 0.22.0 pins; later releases wait the full week
+  # Exact versions void 0.23.0 pins; later releases wait the full week
   - 'hono@4.13.11'
   - 'mysql2@3.24.5'
   - 'postal-mime@4.0.0'
