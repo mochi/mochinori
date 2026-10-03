@@ -102,6 +102,10 @@ The emoji database (about 36 KB) is loaded with a dynamic `import()`, so
 bundlers put it in its own chunk, and it is only fetched when an editor with
 `EmojiExtension` is created. Node and other non-browser runtimes load it
 synchronously, so a headless editor converts shortcodes from its first update.
+Text typed before the database arrives is converted when it does. If it
+fails to load (for example, offline), the error goes to the editor's
+`onError` and the next editor tries again; an editor disposed before it
+arrives is left alone.
 
 Each emoji's image is loaded with the page's own document. Until it loads,
 the font's emoji is shown.

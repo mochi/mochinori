@@ -14,10 +14,18 @@ export function loadTextNodeTransform(): MaybePromise<
   typeof createTextNodeTransform
 > {
   if (!cache) {
-    cache = import('./$textNodeTransform.ts').then(mod => {
-      cache = mod.createTextNodeTransform;
-      return cache;
-    });
+    cache = import('./$textNodeTransform.ts').then(
+      mod => {
+        cache = mod.createTextNodeTransform;
+        return cache;
+      },
+      (error: unknown) => {
+        // A chunk that failed to load (say, offline) is tried again by the
+        // next editor instead of failing for the rest of the page's life
+        cache = undefined;
+        throw error;
+      },
+    );
   }
   return cache;
 }

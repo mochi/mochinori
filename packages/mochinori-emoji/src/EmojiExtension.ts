@@ -102,11 +102,12 @@ export interface EmojiExtensionOutput {
 function resolve<T extends (...args: never[]) => unknown>(
   arg: Promise<T> | T,
   fn: (v: T) => void,
+  onError: (error: unknown) => void,
 ) {
   if (typeof arg === 'function') {
     fn(arg);
   } else {
-    void arg.then(fn);
+    arg.then(fn, onError);
   }
 }
 
@@ -226,10 +227,16 @@ export const EmojiExtension = defineExtension({
         }
       }),
     );
-    // Defer loading of the transform which needs to load the emoji JSON
-    resolve(loadTextNodeTransform(), createTextNodeTransform => {
-      const abortSignal = state.getSignal();
-      if (!abortSignal.aborted) {
+    // Defer loading of the transform which needs to load the emoji JSON.
+    // The editor may be disposed before it arrives, so check the abort
+    // signal, which is aborted when this registration is cleaned up.
+    const abortSignal = state.getSignal();
+    resolve(
+      loadTextNodeTransform(),
+      createTextNodeTransform => {
+        if (abortSignal.aborted) {
+          return;
+        }
         abortSignal.addEventListener(
           'abort',
           // Registered only while the editor is editable, and again when the
@@ -247,8 +254,15 @@ export const EmojiExtension = defineExtension({
           ),
           {once: true},
         );
-      }
-    });
+      },
+      error => {
+        if (!abortSignal.aborted) {
+          editor._onError(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
+      },
+    );
     return cleanup;
   },
 });
