@@ -24,11 +24,27 @@ import {useState} from 'react';
 
 import styles from './styles.module.css';
 
-// Custom emoji beyond the Unicode set, like a Slack workspace's
-const CUSTOM_EMOJI: CustomEmoji[] = [
+// Custom emoji beyond the Unicode set, like a Slack workspace's. They stand
+// in for a server's list, which the editor asks for as names are typed or
+// appear in the document instead of loading all of them up front.
+const SERVER_EMOJI: CustomEmoji[] = [
   {name: 'mochinori', src: '/img/logo/mochinori-mark.svg'},
   {name: 'mochi', src: '/img/logo/mochinori-icon.svg'},
 ];
+
+function lookupCustomEmoji(
+  query: string,
+  signal: AbortSignal,
+): Promise<readonly CustomEmoji[]> {
+  return new Promise(resolve => {
+    // A short delay, as if over the network
+    const timer = setTimeout(
+      () => resolve(SERVER_EMOJI.filter(emoji => emoji.name.startsWith(query))),
+      300,
+    );
+    signal.addEventListener('abort', () => clearTimeout(timer), {once: true});
+  });
+}
 
 const EmojiDemoExtension = defineExtension({
   $initialEditorState: () => {
@@ -52,9 +68,9 @@ const EmojiDemoExtension = defineExtension({
     RichTextExtension,
     HistoryExtension,
     configExtension(EmojiExtension, {
-      customEmoji: CUSTOM_EMOJI,
       emojiClass: styles.emoji,
       emojiLoadedClass: styles.emojiLoaded,
+      lookupCustomEmoji,
     }),
     // Pasted emoji keep their shortcode
     ClipboardDOMImportExtension,

@@ -274,6 +274,158 @@ describe('EmojiExtension', () => {
   });
 
   describe('custom emoji', () => {
+    describe('lookupCustomEmoji', () => {
+      const SERVER: readonly CustomEmoji[] = [
+        PARROT,
+        {name: 'party', src: 'party.png'},
+        {name: 'mochi', src: 'mochi.png'},
+      ];
+
+      function buildLookupEditor(onError: (error: Error) => void = vi.fn()) {
+        const queries: string[] = [];
+        const pending: Promise<unknown>[] = [];
+        const lookup = vi.fn((query: string, _signal: AbortSignal) => {
+          queries.push(query);
+          const result = Promise.resolve(
+            SERVER.filter(emoji => emoji.name.startsWith(query)),
+          );
+          pending.push(result);
+          return result;
+        });
+        const editor = buildEditorFromExtensions(
+          defineExtension({
+            dependencies: [
+              configExtension(EmojiExtension, {lookupCustomEmoji: lookup}),
+            ],
+            name: '[root]',
+            onError,
+          }),
+        );
+        const settle = async () => {
+          await Promise.all(pending);
+          editor.update(() => {}, {discrete: true});
+        };
+        return {editor, lookup, queries, settle};
+      }
+
+      // Types `text` one character at a time at the end of the paragraph
+      function type(editor: LexicalEditor, text: string) {
+        for (const char of text) {
+          editor.update(
+            () => {
+              const last = $getRoot().getLastDescendant();
+              if ($isTextNode(last)) {
+                last.selectEnd();
+              } else {
+                $getRoot().selectEnd();
+              }
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                selection.insertText(char);
+              }
+            },
+            {discrete: true},
+          );
+        }
+      }
+
+      it('looks up a name as it is typed, from two characters', async () => {
+        const {editor, queries, settle} = buildLookupEditor();
+        using _editor = editor;
+        setText(editor, 'so ');
+        type(editor, ':p');
+        expect(queries).toEqual([]);
+        type(editor, 'ar');
+        expect(queries).toEqual(['pa', 'par']);
+        await settle();
+        // By the closing colon the emoji is already known
+        expect(getCustomEmoji(editor).value).toEqual([
+          PARROT,
+          {name: 'party', src: 'party.png'},
+        ]);
+        type(editor, 'typarrot:');
+        expect(describeText(editor)).toEqual(['so ', {custom: 'partyparrot'}]);
+      });
+
+      it('asks each query once', async () => {
+        const {editor, queries, settle} = buildLookupEditor();
+        using _editor = editor;
+        setText(editor, '');
+        type(editor, ':zz');
+        await settle();
+        setText(editor, '');
+        type(editor, ':zz');
+        expect(queries).toEqual(['zz']);
+      });
+
+      it('looks up unknown names in the document', async () => {
+        const {editor, queries, settle} = buildLookupEditor();
+        using _editor = editor;
+        const json = JSON.stringify({
+          root: {
+            children: [
+              {
+                children: [
+                  {name: 'mochi', text: ':mochi:', type: 'mn:emoji'},
+                  {text: ' and :partyparrot: ', type: 'text'},
+                ],
+                type: 'paragraph',
+              },
+            ],
+            type: 'root',
+          },
+        });
+        editor.setEditorState(editor.parseEditorState(json));
+        editor.update(() => {}, {discrete: true});
+        expect([...queries].sort()).toEqual(['mochi', 'partyparrot']);
+        await settle();
+        expect(describeText(editor)).toEqual([
+          {custom: 'mochi'},
+          ' and ',
+          {custom: 'partyparrot'},
+          ' ',
+        ]);
+      });
+
+      it('does not look up names it knows, or while read-only', async () => {
+        const {editor, queries} = buildLookupEditor();
+        using _editor = editor;
+        getCustomEmoji(editor).value = [PARROT];
+        setText(editor, 'a :partyparrot: b');
+        expect(queries).toEqual([]);
+        editor.setEditable(false);
+        setText(editor, ':mo');
+        expect(queries).toEqual([]);
+      });
+
+      it('ignores results after dispose and reports failures', async () => {
+        const onError = vi.fn();
+        const failing = buildEditorFromExtensions(
+          defineExtension({
+            dependencies: [
+              configExtension(EmojiExtension, {
+                lookupCustomEmoji: () => Promise.reject(new Error('offline')),
+              }),
+            ],
+            name: '[root]',
+            onError,
+          }),
+        );
+        using _failing = failing;
+        setText(failing, 'a :nope: b');
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(onError).toHaveBeenCalledWith(new Error('offline'), failing);
+
+        const {editor, lookup, settle} = buildLookupEditor();
+        setText(editor, ':partyparrot: ');
+        const [, signal] = lookup.mock.calls[0];
+        editor.dispose();
+        expect(signal.aborted).toBe(true);
+        await settle().catch(() => {});
+        expect(getCustomEmoji(editor).value).toEqual([]);
+      });
+    });
+
     describe('loadCustomEmoji', () => {
       function buildLoadingEditor(
         load: Promise<readonly CustomEmoji[]>,

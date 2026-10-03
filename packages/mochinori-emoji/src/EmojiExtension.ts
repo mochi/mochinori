@@ -26,6 +26,10 @@ import {
   parseEmojiShortNamesAndTexts,
 } from './emojiEntries.ts';
 import {EmojiNode, renderCustomEmoji} from './EmojiNode.ts';
+import {
+  type CustomEmojiLookup,
+  registerCustomEmojiLookup,
+} from './registerCustomEmojiLookup.ts';
 import {registerEmojiNavigation} from './registerEmojiNavigation.ts';
 import {unifiedIDFromText} from './unifiedID.ts';
 
@@ -91,6 +95,23 @@ export interface EmojiExtensionConfig {
   loadCustomEmoji:
     ((abortSignal: AbortSignal) => Promise<readonly CustomEmoji[]>) | undefined;
   /**
+   * Looks up custom emoji as they are needed instead of loading the whole
+   * set, like Slack does for a workspace with thousands of them. It is asked
+   * for `query`, the start of a name, as the name is typed (once it is
+   * {@link customEmojiLookupMinLength} long), and for each `:name:` or custom
+   * emoji in the document whose name isn't known yet. Return the custom
+   * emoji whose names start with `query` (a few is enough); they are added
+   * to `customEmoji`. Each query is asked once per editor. `abortSignal` is
+   * aborted when the editor is disposed; a rejection goes to the editor's
+   * `onError`.
+   */
+  lookupCustomEmoji: CustomEmojiLookup | undefined;
+  /**
+   * How much of a name has to be typed after the `:` before
+   * {@link lookupCustomEmoji} is asked. Default: 2.
+   */
+  customEmojiLookupMinLength: number;
+  /**
    * The class to use for custom emoji. The image is the element's background
    * and its `:name:` text is shrunk to nothing; a name that is not in
    * `customEmoji` shows its text instead.
@@ -151,11 +172,13 @@ export const EmojiExtension = defineExtension({
   config: safeCast<EmojiExtensionConfig>({
     customEmoji: [],
     customEmojiClass: 'mochinori-custom-emoji',
+    customEmojiLookupMinLength: 2,
     emojiBaseUrl: `https://cdn.jsdelivr.net/npm/emoji-datasource-facebook@${EMOJI_DATASOURCE_VERSION}/img/facebook/64`,
     emojiClass: 'mochinori-emoji',
     emojiLoadedClass: 'mochinori-emoji--loaded',
     emojiLoadingClass: '',
     loadCustomEmoji: undefined,
+    lookupCustomEmoji: undefined,
     parseEmojiReplacementEntry: parseEmojiShortNamesAndTexts,
   }),
   dependencies: [WatchEditableExtension],
@@ -250,17 +273,34 @@ export const EmojiExtension = defineExtension({
         );
       }
     };
+    // Adds custom emoji, replacing any with the same name
+    const addCustomEmoji = (found: readonly CustomEmoji[]) => {
+      const names = new Set(found.map(emoji => emoji.name));
+      customEmoji.value = [
+        ...customEmoji.value.filter(emoji => !names.has(emoji.name)),
+        ...found,
+      ];
+    };
     if (config.loadCustomEmoji) {
       config.loadCustomEmoji(abortSignal).then(loaded => {
-        if (abortSignal.aborted) {
-          return;
+        if (!abortSignal.aborted) {
+          addCustomEmoji(loaded);
         }
-        const names = new Set(loaded.map(emoji => emoji.name));
-        customEmoji.value = [
-          ...customEmoji.value.filter(emoji => !names.has(emoji.name)),
-          ...loaded,
-        ];
       }, reportError);
+    }
+    if (config.lookupCustomEmoji) {
+      abortSignal.addEventListener(
+        'abort',
+        registerCustomEmojiLookup(editor, {
+          abortSignal,
+          addCustomEmoji,
+          getCustomEmoji: () => customEmojiByName.peek(),
+          lookup: config.lookupCustomEmoji,
+          minLength: config.customEmojiLookupMinLength,
+          reportError,
+        }),
+        {once: true},
+      );
     }
     resolve(
       loadTextNodeTransform(),

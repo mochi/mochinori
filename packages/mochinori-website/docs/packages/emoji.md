@@ -82,6 +82,23 @@ configExtension(EmojiExtension, {
 });
 ```
 
+For a large set, like a Slack workspace with thousands of emoji, give
+`lookupCustomEmoji` instead, and the editor asks for emoji as they are
+needed: for the start of a name as it is typed, once two characters follow
+the `:` (`customEmojiLookupMinLength`), so the emoji is usually there by the
+closing `:`, and for each `:name:` or custom emoji in the document whose
+name it doesn't know yet. Return the emoji whose names start with the query;
+they are added to `customEmoji`, and each query is asked once per editor:
+
+```ts
+configExtension(EmojiExtension, {
+  lookupCustomEmoji: async (query, signal) => {
+    const url = `/api/emoji?prefix=${encodeURIComponent(query)}`;
+    return (await fetch(url, {signal})).json();
+  },
+});
+```
+
 - The node stores only the name, so documents show whatever
   image the app has for that name now. A name the app no longer has shows
   as `:name:` text, the way chat apps show a deleted emoji.
@@ -132,6 +149,8 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `emojiLoadedClass` | `'mochinori-emoji--loaded'` | Added once the image loads |
 | `customEmoji` | `[]` | Custom emoji (`{name, src}`), the initial value of the `customEmoji` output signal |
 | `loadCustomEmoji` | `undefined` | `(abortSignal) => Promise<CustomEmoji[]>`, called when an editor is created; the result is added to `customEmoji`. The signal aborts on dispose, and a rejection goes to the editor's `onError` |
+| `lookupCustomEmoji` | `undefined` | `(query, abortSignal) => Promise<CustomEmoji[]>`, asked for the start of a typed name and for unknown names in the document; the result is added to `customEmoji`. The signal aborts on dispose, and a rejection goes to the editor's `onError` |
+| `customEmojiLookupMinLength` | `2` | How much of a name is typed after the `:` before `lookupCustomEmoji` is asked |
 | `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
 

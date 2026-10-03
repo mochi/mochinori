@@ -33,4 +33,5 @@ export {
   type EmojiMatcher,
   findEmoji,
 } from './findEmoji.ts';
+export {type CustomEmojiLookup} from './registerCustomEmojiLookup.ts';
 export {textFromUnifiedID, unifiedIDFromText} from './unifiedID.ts';
