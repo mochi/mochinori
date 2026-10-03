@@ -92,7 +92,11 @@ function $getImages(): ImageNode[] {
   return $getRoot()
     .getChildren()
     .flatMap(child =>
-      $isElementNode(child) ? child.getChildren().filter($isImageNode) : [],
+      $isImageNode(child)
+        ? [child]
+        : $isElementNode(child)
+          ? child.getChildren().filter($isImageNode)
+          : [],
     );
 }
 
@@ -376,15 +380,34 @@ describe('ImageUploadExtension', () => {
     expect(calls.map(call => call.file)).toEqual([file]);
   });
 
-  it('ignores files when disabled', async () => {
+  it('does not upload, mirror or open the file dialog when read-only', async () => {
     const {calls, upload} = manualUploader();
-    using editor = buildEditor({disabled: true, upload});
-    editor.update(() => editor.dispatchCommand(DRAG_DROP_PASTE, [png()]), {
-      discrete: true,
-    });
+    const {calls: mirrorCalls, mirror} = manualMirror();
+    using editor = buildEditor({mirror, upload});
+    editor.setEditable(false);
+    editor.update(
+      () =>
+        $insertNodes([
+          $createImageNode({src: 'blob:mochi'}),
+          $createImageNode({src: 'https://example.com/mochi.png'}),
+        ]),
+      {discrete: true},
+    );
+    getExtensionDependencyFromEditor(
+      editor,
+      ImageUploadExtension,
+    ).output.openFileDialog();
     await flush();
     expect(calls).toHaveLength(0);
-    editor.read(() => expect($getImages()).toHaveLength(0));
+    expect(mirrorCalls).toHaveLength(0);
+    expect(document.querySelector('input[type=file]')).toBeNull();
+
+    // Once editable, the editor catches up on the images it received
+    editor.setEditable(true);
+    await flush();
+    expect(mirrorCalls.map(call => call.src)).toEqual([
+      'https://example.com/mochi.png',
+    ]);
   });
 
   describe('mirroring', () => {

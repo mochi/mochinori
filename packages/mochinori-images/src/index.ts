@@ -7,7 +7,13 @@ export {
   createImageResizer,
   type ImageResizerOptions,
 } from './createImageResizer.ts';
+export {
+  IMAGE_CAPTION_SLOT,
+  SET_IMAGE_BLOCK_COMMAND,
+  SET_IMAGE_CAPTION_COMMAND,
+} from './ImageCaption.ts';
 export {type ImageComponentProps} from './ImageComponent.tsx';
+export {IMAGE_DRAG_TYPE} from './ImageInteractions.ts';
 export {
   $createImageNode,
   $isImageNode,
@@ -15,12 +21,9 @@ export {
   type ImagePayload,
   type SerializedImageNode,
 } from './ImageNode.tsx';
+export {ImagesExtension, INSERT_IMAGE_COMMAND} from './ImagesExtension.ts';
 export {
-  type ImagesConfig,
-  ImagesExtension,
-  INSERT_IMAGE_COMMAND,
-} from './ImagesExtension.ts';
-export {
+  ImageFigureImportRule,
   ImageImportRule,
   ImagesImportExtension,
   ImagesImportRules,

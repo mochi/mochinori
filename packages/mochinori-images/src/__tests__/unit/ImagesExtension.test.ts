@@ -9,7 +9,6 @@ import {
   $getRoot,
   $insertNodes,
   $isElementNode,
-  configExtension,
   defineExtension,
 } from 'lexical';
 import {describe, expect, it} from 'vitest';
@@ -23,7 +22,7 @@ import {
   INSERT_IMAGE_COMMAND,
 } from '../../index.ts';
 
-function buildEditor(disabled = false) {
+function buildEditor() {
   return buildEditorFromExtensions(
     defineExtension({
       $initialEditorState: () => {
@@ -31,11 +30,7 @@ function buildEditor(disabled = false) {
         $getRoot().append(paragraph);
         paragraph.select();
       },
-      dependencies: [
-        RichTextExtension,
-        configExtension(ImagesExtension, {disabled}),
-        ImagesImportExtension,
-      ],
+      dependencies: [RichTextExtension, ImagesExtension, ImagesImportExtension],
       name: '[root]',
     }),
   );
@@ -45,7 +40,11 @@ function $getImages(): ImageNode[] {
   return $getRoot()
     .getChildren()
     .flatMap(child =>
-      $isElementNode(child) ? child.getChildren().filter($isImageNode) : [],
+      $isImageNode(child)
+        ? [child]
+        : $isElementNode(child)
+          ? child.getChildren().filter($isImageNode)
+          : [],
     );
 }
 
@@ -97,21 +96,6 @@ describe('ImagesExtension', () => {
     });
   });
 
-  it('does not handle INSERT_IMAGE_COMMAND when disabled', () => {
-    using editor = buildEditor(true);
-    editor.update(
-      () => {
-        expect(
-          editor.dispatchCommand(INSERT_IMAGE_COMMAND, {src: 'x.png'}),
-        ).toBe(false);
-      },
-      {discrete: true},
-    );
-    editor.read(() => {
-      expect($getImages()).toHaveLength(0);
-    });
-  });
-
   it('round-trips through JSON', () => {
     using editor = buildEditor();
     editor.update(
@@ -128,9 +112,10 @@ describe('ImagesExtension', () => {
     ];
     expect(paragraph.children[0]).toEqual({
       altText: 'a',
+      block: false,
       height: 20,
       src: 'a.png',
-      type: 'image',
+      type: 'mn:image',
       version: 1,
       width: 10,
     });

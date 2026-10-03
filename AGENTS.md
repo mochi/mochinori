@@ -79,17 +79,28 @@ package. So:
 - Optional chaining (`?.`) and nullish coalescing (`??`) are fine everywhere,
   including published packages. Lexical avoids them in its packages (its
   `no-optional-chaining` lint rule); mochinori does not carry that rule.
-- Prefer extensions (`defineExtension`) over React plugins. Extensions whose
-  behavior can be switched off take a `disabled` config and expose it as a
-  signal with `namedSignals` (see `ImagesExtension`).
+- Prefer extensions (`defineExtension`) over React plugins. Don't give an
+  extension a `disabled` config to turn all of it off: an app that doesn't
+  want a feature leaves the extension out of its dependencies. A `disabled`
+  config (exposed as a signal with `namedSignals`) is only for behavior that
+  must be switched off and on again while one editor is running.
+- Behavior that makes no sense in a read-only editor observes the editable
+  state: depend on `WatchEditableExtension` and register it in an `effect`
+  while its signal is true (see `ImagesExtension`), or react when it turns
+  true (see `ImageUploadExtension`). A one-off action, like opening a
+  dialog, can check `editor.isEditable()`.
 
 ### Custom nodes
 
 `ImageNode` in `@mochinori/images` is the reference.
 
+Node types start with `mn:` (`mn:image`), so they never collide with a
+third-party or in-house node of the same name, and an app can move from
+its own `image` node to ours one document at a time.
+
 1. Extend a base node class (`TextNode`, `ElementNode`, `DecoratorNode`).
    The constructor must work with no arguments.
-2. Implement `$config()` with `this.config('type', {extends: BaseNode, json:
+2. Implement `$config()` with `this.config('mn:type', {extends: BaseNode, json:
    schema})`, where `schema` is built with `nodeSchema<YourNode>()({...})`
    as a module-scope `const` above the class (like `imageNodeSchema`).
    Written inline in `$config()`, it makes TypeScript skip checking the
