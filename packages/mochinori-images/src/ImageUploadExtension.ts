@@ -4,6 +4,7 @@ import {
   namedSignals,
   type ReadonlySignal,
   signal,
+  WatchEditableExtension,
 } from '@lexical/extension';
 import {DRAG_DROP_PASTE} from '@lexical/rich-text';
 import {
@@ -11,6 +12,7 @@ import {
   $getRoot,
   $insertNodes,
   $isElementNode,
+  $nodesOfType,
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
   createCommand,
@@ -23,7 +25,7 @@ import {
 } from 'lexical';
 
 import {$createImageNode, $isImageNode, ImageNode} from './ImageNode.tsx';
-import {ImagesExtension} from './ImagesExtension.ts';
+import {$isBlockImagePlace, ImagesExtension} from './ImagesExtension.ts';
 
 /** Options passed to an {@link ImageUploader} */
 export interface ImageUploadOptions {
@@ -94,11 +96,6 @@ export class ImageTooLargeError extends Error {
 export type ImageRejectionReason = 'type' | 'size';
 
 export interface ImageUploadConfig {
-  /**
-   * When true, files are not inserted or uploaded. Images already uploading
-   * finish.
-   */
-  disabled: boolean;
   /**
    * Uploads image data. Without one, images keep their local `blob:` or
    * `data:` URL.
@@ -348,6 +345,8 @@ export const ImageUploadExtension = defineExtension({
     const $insertFiles = (fileList: readonly File[]): boolean => {
       const {accept, maxFileSize, onReject, prepareUpload} = configSignals;
       const nodes = [];
+      // On a line of their own, images are blocks; in text, inline
+      const block = $isBlockImagePlace();
       for (const file of fileList) {
         if (!accept.peek().includes(file.type)) {
           onReject.peek()?.(file, 'type');
@@ -356,7 +355,7 @@ export const ImageUploadExtension = defineExtension({
         } else {
           const localSrc = URL.createObjectURL(file);
           files.set(localSrc, file);
-          nodes.push($createImageNode({src: localSrc}));
+          nodes.push($createImageNode({block, src: localSrc}));
         }
       }
       if (nodes.length > 0) {
@@ -367,7 +366,7 @@ export const ImageUploadExtension = defineExtension({
 
     const openFileDialog = () => {
       const doc = editor.getRootElement()?.ownerDocument;
-      if (!doc || configSignals.disabled.peek()) {
+      if (!doc || !editor.isEditable()) {
         return;
       }
       const input = doc.createElement('input');
@@ -422,7 +421,6 @@ export const ImageUploadExtension = defineExtension({
   },
   config: safeCast<ImageUploadConfig>({
     accept: DEFAULT_ACCEPT,
-    disabled: false,
     inlineDataUrlMaxLength: 1024,
     isHostedSrc: null,
     maxFileSize: 10 * 1024 * 1024,
@@ -431,11 +429,12 @@ export const ImageUploadExtension = defineExtension({
     prepareUpload: null,
     upload: null,
   }),
-  dependencies: [ImagesExtension],
+  dependencies: [ImagesExtension, WatchEditableExtension],
   name: '@mochinori/images/ImageUpload',
   register: (editor, _config, state) => {
     const output = state.getOutput();
-    const {disabled, inlineDataUrlMaxLength, uploads} = output;
+    const {inlineDataUrlMaxLength, uploads} = output;
+    const editable = state.getDependency(WatchEditableExtension).output;
     const needsUpload = (src: string) =>
       src.startsWith('blob:') ||
       (src.startsWith('data:') && src.length > inlineDataUrlMaxLength.peek()) ||
@@ -451,7 +450,9 @@ export const ImageUploadExtension = defineExtension({
       if (upload?.status === 'uploaded') {
         return upload.src;
       }
-      if (!upload && !disabled.peek() && needsUpload(src)) {
+      // A read-only editor (a viewer of a shared document) leaves uploads
+      // and mirroring to the editors that can change the document
+      if (!upload && editable.peek() && needsUpload(src)) {
         // Uploads start after the update that created the image commits
         queueMicrotask(() => output.startUpload(src));
       }
@@ -491,27 +492,37 @@ export const ImageUploadExtension = defineExtension({
         },
         {skipInitialization: true},
       ),
-      effect(() => {
-        if (disabled.value) {
-          return;
-        }
-        return editor.registerCommand(
-          INSERT_IMAGE_FILES_COMMAND,
-          fileList => output.$insertFiles(fileList),
-          COMMAND_PRIORITY_EDITOR,
-        );
-      }),
-      effect(() => {
-        if (disabled.value) {
-          return;
-        }
-        return editor.registerCommand(
-          DRAG_DROP_PASTE,
-          fileList =>
-            editor.dispatchCommand(INSERT_IMAGE_FILES_COMMAND, fileList),
-          COMMAND_PRIORITY_LOW,
-        );
-      }),
+      // Images that arrived while read-only are checked once the editor
+      // becomes editable
+      (() => {
+        let wasEditable = editable.peek();
+        return effect(() => {
+          const isEditable = editable.value;
+          if (isEditable && !wasEditable) {
+            editor.read('latest', () => {
+              for (const node of $nodesOfType(ImageNode)) {
+                const localSrc = node.getSrc();
+                const src = check(localSrc);
+                if (src !== null) {
+                  output.swapToUploaded(localSrc, src);
+                }
+              }
+            });
+          }
+          wasEditable = isEditable;
+        });
+      })(),
+      editor.registerCommand(
+        INSERT_IMAGE_FILES_COMMAND,
+        fileList => output.$insertFiles(fileList),
+        COMMAND_PRIORITY_EDITOR,
+      ),
+      editor.registerCommand(
+        DRAG_DROP_PASTE,
+        fileList =>
+          editor.dispatchCommand(INSERT_IMAGE_FILES_COMMAND, fileList),
+        COMMAND_PRIORITY_LOW,
+      ),
     ];
     return () => {
       for (const fn of cleanup.reverse()) {
