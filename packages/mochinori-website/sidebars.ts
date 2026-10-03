@@ -10,6 +10,11 @@ const sidebars: SidebarsConfig = {
       type: 'category',
     },
     {
+      items: ['guides/collaboration'],
+      label: 'Guides',
+      type: 'category',
+    },
+    {
       items: ['contributing/monorepo', 'contributing/cloudflare'],
       label: 'Contributing',
       type: 'category',

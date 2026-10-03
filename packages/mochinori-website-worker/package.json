@@ -17,9 +17,12 @@
     "@cloudflare/workers-types": "^5.20261002.1",
     "@mochinori/website": "workspace:*",
     "@types/node": "^24.0.0",
+    "partyserver": "^0.5.10",
     "typescript": "^6.0.3",
     "vite": "^8.3.1",
-    "void": "0.22.0",
-    "wrangler": "^4.146.0"
+    "void": "0.23.0",
+    "wrangler": "^4.146.0",
+    "y-partyserver": "^2.2.0",
+    "yjs": "^13.6.33"
   }
 }

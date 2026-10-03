@@ -26,7 +26,10 @@ notice.
 - `pnpm run deploy:website` - Build the site, then `void deploy --platform cloudflare`. Never
   deploy unless a person asked. Pushes to `main` deploy through
   `.github/workflows/deploy.yml`, and each pull request gets its own preview
-  Worker through `.github/workflows/preview.yml`.
+  Worker through `.github/workflows/preview.yml`. A change that adds,
+  renames or removes a Durable Object class needs one atomic production
+  deploy (`--atomic`, or the Deploy workflow's `atomic` input); say so in
+  its PR.
 
 ## Layout
 
@@ -37,7 +40,9 @@ notice.
     be `"type": "module"` (Docusaurus breaks).
   - `mochinori-website-worker` is the [Void](https://void.cloud) app that
     deploys the site: `routes/` holds API routes (Hono handlers),
-    `durable-objects/` holds Durable Objects (`defineDurableState`), and
+    `durable-objects/` holds Durable Objects (`defineDurableState`; the
+    exception is `collab.ts`, which exports its own class, see
+    `docs/guides/collaboration.md` in the website), and
     `void.config.ts` the Worker settings. Its static assets are the
     Docusaurus build. Keep Docusaurus out of this package's dependencies:
     Void 0.22.0 refuses to deploy a backend from a package that depends on

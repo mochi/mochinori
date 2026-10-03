@@ -20,13 +20,16 @@
     "@lexical/html": "catalog:",
     "@lexical/react": "catalog:",
     "@lexical/rich-text": "catalog:",
+    "@lexical/yjs": "catalog:",
     "@mdx-js/react": "^3.1.1",
     "@mochinori/images": "workspace:*",
     "clsx": "^2.1.1",
     "lexical": "catalog:",
     "prism-react-renderer": "^2.4.1",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "y-partyserver": "^2.2.0",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",

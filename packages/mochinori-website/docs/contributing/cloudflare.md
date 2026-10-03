@@ -35,6 +35,12 @@ In `packages/mochinori-website-worker/`:
   from the filename. `counter.ts` becomes the `COUNTER` binding and the
   `CounterDurableObject` class. Routes call it with
   `Counter.get(name).increment(1)`.
+- `durable-objects/collab.ts` and `routes/api/collab/[doc].ts` serve
+  collaborative Yjs documents at `/api/collab/<doc>`, one Durable Object
+  each. `collab.ts` hands Void a y-partyserver class instead of a
+  `defineDurableState` definition; see
+  [Collaboration on Cloudflare](../guides/collaboration.md) for how, and
+  what to check before upgrading Void.
 - `routes/api/images/` stores demo image uploads in R2 (the `STORAGE`
   binding, bucket `mochinori-demo-uploads`). `POST /api/images` checks the
   file's magic bytes (PNG, JPEG, GIF, WebP or AVIF; never SVG), caps it at

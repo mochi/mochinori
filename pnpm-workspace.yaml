@@ -17,7 +17,7 @@ minimumReleaseAgeExclude:
   - 'miniflare'
   - 'workerd'
   - 'wrangler'
-  # Exact versions void 0.22.0 pins; later releases wait the full week
+  # Exact versions void 0.23.0 pins; later releases wait the full week
   - 'hono@4.13.11'
   - 'mysql2@3.24.5'
   - 'postal-mime@4.0.0'
@@ -35,12 +35,15 @@ catalog:
   '@lexical/react': '0.52.0'
   '@lexical/rich-text': '0.52.0'
   '@lexical/utils': '0.52.0'
+  '@lexical/yjs': '0.52.0'
   react: '^19.2.5'
   react-dom: '^19.2.5'
 
 peerDependencyRules:
   allowedVersions:
     eslint: '10'
+    # Types only; y-partyserver has not widened its range to 5 yet
+    'y-partyserver>@cloudflare/workers-types': '5'
 
 # Dependency build scripts stay disabled unless a package needs one.
 allowBuilds:

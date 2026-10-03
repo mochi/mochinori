@@ -10,6 +10,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      atomic:
+        description: >-
+          Publish atomically. Needed once after a change adds, renames or
+          removes a Durable Object class, which a staged deploy refuses.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,4 +41,4 @@ jobs:
           node-version: 24.x
       # The deploy script builds the Docusaurus site first: `void deploy` only
       # runs `vite build`, which serves whatever is already in its build/.
-      - run: pnpm run deploy:website
+      - run: pnpm run deploy:website ${{ inputs.atomic && '--atomic' || '' }}

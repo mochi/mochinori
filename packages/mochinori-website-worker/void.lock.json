@@ -35,6 +35,10 @@
         {
           "name": "COUNTER",
           "class_name": "CounterDurableObject"
+        },
+        {
+          "name": "COLLAB",
+          "class_name": "CollabDurableObject"
         }
       ]
     },
@@ -44,9 +48,15 @@
         "new_sqlite_classes": [
           "CounterDurableObject"
         ]
+      },
+      {
+        "tag": "void-durable-collab-v1",
+        "new_sqlite_classes": [
+          "CollabDurableObject"
+        ]
       }
     ],
     "workers_dev": true
   },
-  "text": "{\n  \"name\": \"mochinori-website\",\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ],\n  \"routes\": [\n    {\n      \"custom_domain\": true,\n      \"pattern\": \"mochinori.com\"\n    }\n  ],\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    }\n  ],\n  \"workers_dev\": true\n}\n"
+  "text": "{\n  \"name\": \"mochinori-website\",\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"mochinori-demo-uploads\"\n    }\n  ],\n  \"routes\": [\n    {\n      \"custom_domain\": true,\n      \"pattern\": \"mochinori.com\"\n    }\n  ],\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"COUNTER\",\n        \"class_name\": \"CounterDurableObject\"\n      },\n      {\n        \"name\": \"COLLAB\",\n        \"class_name\": \"CollabDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-counter-v1\",\n      \"new_sqlite_classes\": [\n        \"CounterDurableObject\"\n      ]\n    },\n    {\n      \"tag\": \"void-durable-collab-v1\",\n      \"new_sqlite_classes\": [\n        \"CollabDurableObject\"\n      ]\n    }\n  ],\n  \"workers_dev\": true\n}\n"
 }
