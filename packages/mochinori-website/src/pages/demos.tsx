@@ -34,8 +34,8 @@ export default function Demos(): JSX.Element {
           </Heading>
           <p>
             Shortcodes turn into emoji as you type, shown with the same images
-            on every platform. See the{' '}
-            <Link to="/docs/packages/emoji">docs</Link>.
+            on every platform, plus custom emoji you can add while the editor
+            runs. See the <Link to="/docs/packages/emoji">docs</Link>.
           </p>
           <BrowserOnly fallback={<div>Loading editor…</div>}>
             {() => <EmojiDemo />}

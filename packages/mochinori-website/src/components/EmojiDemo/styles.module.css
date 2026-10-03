@@ -31,3 +31,37 @@
 .emojiLoaded {
   color: transparent;
 }
+
+/* An <img>, or the :name: text once the emoji is removed */
+.customEmoji img {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+  vertical-align: -0.25em;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.input {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 0.4rem;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font: inherit;
+}

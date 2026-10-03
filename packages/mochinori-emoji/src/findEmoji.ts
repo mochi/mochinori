@@ -1,3 +1,5 @@
+import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
+
 import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
@@ -12,8 +14,13 @@ export type EmojiMatch = Readonly<{
   position: number;
   /** The matching shortcode from the text, such as ":man-facepalming:" or ":)" */
   shortcode: string;
-  /** The text of the emoji from the database, such as "🤦‍♂️" or "🙂" */
+  /**
+   * The text of the emoji from the database, such as "🤦‍♂️" or "🙂", or the
+   * shortcode of a custom emoji
+   */
   emoji: string;
+  /** The custom emoji that matched, if it was not a standard one */
+  custom?: CustomEmoji;
 }>;
 
 /** Finds the first emoji shortcode in a text, see {@link findEmoji} */
@@ -49,6 +56,7 @@ const EMOJI_DELIMITER = /[ \xa0:]/g;
 
 function findEmojiInMap(
   emojiReplacementMap: ReadonlyMap<string, string>,
+  customEmoji: CustomEmojiMap | undefined,
   text: string,
 ): EmojiMatch | null {
   let lastWordBreak = 0;
@@ -62,6 +70,10 @@ function findEmojiInMap(
         const emoji = emojiReplacementMap.get(shortcode);
         if (emoji) {
           return {emoji, position: lastColon, shortcode};
+        }
+        const custom = customEmoji?.get(shortcode.slice(1, -1));
+        if (custom) {
+          return {custom, emoji: shortcode, position: lastColon, shortcode};
         }
       }
       lastColon = match.index;
@@ -80,21 +92,40 @@ function findEmojiInMap(
   return null;
 }
 
+const replacementMaps = new WeakMap<EmojiEntryParser, Map<string, string>>();
+
+function getEmojiReplacementMap(
+  parseEntry: EmojiEntryParser,
+): Map<string, string> {
+  let map = replacementMaps.get(parseEntry);
+  if (!map) {
+    map = buildEmojiReplacementMap(parseEntry);
+    replacementMaps.set(parseEntry, map);
+  }
+  return map;
+}
+
 const matchers = new WeakMap<EmojiEntryParser, EmojiMatcher>();
 
 /**
  * Returns an {@link EmojiMatcher} for the replacements that `parseEntry`
- * returns for each entry of the emoji database. The database is parsed the
- * first time the matcher is called.
+ * returns for each entry of the emoji database, and for the `:name:` of
+ * each of the `customEmoji`. Standard emoji take precedence over custom
+ * emoji with the same name. The database is parsed the first time a matcher
+ * for `parseEntry` is called.
  */
-export function createEmojiMatcher(parseEntry: EmojiEntryParser): EmojiMatcher {
+export function createEmojiMatcher(
+  parseEntry: EmojiEntryParser,
+  customEmoji?: CustomEmojiMap,
+): EmojiMatcher {
+  if (customEmoji && customEmoji.size > 0) {
+    return text =>
+      findEmojiInMap(getEmojiReplacementMap(parseEntry), customEmoji, text);
+  }
   let matcher = matchers.get(parseEntry);
   if (!matcher) {
-    let map: Map<string, string> | undefined;
-    matcher = text => {
-      map ??= buildEmojiReplacementMap(parseEntry);
-      return findEmojiInMap(map, text);
-    };
+    matcher = text =>
+      findEmojiInMap(getEmojiReplacementMap(parseEntry), undefined, text);
     matchers.set(parseEntry, matcher);
   }
   return matcher;

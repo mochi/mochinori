@@ -8,7 +8,9 @@ Emoji for Lexical. Typing a short name such as `:tada:` or
 `:man-facepalming:`, or a smiley such as `:)` followed by a space, replaces it
 with an `EmojiNode`. Emoji are drawn with the 64×64 images from
 [emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so they
-look the same on every platform.
+look the same on every platform. Apps can add custom emoji beyond Unicode,
+like a Slack workspace or a Discord server, and change them while the editor
+runs.
 
 :::info Status
 
@@ -53,6 +55,42 @@ Then style the emoji, for example:
 }
 ```
 
+## Custom emoji
+
+A custom emoji is a name and an image. Typing `:name:` turns into a
+`CustomEmojiNode`:
+
+```ts
+configExtension(EmojiExtension, {
+  customEmoji: [{name: 'partyparrot', src: '/emoji/partyparrot.gif'}],
+});
+```
+
+The set can change while the editor runs, for example when someone uploads a
+new emoji. Set the extension's `customEmoji` output signal:
+
+```ts
+const {customEmoji} = getExtensionDependencyFromEditor(
+  editor,
+  EmojiExtension,
+).output;
+customEmoji.value = [...customEmoji.value, {name: 'mochi', src: mochiUrl}];
+```
+
+- A `CustomEmojiNode` stores only the name, so documents show whatever
+  image the app has for that name now. A name the app no longer has shows
+  as `:name:` text, the way chat apps show a deleted emoji.
+- Shortcodes typed before their emoji existed turn into emoji once it is
+  added.
+- A standard emoji with the same short name wins over a custom one.
+- In plain text (copy, `getTextContent()`) a custom emoji is `:name:`.
+- It exports to HTML as `<span data-custom-emoji="name"><img …></span>`,
+  so other apps show the image, and `EmojiImportExtension` imports it back
+  by name.
+
+Style it with `customEmojiClass`, for example
+`.mochinori-custom-emoji img { width: 1.25em; height: 1.25em; vertical-align: -0.25em; }`.
+
 ## How it loads
 
 The emoji database (about 36 KB) is loaded with a dynamic `import()`, so
@@ -78,12 +116,18 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `emojiClass` | `'mochinori-emoji'` | Class of every emoji |
 | `emojiLoadingClass` | `''` | Added until the image loads |
 | `emojiLoadedClass` | `'mochinori-emoji--loaded'` | Added once the image loads |
+| `customEmoji` | `[]` | Custom emoji (`{name, src}`), the initial value of the `customEmoji` output signal |
+| `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
+
+Its output has `customEmoji`, a signal of the custom emoji to set while the
+editor runs, and `customEmojiByName`, the same as a `Map`.
 
 ### `EmojiImportExtension`
 
-Adds an import rule to `DOMImportExtension` that turns the
-`data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`.
+Adds import rules to `DOMImportExtension` that turn the
+`data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`,
+and the `data-custom-emoji` element back into a `CustomEmojiNode`.
 HTML paste uses it when the editor also has `ClipboardDOMImportExtension`.
 
 ### `EmojiNode`
@@ -106,11 +150,19 @@ A `TextNode` in token mode, so it is deleted as a unit. It serializes as:
 Create one with `$createEmojiNode(emoji, shortcode)` and test for one with
 `$isEmojiNode(node)`.
 
-### `findEmoji(text)` and `createEmojiMatcher(parser)`
+### `CustomEmojiNode`
+
+An inline `DecoratorNode`, rendered without React. It serializes as
+`{"type": "custom-emoji", "version": 1, "name": "partyparrot"}`. Create one
+with `$createCustomEmojiNode(name)` and test for one with
+`$isCustomEmojiNode(node)`.
+
+### `findEmoji(text)` and `createEmojiMatcher(parser, customEmoji?)`
 
 `findEmoji` returns the first shortcode in a string, its position and its
 emoji, or `null`. `createEmojiMatcher` returns the same kind of function for
-another `parseEmojiReplacementEntry`.
+another `parseEmojiReplacementEntry`, and also matches the `:name:` of a map
+of custom emoji (the match then has `custom` set).
 
 ### `unifiedIDFromText(emoji)` and `textFromUnifiedID(id)`
 

@@ -25,7 +25,7 @@ const PROJECTS: Project[] = [
   {
     demo: '/demos#emoji',
     description:
-      'Type :tada: or :) and get an emoji node, drawn with the same images on every platform. The emoji database loads lazily in its own chunk.',
+      'Type :tada: or :) and get an emoji node, drawn with the same images on every platform, plus custom emoji like a Slack workspace has.',
     docs: '/docs/packages/emoji',
     name: '@mochinori/emoji',
     status: 'In progress',

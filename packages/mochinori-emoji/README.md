@@ -4,8 +4,9 @@ Emoji for [Lexical](https://lexical.dev) editors. Typing a short name such as
 `:tada:`, or a smiley such as `:)`, replaces it with an `EmojiNode` drawn with
 the images from
 [emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so emoji
-look the same on every platform. The emoji database loads lazily in its own
-chunk.
+look the same on every platform. Custom emoji, like a Slack workspace's,
+extend the set with your own images and can change while the editor runs.
+The emoji database loads lazily in its own chunk.
 
 Ported from `@etrepum/lexical-emoji-extension` in
 [lexical-builder](https://github.com/etrepum/lexical-builder).

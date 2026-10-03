@@ -1,4 +1,13 @@
-import {effect, WatchEditableExtension} from '@lexical/extension';
+import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
+
+import {
+  computed,
+  effect,
+  type ReadonlySignal,
+  type Signal,
+  signal,
+  WatchEditableExtension,
+} from '@lexical/extension';
 import {
   addClassNamesToElement,
   defineExtension,
@@ -12,6 +21,7 @@ import {
 
 import {loadTextNodeTransform} from '#loadTextNodeTransform';
 
+import {CustomEmojiNode, renderCustomEmoji} from './CustomEmojiNode.ts';
 import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
@@ -64,6 +74,29 @@ export interface EmojiExtensionConfig {
    * The function to use to parse the emoji database and build the text -> emoji mapping
    */
   parseEmojiReplacementEntry: EmojiEntryParser;
+  /**
+   * The custom emoji that `:name:` turns into, beyond the Unicode set. This is
+   * the initial value of the extension's `customEmoji` output signal; set
+   * that signal to change them while the editor runs.
+   */
+  customEmoji: readonly CustomEmoji[];
+  /**
+   * The class to use for custom emoji. The element holds an `<img>`, or the
+   * `:name:` text for a name that is not in `customEmoji`.
+   */
+  customEmojiClass: string;
+}
+
+export interface EmojiExtensionOutput {
+  /**
+   * The custom emoji. Set it to add, change or remove custom emoji while the
+   * editor runs: existing custom emoji show their new image (or their
+   * `:name:` once removed), and shortcodes already typed for a new name
+   * turn into emoji.
+   */
+  customEmoji: Signal<readonly CustomEmoji[]>;
+  /** {@link EmojiExtensionOutput.customEmoji} by name */
+  customEmojiByName: ReadonlySignal<CustomEmojiMap>;
 }
 
 function resolve<T extends (...args: never[]) => unknown>(
@@ -91,9 +124,21 @@ function resolve<T extends (...args: never[]) => unknown>(
  * Images are also maximally lazily loaded, before they load the font's
  * representation of that emoji is used and then the emojiLoadedClass is
  * added.
+ *
+ * Custom emoji (`customEmoji`) extend the set beyond Unicode with images,
+ * typed as `:name:` and stored as a {@link CustomEmojiNode}.
  */
 export const EmojiExtension = defineExtension({
+  build(_editor, config): EmojiExtensionOutput {
+    const customEmoji = signal(config.customEmoji);
+    const customEmojiByName = computed<CustomEmojiMap>(
+      () => new Map(customEmoji.value.map(emoji => [emoji.name, emoji])),
+    );
+    return {customEmoji, customEmojiByName};
+  },
   config: safeCast<EmojiExtensionConfig>({
+    customEmoji: [],
+    customEmojiClass: 'mochinori-custom-emoji',
     emojiBaseUrl: `https://cdn.jsdelivr.net/npm/emoji-datasource-facebook@${EMOJI_DATASOURCE_VERSION}/img/facebook/64`,
     emojiClass: 'mochinori-emoji',
     emojiLoadedClass: 'mochinori-emoji--loaded',
@@ -102,9 +147,11 @@ export const EmojiExtension = defineExtension({
   }),
   dependencies: [WatchEditableExtension],
   name: '@mochinori/emoji/Emoji',
-  nodes: () => [EmojiNode],
+  nodes: () => [EmojiNode, CustomEmojiNode],
   register(editor: LexicalEditor, config, state) {
     const editable = state.getDependency(WatchEditableExtension).output;
+    const {customEmojiByName} = state.getOutput();
+    const customEmojiKeys = new Set<NodeKey>();
     const nodeCleanup = new Map<NodeKey, () => void>();
     const runNodeCleanup = (nodeKey: NodeKey) => {
       const fn = nodeCleanup.get(nodeKey);
@@ -161,20 +208,44 @@ export const EmojiExtension = defineExtension({
         }
         nodeCleanup.clear();
       },
+      editor.registerMutationListener(CustomEmojiNode, nodes => {
+        for (const [nodeKey, mutation] of nodes) {
+          if (mutation === 'destroyed') {
+            customEmojiKeys.delete(nodeKey);
+          } else {
+            customEmojiKeys.add(nodeKey);
+          }
+        }
+      }),
+      // Show the current image of each custom emoji when the set changes
+      effect(() => {
+        const byName = customEmojiByName.value;
+        for (const nodeKey of customEmojiKeys) {
+          const dom = editor.getElementByKey(nodeKey);
+          const name = dom?.getAttribute('data-custom-emoji');
+          if (dom && name !== null && name !== undefined) {
+            renderCustomEmoji(dom, name, byName.get(name));
+          }
+        }
+      }),
     );
     // Defer loading of the transform which needs to load the emoji JSON
     resolve(loadTextNodeTransform(), createTextNodeTransform => {
       const abortSignal = state.getSignal();
       if (!abortSignal.aborted) {
-        const $textNodeTransform = createTextNodeTransform(
-          config.parseEmojiReplacementEntry,
-        );
         abortSignal.addEventListener(
           'abort',
-          // Registered only while the editor is editable
+          // Registered only while the editor is editable, and again when the
+          // custom emoji change, which runs it over all of the text
           effect(() =>
             editable.value
-              ? editor.registerNodeTransform(TextNode, $textNodeTransform)
+              ? editor.registerNodeTransform(
+                  TextNode,
+                  createTextNodeTransform(
+                    config.parseEmojiReplacementEntry,
+                    customEmojiByName.value,
+                  ),
+                )
               : undefined,
           ),
           {once: true},

@@ -6,6 +6,7 @@ import {
 } from '@lexical/html';
 import {$isTextNode, configExtension, defineExtension} from 'lexical';
 
+import {$createCustomEmojiNode} from './CustomEmojiNode.ts';
 import {EmojiExtension} from './EmojiExtension.ts';
 import {$createEmojiNode} from './EmojiNode.ts';
 
@@ -40,7 +41,21 @@ export const EmojiImportRule = defineImportRule({
   name: '@mochinori/emoji/emoji',
 });
 
-export const EmojiImportRules = [EmojiImportRule];
+/**
+ * Imports the `<span data-custom-emoji>` that {@link CustomEmojiNode}
+ * exports as a {@link CustomEmojiNode}, by name, so it shows the editor's
+ * own image for that name
+ */
+export const CustomEmojiImportRule = defineImportRule({
+  $import: (_ctx, el, $next) => {
+    const name = el.getAttribute('data-custom-emoji');
+    return name ? [$createCustomEmojiNode(name)] : $next();
+  },
+  match: sel.any().attr('data-custom-emoji', true),
+  name: '@mochinori/emoji/custom-emoji',
+});
+
+export const EmojiImportRules = [EmojiImportRule, CustomEmojiImportRule];
 
 /**
  * Adds emoji import to {@link DOMImportExtension}, for HTML paste and

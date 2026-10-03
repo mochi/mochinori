@@ -1,3 +1,10 @@
+export {type CustomEmoji, type CustomEmojiMap} from './customEmoji.ts';
+export {
+  $createCustomEmojiNode,
+  $isCustomEmojiNode,
+  CustomEmojiNode,
+  type SerializedCustomEmojiNode,
+} from './CustomEmojiNode.ts';
 export {
   type EmojiEntry,
   type EmojiEntryParser,
@@ -10,8 +17,10 @@ export {
   EMOJI_DATASOURCE_VERSION,
   EmojiExtension,
   type EmojiExtensionConfig,
+  type EmojiExtensionOutput,
 } from './EmojiExtension.ts';
 export {
+  CustomEmojiImportRule,
   EmojiImportExtension,
   EmojiImportRule,
   EmojiImportRules,

@@ -1,17 +1,22 @@
+import type {CustomEmojiMap} from './customEmoji.ts';
 import type {EmojiEntryParser} from './emojiEntries.ts';
-import type {TextNode} from 'lexical';
 
+import {$getSelection, $isRangeSelection, type TextNode} from 'lexical';
+
+import {$createCustomEmojiNode} from './CustomEmojiNode.ts';
 import {$createEmojiNode} from './EmojiNode.ts';
 import {createEmojiMatcher} from './findEmoji.ts';
 
 /**
  * Returns a {@link TextNode} transform that replaces the shortcodes that
- * `parseEntry` produces with an {@link EmojiNode}
+ * `parseEntry` produces with an {@link EmojiNode}, and the `:name:` of each
+ * of the `customEmoji` with a {@link CustomEmojiNode}
  */
 export function createTextNodeTransform(
   parseEntry: EmojiEntryParser,
+  customEmoji?: CustomEmojiMap,
 ): (node: TextNode) => void {
-  const findEmoji = createEmojiMatcher(parseEntry);
+  const findEmoji = createEmojiMatcher(parseEntry, customEmoji);
   return function $textNodeTransform(node: TextNode): void {
     if (!node.isSimpleText() || node.hasFormat('code')) {
       return;
@@ -24,14 +29,30 @@ export function createTextNodeTransform(
       return;
     }
 
-    const {emoji, position, shortcode} = emojiMatch;
+    const {custom, emoji, position, shortcode} = emojiMatch;
     const [targetNode] =
       position === 0
         ? // First text chunk within string, splitting into 2 parts
           node.splitText(shortcode.length)
         : // In the middle of a string
           node.splitText(position, position + shortcode.length).slice(1);
-    if (targetNode !== undefined) {
+    if (targetNode === undefined) {
+      return;
+    }
+    if (custom) {
+      const selection = $getSelection();
+      const hadCaret =
+        $isRangeSelection(selection) &&
+        selection.isCollapsed() &&
+        selection.anchor.key === targetNode.getKey();
+      const customNode = targetNode.replace(
+        $createCustomEmojiNode(custom.name),
+      );
+      if (hadCaret) {
+        // A decorator can't hold the caret, so keep typing after it
+        customNode.selectNext(0, 0);
+      }
+    } else {
       targetNode.replace(
         $createEmojiNode(emoji, shortcode)
           .setFormat(targetNode.getFormat())

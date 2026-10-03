@@ -57,6 +57,30 @@ describe('createEmojiMatcher', () => {
     expect(texts('a :) b')?.emoji).toBe('🙂');
   });
 
+  it('matches custom emoji by :name:, after standard emoji', () => {
+    const parrot = {name: 'partyparrot', src: 'parrot.gif'};
+    const smile = {name: 'smile', src: 'smile.png'};
+    const matcher = createEmojiMatcher(
+      parseEmojiShortNames,
+      new Map([
+        [parrot.name, parrot],
+        [smile.name, smile],
+      ]),
+    );
+    expect(matcher('so :partyparrot:')).toEqual({
+      custom: parrot,
+      emoji: ':partyparrot:',
+      position: 3,
+      shortcode: ':partyparrot:',
+    });
+    expect(matcher(':smile:')).toEqual({
+      emoji: '😄',
+      position: 0,
+      shortcode: ':smile:',
+    });
+    expect(matcher('partyparrot')).toBe(null);
+  });
+
   it('returns the same matcher for the same parser', () => {
     expect(createEmojiMatcher(parseEmojiTexts)).toBe(
       createEmojiMatcher(parseEmojiTexts),
