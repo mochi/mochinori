@@ -24,9 +24,11 @@ function textTransformCount(editor: LexicalEditor): number {
 /** Loads the package with a transform loader that waits for `load` */
 async function importWithLoader(load: Promise<CreateTransform>) {
   vi.resetModules();
-  vi.doMock('#loadTextNodeTransform', () => ({
-    loadTextNodeTransform: () => load,
-  }));
+  // Mock the files rather than the package's `#loadTextNodeTransform`
+  // import, whichever of them it resolves to
+  const loader = () => ({loadTextNodeTransform: () => load});
+  vi.doMock('../../loadTextNodeTransform.ts', loader);
+  vi.doMock('../../loadTextNodeTransform.node.ts', loader);
   const [{EmojiExtension}, {buildEditorFromExtensions}, transform] =
     await Promise.all([
       import('../../index.ts'),
@@ -41,7 +43,8 @@ async function importWithLoader(load: Promise<CreateTransform>) {
 }
 
 afterEach(() => {
-  vi.doUnmock('#loadTextNodeTransform');
+  vi.doUnmock('../../loadTextNodeTransform.ts');
+  vi.doUnmock('../../loadTextNodeTransform.node.ts');
   vi.doUnmock('../../$textNodeTransform.ts');
   vi.resetModules();
 });
