@@ -21,6 +21,7 @@
     "@lexical/react": "catalog:",
     "@lexical/rich-text": "catalog:",
     "@mdx-js/react": "^3.1.1",
+    "@mochinori/emoji": "workspace:*",
     "@mochinori/images": "workspace:*",
     "clsx": "^2.1.1",
     "lexical": "catalog:",

@@ -22,6 +22,14 @@ const PROJECTS: Project[] = [
     name: '@mochinori/images',
     status: 'In progress',
   },
+  {
+    demo: '/demos#emoji',
+    description:
+      'Type :tada: or :) and get an emoji node, drawn with the same images on every platform. The emoji database loads lazily in its own chunk.',
+    docs: '/docs/packages/emoji',
+    name: '@mochinori/emoji',
+    status: 'In progress',
+  },
 ];
 
 export default function HomepageProjects(): JSX.Element {

@@ -1,0 +1,33 @@
+.demo {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--ifm-background-surface-color);
+}
+
+.editor {
+  min-height: 8rem;
+  padding: 1rem;
+  outline: none;
+}
+
+.paragraph {
+  margin: 0 0 0.75rem;
+}
+
+/* The image from emoji-datasource-facebook, at the size of the text */
+.emoji {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 1em 1em;
+  vertical-align: top;
+  caret-color: var(--ifm-font-color-base);
+}
+
+/* Once the image has loaded, hide the font's emoji behind it */
+.emojiLoaded {
+  color: transparent;
+}

@@ -1,0 +1,63 @@
+{
+  "name": "@mochinori/emoji",
+  "description": "Emoji shortcodes and consistent emoji images for Lexical editors, with a lazily loaded emoji database.",
+  "keywords": [
+    "lexical",
+    "editor",
+    "rich-text",
+    "emoji",
+    "extension"
+  ],
+  "license": "MIT",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mochi/mochinori.git",
+    "directory": "packages/mochinori-emoji"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "mochinori-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#loadTextNodeTransform": {
+      "mochinori-source": {
+        "browser": "./src/loadTextNodeTransform.ts",
+        "default": "./src/loadTextNodeTransform.node.ts"
+      },
+      "types": "./dist/loadTextNodeTransform.d.ts",
+      "browser": "./dist/loadTextNodeTransform.js",
+      "default": "./dist/loadTextNodeTransform.node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "generate": "node scripts/generateEmojiData.mjs"
+  },
+  "peerDependencies": {
+    "@lexical/extension": "^0.52.0",
+    "@lexical/html": "^0.52.0",
+    "lexical": "^0.52.0"
+  },
+  "devDependencies": {
+    "@lexical/extension": "catalog:",
+    "@lexical/html": "catalog:",
+    "emoji-datasource-facebook": "15.1.2",
+    "lexical": "catalog:"
+  }
+}

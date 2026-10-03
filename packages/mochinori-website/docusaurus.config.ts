@@ -74,6 +74,7 @@ const config: Config = {
           items: [
             {label: 'Introduction', to: '/docs/intro'},
             {label: '@mochinori/images', to: '/docs/packages/images'},
+            {label: '@mochinori/emoji', to: '/docs/packages/emoji'},
           ],
           title: 'Docs',
         },
