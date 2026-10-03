@@ -8,9 +8,6 @@ look the same on every platform. Custom emoji, like a Slack workspace's,
 extend the set with your own images and can change while the editor runs.
 The emoji database loads lazily in its own chunk.
 
-Ported from `@etrepum/lexical-emoji-extension` in
-[lexical-builder](https://github.com/etrepum/lexical-builder).
-
 ## Install
 
 ```sh

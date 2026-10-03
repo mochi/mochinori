@@ -12,14 +12,6 @@ look the same on every platform. Apps can add custom emoji beyond Unicode,
 like a Slack workspace or a Discord server, and change them while the editor
 runs.
 
-:::info Status
-
-Ported from `@etrepum/lexical-emoji-extension` in
-[lexical-builder](https://github.com/etrepum/lexical-builder). Not published to
-npm yet.
-
-:::
-
 [Try it in the demos](/demos#emoji).
 
 ## Usage
