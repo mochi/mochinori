@@ -11,8 +11,10 @@ import {
   type EditorConfig,
   type LexicalEditor,
   type LexicalNode,
+  type LexicalParseJSON,
   nodeSchema,
   type SerializedLexicalNode,
+  type SerializedPartial,
   type Spread,
   stringValue,
   withField,
@@ -28,6 +30,16 @@ export type SerializedCustomEmojiNode = Spread<
 const customEmojiNodeSchema = nodeSchema<CustomEmojiNode>()({
   name: withField(stringValue(), {field: '__name'}),
 });
+
+// The JSON types of the methods the schema derives
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export interface CustomEmojiNode {
+  exportJSON(compact?: false): SerializedCustomEmojiNode;
+  exportJSON(compact: boolean): SerializedPartial<SerializedCustomEmojiNode>;
+  updateFromJSON(
+    serializedNode: LexicalParseJSON<SerializedCustomEmojiNode>,
+  ): this;
+}
 
 /**
  * Renders a custom emoji into its element: an `<img>` when `emoji` is known,
@@ -65,6 +77,7 @@ export function renderCustomEmoji(
  * for that name now. A name the app no longer has is shown as `:name:`.
  * Its text content is `:name:` too, so plain text copies keep it.
  */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class CustomEmojiNode extends DecoratorNode<null> {
   __name: string = '';
 

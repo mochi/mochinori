@@ -8,8 +8,10 @@ import {
   type EditorConfig,
   type LexicalEditor,
   type LexicalNode,
+  type LexicalParseJSON,
   nodeSchema,
   optional,
+  type SerializedPartial,
   type SerializedTextNode,
   type Spread,
   stringValue,
@@ -28,6 +30,14 @@ const emojiNodeSchema = nodeSchema<EmojiNode>()({
   shortcode: withField(optional(stringValue()), {field: '__shortcode'}),
 });
 
+// The JSON types of the methods the schema derives
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export interface EmojiNode {
+  exportJSON(compact?: false): SerializedEmojiNode;
+  exportJSON(compact: boolean): SerializedPartial<SerializedEmojiNode>;
+  updateFromJSON(serializedNode: LexicalParseJSON<SerializedEmojiNode>): this;
+}
+
 /**
  * An emoji, such as 🙂, and the shortcode it was typed as, such as `:)`.
  *
@@ -38,6 +48,7 @@ const emojiNodeSchema = nodeSchema<EmojiNode>()({
  * by EmojiExtension, which makes it a little easier to ensure that clean-up is
  * done properly.
  */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class EmojiNode extends TextNode {
   __shortcode: string | undefined = undefined;
 

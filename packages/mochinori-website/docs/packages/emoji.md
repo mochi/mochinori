@@ -132,30 +132,34 @@ HTML paste uses it when the editor also has `ClipboardDOMImportExtension`.
 
 ### `EmojiNode`
 
-A `TextNode` in token mode, so it is deleted as a unit. It serializes as:
+A `TextNode` (type `emoji`) whose text is the emoji, in token mode so it is
+deleted as a unit. Its `$config` schema adds one property to the ones it
+inherits from `TextNode` (`text`, `format`, `style`, `mode`, `detail`):
 
-```json
-{
-  "type": "emoji",
-  "version": 1,
-  "text": "🙂",
-  "shortcode": ":)",
-  "mode": "token",
-  "detail": 0,
-  "format": 0,
-  "style": ""
-}
-```
+| Property | Schema | Default |
+| --- | --- | --- |
+| `shortcode` | `optional(stringValue())` | absent |
 
-Create one with `$createEmojiNode(emoji, shortcode)` and test for one with
-`$isEmojiNode(node)`.
+`shortcode` is what was typed, such as `:)`. Create one with
+`$createEmojiNode(emoji, shortcode)`, which also sets `mode` to `token`, and
+test for one with `$isEmojiNode(node)`.
 
 ### `CustomEmojiNode`
 
-An inline `DecoratorNode`, rendered without React. It serializes as
-`{"type": "custom-emoji", "version": 1, "name": "partyparrot"}`. Create one
-with `$createCustomEmojiNode(name)` and test for one with
+An inline `DecoratorNode` (type `custom-emoji`), rendered without React. Its
+schema has one property:
+
+| Property | Schema | Default |
+| --- | --- | --- |
+| `name` | `stringValue()` | `''` |
+
+The image is not stored; it comes from `customEmoji` when the node renders.
+Create one with `$createCustomEmojiNode(name)` and test for one with
 `$isCustomEmojiNode(node)`.
+
+Neither node has serialization code of its own, as with Lexical's own nodes:
+JSON is read and written from the schemas, and the compact form
+(`editorState.toJSON(true)`) leaves out every property at its default.
 
 ### `findEmoji(text)` and `createEmojiMatcher(parser, customEmoji?)`
 

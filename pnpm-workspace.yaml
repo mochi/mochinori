@@ -30,6 +30,7 @@ catalog:
   '@lexical/clipboard': '0.52.0'
   '@lexical/eslint-plugin': '0.52.0'
   '@lexical/extension': '0.52.0'
+  '@lexical/fast-check': '0.52.0'
   '@lexical/history': '0.52.0'
   '@lexical/html': '0.52.0'
   '@lexical/react': '0.52.0'

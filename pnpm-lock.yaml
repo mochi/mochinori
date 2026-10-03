@@ -15,6 +15,9 @@ catalogs:
     '@lexical/extension':
       specifier: 0.52.0
       version: 0.52.0
+    '@lexical/fast-check':
+      specifier: 0.52.0
+      version: 0.52.0
     '@lexical/history':
       specifier: 0.52.0
       version: 0.52.0
@@ -149,12 +152,18 @@ importers:
       '@lexical/extension':
         specifier: 'catalog:'
         version: 0.52.0(typescript@6.0.3)
+      '@lexical/fast-check':
+        specifier: 'catalog:'
+        version: 0.52.0(fast-check@4.10.2)(typescript@6.0.3)
       '@lexical/html':
         specifier: 'catalog:'
         version: 0.52.0(typescript@6.0.3)
       emoji-datasource-facebook:
         specifier: 15.1.2
         version: 15.1.2
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
       lexical:
         specifier: 'catalog:'
         version: 0.52.0(typescript@6.0.3)
@@ -2709,6 +2718,15 @@ packages:
       typescript:
         optional: true
 
+  '@lexical/fast-check@0.52.0':
+    resolution: {integrity: sha512-baZ58VIZ2/+EJl+jahwpnG7yjP6acNhralrr+jYCWBDjUSg4m01jYy6eVb4YeJJByVVdx/UReEBTrCklYyT7jA==}
+    peerDependencies:
+      fast-check: '>=4.0.0'
+      typescript: '>=5.2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@lexical/hashtag@0.52.0':
     resolution: {integrity: sha512-y0d7fLhIItJHGdw+bulvzXBNrb0wkppvDkR9jqAp8w0s53zlRLn4egucLkSEWqd0kSAN3jjmSoxcWeC4sF6I0A==}
     peerDependencies:
@@ -5156,6 +5174,10 @@ packages:
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
 
+  fast-check@4.10.2:
+    resolution: {integrity: sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw==}
+    engines: {node: '>=12.17.0'}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -7360,6 +7382,9 @@ packages:
   pupa@3.3.0:
     resolution: {integrity: sha512-LjgDO2zPtoXP2wJpDjZrGdojii1uqO0cnwKoIoUzkfS98HDmbeiGmYiXo3lXeFlq2xvne1QFQhwYXSUCLKtEuA==}
     engines: {node: '>=12.20'}
+
+  pure-rand@8.4.2:
+    resolution: {integrity: sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==}
 
   pvtsutils@1.3.6:
     resolution: {integrity: sha512-PLgQXQ6H2FWCaeRak8vvk1GW462lMxB5s3Jm673N82zI4vqtVUPuZdffdZbPDFRoU8kAhItWFtPCWiPpp4/EDg==}
@@ -11919,6 +11944,13 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
+  '@lexical/fast-check@0.52.0(fast-check@4.10.2)(typescript@6.0.3)':
+    dependencies:
+      fast-check: 4.10.2
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
+
   '@lexical/hashtag@0.52.0(typescript@6.0.3)':
     dependencies:
       '@lexical/text': 0.52.0(typescript@6.0.3)
@@ -14602,6 +14634,10 @@ snapshots:
 
   extend@3.0.2: {}
 
+  fast-check@4.10.2:
+    dependencies:
+      pure-rand: 8.4.2
+
   fast-deep-equal@3.1.3: {}
 
   fast-glob@3.3.3:
@@ -17156,6 +17192,8 @@ snapshots:
   pupa@3.3.0:
     dependencies:
       escape-goat: 4.0.0
+
+  pure-rand@8.4.2: {}
 
   pvtsutils@1.3.6:
     dependencies:
