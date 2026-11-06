@@ -11,7 +11,7 @@ import {
   useExtensionSignalValue,
   useSignalValue,
 } from '@lexical/react/useExtensionSignalValue';
-import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
+import {RichTextExtension} from '@lexical/rich-text';
 import {
   $createImageNode,
   createHttpImageMirror,
@@ -19,7 +19,6 @@ import {
   createImageResizer,
   type ImageRejectionReason,
   ImagesExtension,
-  ImagesImportExtension,
   ImageUploadExtension,
   INSERT_IMAGE_COMMAND,
 } from '@mochinori/images';
@@ -83,11 +82,9 @@ const ImagesDemoExtension = defineExtension({
     RichTextExtension,
     HistoryExtension,
     ImagesExtension,
-    // Route HTML pastes through DOMImportExtension, where the import rules
-    // for rich text and images are registered
+    // Route HTML pastes through DOMImportExtension, where RichTextExtension
+    // and ImagesExtension register their import rules
     ClipboardDOMImportExtension,
-    RichTextImportExtension,
-    ImagesImportExtension,
     configExtension(ImageUploadExtension, {
       // The same limit the site's Worker enforces, checked after resizing
       maxFileSize: 5 * 1024 * 1024,

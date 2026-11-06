@@ -20,11 +20,11 @@ copy of Lexical.
 ## Usage
 
 ```ts
-import {EmojiExtension, EmojiImportExtension} from '@mochinori/emoji';
+import {EmojiExtension} from '@mochinori/emoji';
 import {defineExtension} from 'lexical';
 
 const AppExtension = defineExtension({
-  dependencies: [EmojiExtension, EmojiImportExtension],
+  dependencies: [EmojiExtension],
   name: '@my-app/Editor',
 });
 ```

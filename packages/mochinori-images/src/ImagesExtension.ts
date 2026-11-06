@@ -1,4 +1,5 @@
 import {effect, WatchEditableExtension} from '@lexical/extension';
+import {CoreImportExtension, DOMImportExtension} from '@lexical/html';
 import {
   $getNodeByKey,
   $getSelection,
@@ -7,6 +8,7 @@ import {
   $isRangeSelection,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_EDITOR,
+  configExtension,
   createCommand,
   defineExtension,
   type LexicalCommand,
@@ -17,9 +19,11 @@ import {
   $focusCaptionWhenMounted,
   $selectCaptionEnd,
   $selectImage,
+  SET_IMAGE_ALT_TEXT_COMMAND,
   SET_IMAGE_BLOCK_COMMAND,
   SET_IMAGE_CAPTION_COMMAND,
 } from './ImageCaption.ts';
+import {ImagesImportRules} from './ImageImportRules.ts';
 import {registerImageInteractions} from './ImageInteractions.ts';
 import {
   $createImageNode,
@@ -74,10 +78,19 @@ export function $createImageForSelection(payload: ImagePayload): ImageNode {
  * Backspace in an empty caption removes it, and the arrow keys leave it at
  * either end. None of this happens while the editor is read-only.
  *
+ * It also adds {@link ImagesImportRules} to `DOMImportExtension`, so HTML
+ * imported through that pipeline (`ClipboardDOMImportExtension` for paste,
+ * or `$generateNodesFromDOM` from the extension's output) turns `<img>` and
+ * `<figure>` into images. Images have no legacy `importDOM`.
+ *
  * Add `ImageUploadExtension` to upload files.
  */
 export const ImagesExtension = defineExtension({
-  dependencies: [WatchEditableExtension],
+  dependencies: [
+    WatchEditableExtension,
+    CoreImportExtension,
+    configExtension(DOMImportExtension, {rules: ImagesImportRules}),
+  ],
   name: '@mochinori/images/Images',
   nodes: () => [ImageNode],
   register: (editor, _config, state) => {
@@ -106,6 +119,20 @@ export const ImagesExtension = defineExtension({
           image.setCaption();
           $selectCaptionEnd(nodeKey);
           $focusCaptionWhenMounted(nodeKey);
+          return true;
+        },
+        COMMAND_PRIORITY_EDITOR,
+      ),
+      editor.registerCommand(
+        SET_IMAGE_ALT_TEXT_COMMAND,
+        ({altText, nodeKey}) => {
+          const image = $getNodeByKey(nodeKey);
+          if (!$isImageNode(image)) {
+            return false;
+          }
+          if (image.getAltText() !== altText) {
+            image.setAltText(altText);
+          }
           return true;
         },
         COMMAND_PRIORITY_EDITOR,

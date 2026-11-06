@@ -8,7 +8,7 @@ import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
 import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
 import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
-import {RichTextExtension, RichTextImportExtension} from '@lexical/rich-text';
+import {RichTextExtension} from '@lexical/rich-text';
 import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
@@ -16,7 +16,6 @@ import {
 import {
   type CustomEmoji,
   EmojiExtension,
-  EmojiImportExtension,
   type EmojiSuggestion,
   EmojiTypeaheadExtension,
   INSERT_EMOJI_COMMAND,
@@ -92,8 +91,6 @@ const EmojiDemoExtension = defineExtension({
     EmojiTypeaheadExtension,
     // Pasted emoji keep their shortcode
     ClipboardDOMImportExtension,
-    RichTextImportExtension,
-    EmojiImportExtension,
   ],
   name: '@mochinori/website/EmojiDemo',
   namespace: 'EmojiDemo',

@@ -30,7 +30,6 @@ import {
   type CustomEmoji,
   EmojiExtension,
   type EmojiExtensionConfig,
-  EmojiImportExtension,
   parseEmojiShortNames,
 } from '../../index.ts';
 import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
@@ -38,10 +37,7 @@ import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
 function buildEditor(config: Partial<EmojiExtensionConfig> = {}) {
   return buildEditorFromExtensions(
     defineExtension({
-      dependencies: [
-        configExtension(EmojiExtension, config),
-        EmojiImportExtension,
-      ],
+      dependencies: [configExtension(EmojiExtension, config)],
       name: '[root]',
     }),
   );

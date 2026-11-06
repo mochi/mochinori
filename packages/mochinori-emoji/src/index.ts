@@ -18,10 +18,9 @@ export {
 } from './EmojiExtension.ts';
 export {
   CustomEmojiImportRule,
-  EmojiImportExtension,
   EmojiImportRule,
   EmojiImportRules,
-} from './EmojiImportExtension.ts';
+} from './EmojiImportRules.ts';
 export {
   $createCustomEmojiNode,
   $createEmojiNode,

@@ -50,9 +50,9 @@
     "generate": "node scripts/generateEmojiData.mjs"
   },
   "peerDependencies": {
-    "@lexical/extension": "^0.52.0",
-    "@lexical/html": "^0.52.0",
-    "lexical": "^0.52.0"
+    "@lexical/extension": "^0.53.0",
+    "@lexical/html": "^0.53.0",
+    "lexical": "^0.53.0"
   },
   "devDependencies": {
     "@lexical/extension": "catalog:",

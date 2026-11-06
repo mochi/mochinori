@@ -17,15 +17,11 @@ runs.
 ## Usage
 
 ```ts
-import {EmojiExtension, EmojiImportExtension} from '@mochinori/emoji';
+import {EmojiExtension} from '@mochinori/emoji';
 import {defineExtension} from 'lexical';
 
 const AppExtension = defineExtension({
-  dependencies: [
-    EmojiExtension,
-    // Optional: import pasted or loaded HTML emoji with their shortcode
-    EmojiImportExtension,
-  ],
+  dependencies: [EmojiExtension],
   name: '@my-app/Editor',
 });
 ```
@@ -110,8 +106,8 @@ configExtension(EmojiExtension, {
   Shift-selection treat the emoji as one character and screen readers read
   its name (`role="img"`).
 - It exports to HTML as `<span data-custom-emoji="name"><img …></span>`,
-  so other apps show the image, and `EmojiImportExtension` imports it back
-  by name.
+  so other apps show the image, and an editor with `EmojiExtension` imports
+  it back by name.
 
 The image's size and position are inline styles (1.25em square). The
 `customEmojiClass` class is there for anything else, such as a hover
@@ -235,12 +231,11 @@ editor runs, `customEmojiByName`, the same as a `Map`, `searchEmoji`, a
 signal of a search over both (null until the database loads), and
 `getEmojiSrc(suggestion)`, the image of a search result.
 
-### `EmojiImportExtension`
-
-Adds import rules to `DOMImportExtension` that turn the
+It also adds `EmojiImportRules` to `DOMImportExtension`, which turn the
 `data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`,
-and the `data-custom-emoji` element back into a custom emoji.
-HTML paste uses it when the editor also has `ClipboardDOMImportExtension`.
+and the `data-custom-emoji` element back into a custom emoji. HTML paste
+uses them when the editor also has `ClipboardDOMImportExtension`, and so
+does `$generateNodesFromDOM` from `DOMImportExtension`'s output.
 
 ### `EmojiNode`
 

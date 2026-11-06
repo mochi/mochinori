@@ -1,12 +1,6 @@
-import {
-  CoreImportExtension,
-  defineImportRule,
-  DOMImportExtension,
-  sel,
-} from '@lexical/html';
-import {$isTextNode, configExtension, defineExtension} from 'lexical';
+import {defineImportRule, sel} from '@lexical/html';
+import {$isTextNode} from 'lexical';
 
-import {EmojiExtension} from './EmojiExtension.ts';
 import {$createCustomEmojiNode, $createEmojiNode} from './EmojiNode.ts';
 
 /**
@@ -64,17 +58,3 @@ export const CustomEmojiImportRule = defineImportRule({
 });
 
 export const EmojiImportRules = [EmojiImportRule, CustomEmojiImportRule];
-
-/**
- * Adds emoji import to {@link DOMImportExtension}, for HTML paste and
- * `$generateNodesFromDOM`. Emoji are not imported through the legacy
- * `importDOM` path.
- */
-export const EmojiImportExtension = defineExtension({
-  dependencies: [
-    EmojiExtension,
-    CoreImportExtension,
-    configExtension(DOMImportExtension, {rules: EmojiImportRules}),
-  ],
-  name: '@mochinori/emoji/EmojiImport',
-});

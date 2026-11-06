@@ -9,11 +9,13 @@ import {
   signal,
   WatchEditableExtension,
 } from '@lexical/extension';
+import {CoreImportExtension, DOMImportExtension} from '@lexical/html';
 import {
   $getSelection,
   $isRangeSelection,
   addClassNamesToElement,
   COMMAND_PRIORITY_EDITOR,
+  configExtension,
   createCommand,
   defineExtension,
   type LexicalEditor,
@@ -30,6 +32,7 @@ import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
 } from './emojiEntries.ts';
+import {EmojiImportRules} from './EmojiImportRules.ts';
 import {
   $createCustomEmojiNode,
   $createEmojiNode,
@@ -203,6 +206,11 @@ export function $createEmojiNodeFromSuggestion(
  *
  * Custom emoji (`customEmoji`) extend the set beyond Unicode with images,
  * typed as `:name:` and stored as an {@link EmojiNode} with that name.
+ *
+ * It also adds {@link EmojiImportRules} to `DOMImportExtension`, so HTML
+ * imported through that pipeline (`ClipboardDOMImportExtension` for paste,
+ * or `$generateNodesFromDOM`) turns the emoji that {@link EmojiNode}
+ * exports back into emoji. Emoji have no legacy `importDOM`.
  */
 export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
@@ -242,7 +250,11 @@ export const EmojiExtension = defineExtension({
     lookupCustomEmoji: undefined,
     parseEmojiReplacementEntry: parseEmojiShortNamesAndTexts,
   }),
-  dependencies: [WatchEditableExtension],
+  dependencies: [
+    WatchEditableExtension,
+    CoreImportExtension,
+    configExtension(DOMImportExtension, {rules: EmojiImportRules}),
+  ],
   name: '@mochinori/emoji/Emoji',
   nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {

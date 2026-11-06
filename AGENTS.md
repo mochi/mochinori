@@ -127,10 +127,13 @@ its own `image` node to ours one document at a time.
 4. Implement `createDOM()` and `updateDOM()` (and `decorate()` for a
    `DecoratorNode`). Keep `exportDOM()` on the class when the default export
    is not enough.
-5. Never add `importDOM()`. Import HTML with a `defineImportRule` contributed
-   through `configExtension(DOMImportExtension, {rules: [...]})` from an
-   `*ImportExtension` that depends on `CoreImportExtension` (see
-   `ImagesImportExtension`).
+5. Never add `importDOM()`. Import HTML with `defineImportRule` rules that
+   the extension providing the node registers itself: list
+   `CoreImportExtension` and
+   `configExtension(DOMImportExtension, {rules: [...]})` in its
+   `dependencies` (see `ImagesExtension` and `ImagesImportRules`). Don't add
+   a separate `*ImportExtension`; Lexical removed its own in v0.53.0. Export
+   the rules array too, so an app can reuse them.
 6. Register with an extension (`nodes: () => [YourNode]`).
 7. Export a `$createYourNode()` factory built on `$create(YourNode)` and the
    node's setters, and a `$isYourNode()` guard.
