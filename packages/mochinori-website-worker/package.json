@@ -16,7 +16,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261002.1",
     "@mochinori/website": "workspace:*",
-    "@types/node": "^24.0.0",
+    "@types/node": "^24.19.2",
     "typescript": "^6.0.3",
     "vite": "^8.3.1",
     "void": "0.23.0",
