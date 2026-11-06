@@ -61,12 +61,13 @@ interactive:
 - **Drag and drop.** Drag an image to move it, caption and all, anywhere in
   the text. Images can't be dropped into a caption. Dragged out of the
   editor, an image carries its URL and an `<img>` as HTML, so another
-  editor with `ImagesImportExtension` imports it.
+  editor with `ImagesExtension` imports it.
 - **Image tools.** A selected image shows *Alt text*, *Add caption* (or
   *Remove caption*) and *Make block* (or *Make inline*) buttons. *Alt text*
   opens a field: Enter saves, Escape cancels, and leaving the field saves.
-  The buttons dispatch `SET_IMAGE_CAPTION_COMMAND` and
-  `SET_IMAGE_BLOCK_COMMAND`, which apps can dispatch too.
+  The buttons dispatch `SET_IMAGE_ALT_TEXT_COMMAND`,
+  `SET_IMAGE_CAPTION_COMMAND` and `SET_IMAGE_BLOCK_COMMAND`, which apps can
+  dispatch too.
 - **Captions.** In a caption, Enter does nothing, Escape selects the image,
   the arrow keys leave the caption at either end, and Backspace in an empty
   caption removes it.
@@ -116,20 +117,20 @@ else. `getCaption()` returns it, `hasCaption()` tests for it, and
 `@experimental` in Lexical.
 
 An inline image exports to `<img>` HTML, and a block image to `<figure>`,
-with a `<figcaption>` when it has a caption. HTML import goes through
-`ImagesImportExtension` only.
+with a `<figcaption>` when it has a caption.
 
-### `ImagesImportExtension`
-
-Adds `ImageImportRule` and `ImageFigureImportRule` to `@lexical/html`'s
-`DOMImportExtension`, so pasted HTML and `$generateNodesFromDOM` turn `<img>`
-into an inline `ImageNode`, and a `<figure>` with one `<img>` into a block
-`ImageNode` with the text of its `<figcaption>`, if any, as the caption
-(pasted from Wikipedia, for example). It depends on
-`ImagesExtension` and `CoreImportExtension`. Images whose `src` is a local
-`file:///` path are skipped, because they can never load in the editor.
-`ImageNode` has no legacy `importDOM`, so add this extension wherever images
-should be imported from HTML.
+`ImagesExtension` also adds `ImageImportRule` and `ImageFigureImportRule`
+(together, `ImagesImportRules`) to `@lexical/html`'s `DOMImportExtension`,
+the same way Lexical's own extensions register theirs, so HTML imported
+through that pipeline turns `<img>` into an inline `ImageNode`, and a
+`<figure>` with one `<img>` into a block `ImageNode` with the text of its
+`<figcaption>`, if any, as the caption (pasted from Wikipedia, for example).
+Pasted HTML goes through the pipeline when the editor also has
+`ClipboardDOMImportExtension` from `@lexical/clipboard`, and
+`$generateNodesFromDOM` from `DOMImportExtension`'s output uses it too.
+Images whose `src` is a local `file:///` path are skipped, because they can
+never load in the editor. `ImageNode` has no legacy `importDOM`, so HTML
+import goes through these rules only.
 
 ### `ImageUploadExtension`
 

@@ -29,8 +29,9 @@ import {
   $createImageNode,
   $isImageNode,
   type ImageNode,
-  ImagesImportExtension,
+  ImagesExtension,
   INSERT_IMAGE_COMMAND,
+  SET_IMAGE_ALT_TEXT_COMMAND,
   SET_IMAGE_BLOCK_COMMAND,
   SET_IMAGE_CAPTION_COMMAND,
 } from '../../index.ts';
@@ -44,7 +45,7 @@ function buildEditor() {
           $createParagraphNode().append($createTextNode('two')),
         );
       },
-      dependencies: [RichTextExtension, ImagesImportExtension],
+      dependencies: [RichTextExtension, ImagesExtension],
       name: '[root]',
     }),
   );
@@ -453,6 +454,34 @@ describe('inline images and figures', () => {
       expect($isRangeSelection(selection)).toBe(true);
       expect(selection?.getNodes()[0].is(caption)).toBe(true);
     });
+  });
+
+  it('sets the alt text with SET_IMAGE_ALT_TEXT_COMMAND', () => {
+    using editor = buildEditor();
+    insertImage(editor);
+    const key = editor.read(() => $images()[0].getKey());
+    let handled = false;
+    update(editor, () => {
+      handled = editor.dispatchCommand(SET_IMAGE_ALT_TEXT_COMMAND, {
+        altText: 'A mochi',
+        nodeKey: key,
+      });
+    });
+    expect(handled).toBe(true);
+    editor.read(() => {
+      expect($images()[0].getAltText()).toBe('A mochi');
+    });
+    // Not an image
+    const paragraphKey = editor.read(() =>
+      $getRoot().getFirstChildOrThrow().getKey(),
+    );
+    update(editor, () => {
+      handled = editor.dispatchCommand(SET_IMAGE_ALT_TEXT_COMMAND, {
+        altText: 'nope',
+        nodeKey: paragraphKey,
+      });
+    });
+    expect(handled).toBe(false);
   });
 
   it('switches between inline and block, keeping the image properties', () => {

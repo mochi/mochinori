@@ -1,6 +1,5 @@
 // Type-only, so this module does not import the extension and create a
 // module cycle through ImageNode
-import type {ImageNode} from './ImageNode.tsx';
 import type {
   ImageUploadExtension,
   ImageUploadState,
@@ -14,7 +13,7 @@ import {useSignalValue} from '@lexical/react/useExtensionSignalValue';
 import {useLexicalEditable} from '@lexical/react/useLexicalEditable';
 import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {useLexicalSlotRef} from '@lexical/react/useLexicalSlotRef';
-import {$getNodeByKey, type LexicalEditor, type NodeKey} from 'lexical';
+import {type LexicalEditor, type NodeKey} from 'lexical';
 import {useCallback, useEffect, useId, useRef, useState} from 'react';
 
 import {
@@ -22,6 +21,7 @@ import {
   $selectCaptionEnd,
   $selectImage,
   IMAGE_CAPTION_SLOT,
+  SET_IMAGE_ALT_TEXT_COMMAND,
   SET_IMAGE_BLOCK_COMMAND,
   SET_IMAGE_CAPTION_COMMAND,
   takeCaptionFocus,
@@ -128,12 +128,11 @@ function AltTextEditor({
   // focus back
   const close = (save: boolean, reselect = true) => {
     editor.update(() => {
-      const image = $getNodeByKey<ImageNode>(nodeKey);
-      if (image === null) {
-        return;
-      }
-      if (save && image.getAltText() !== value.trim()) {
-        image.setAltText(value.trim());
+      if (save) {
+        editor.dispatchCommand(SET_IMAGE_ALT_TEXT_COMMAND, {
+          altText: value.trim(),
+          nodeKey,
+        });
       }
       if (reselect) {
         $selectImage(nodeKey);
