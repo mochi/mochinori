@@ -40,7 +40,13 @@ describe('findEmoji', () => {
       position: 'handles '.length,
       shortcode: ':)',
     },
+    'handles smileys right after an emoji 😀:) ok': {
+      emoji: '🙂',
+      position: 'handles smileys right after an emoji 😀'.length,
+      shortcode: ':)',
+    },
     'ignores smileys at the end :)': null,
+    'ignores smileys right after a letter x:) ok': null,
   }).forEach(([k, v]) => {
     it(`${k} -> ${v ? v.shortcode : 'not found'}`, () =>
       expect(findEmoji(k)).toEqual(v));

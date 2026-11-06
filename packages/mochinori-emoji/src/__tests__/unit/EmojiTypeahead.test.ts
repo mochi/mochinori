@@ -120,9 +120,33 @@ describe('EmojiTypeaheadExtension', () => {
       name: 'apple',
       src: expect.stringMatching(/\/1f34e\.png$/),
     });
-    // Not after text without a space before the colon
+    // Not after a letter or digit, as in x:ab or 10:30
     type(editor, ' x:ab');
     expect(state.value).toBe(null);
+    type(editor, ' 10:30');
+    expect(state.value).toBe(null);
+  });
+
+  it('opens right after another emoji', () => {
+    using editor = buildEditor();
+    const {state} = typeahead(editor);
+    // An emoji typed with the system keyboard is plain text
+    type(editor, '😀:pe');
+    expect(state.value?.query).toBe('pe');
+    press(editor, KEY_ENTER_COMMAND, 'Enter');
+    // Right after an emoji node, and after a name that isn't an emoji
+    type(editor, ':apple::nope::ap');
+    expect(state.value?.query).toBe('ap');
+    press(editor, KEY_ENTER_COMMAND, 'Enter');
+    expect(describeText(editor)).toEqual([
+      '😀',
+      {emoji: '🍐'},
+      ' ',
+      {emoji: '🍎'},
+      ':nope:',
+      {emoji: '🍎'},
+      ' ',
+    ]);
   });
 
   it('moves with the arrow keys and picks with Enter', () => {

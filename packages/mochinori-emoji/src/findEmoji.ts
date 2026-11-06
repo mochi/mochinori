@@ -85,6 +85,15 @@ function findEmojiInMap(
           return {emoji, position: lastWordBreak, shortcode};
         }
       }
+      // A text like `:)` right after something that isn't a letter or
+      // digit, such as an emoji typed with the system keyboard
+      if (lastColon !== null && lastColon > lastWordBreak) {
+        const smiley = text.slice(lastColon, match.index);
+        const emoji = emojiReplacementMap.get(smiley);
+        if (emoji && !/[\p{L}\p{N}_]/u.test(text[lastColon - 1])) {
+          return {emoji, position: lastColon, shortcode: smiley};
+        }
+      }
       lastColon = null;
       lastWordBreak = match.index + 1;
     }

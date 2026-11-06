@@ -11,6 +11,7 @@ import {
 } from 'lexical';
 
 import {$isCustomEmojiNode} from './EmojiNode.ts';
+import {NAME_BEFORE_CARET} from './typedName.ts';
 
 /**
  * Finds custom emoji, by name or by the start of a name, for
@@ -36,9 +37,6 @@ export interface CustomEmojiLookupOptions {
 
 // A `:name:` in text; names have no spaces or colons
 const NAME_IN_TEXT = /:([^\s:]+):/g;
-// A name being typed: a `:` at the start or after a space, then the name so
-// far, right before the caret
-const NAME_BEFORE_CARET = /(?:^|\s):([^\s:]+)$/;
 
 /**
  * Looks up custom emoji as they are needed, rather than loading the whole

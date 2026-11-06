@@ -33,6 +33,7 @@ import {
   EmojiExtension,
 } from './EmojiExtension.ts';
 import {$isEmojiNode} from './EmojiNode.ts';
+import {NAME_BEFORE_CARET} from './typedName.ts';
 
 export interface EmojiTypeaheadConfig {
   /**
@@ -86,8 +87,6 @@ interface TypedQuery {
   readonly end: number;
   readonly query: string;
 }
-
-const NAME_BEFORE_CARET = /(?:^|\s):([^\s:]+)$/;
 
 /**
  * A headless emoji typeahead, like the menu Slack and Discord show while
