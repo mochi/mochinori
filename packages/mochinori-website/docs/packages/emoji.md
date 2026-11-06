@@ -27,7 +27,8 @@ const AppExtension = defineExtension({
 ```
 
 Each emoji is drawn as a 1.25em image sitting on the baseline, like a
-glyph, at any font and size; those styles are inline. Until its image loads
+glyph, at any font and size, with a 0.075em margin on each side so emoji
+side by side don't touch; those styles are inline. Until its image loads
 the font's emoji shows, so hide it once the image has loaded, keeping the
 caret visible:
 
@@ -109,7 +110,7 @@ configExtension(EmojiExtension, {
   so other apps show the image, and an editor with `EmojiExtension` imports
   it back by name.
 
-The image's size and position are inline styles (1.25em square). The
+The image's size, margin and position are inline styles (1.25em square). The
 `customEmojiClass` class is there for anything else, such as a hover
 effect.
 

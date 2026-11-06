@@ -174,6 +174,7 @@ describe('EmojiExtension', () => {
     // Sized and aligned like a custom emoji, whatever the font
     expect(span?.style).toMatchObject({
       height: '1.25em',
+      margin: '0px 0.075em',
       overflow: 'hidden',
       verticalAlign: '-0.25em',
       width: '1.25em',
@@ -602,6 +603,7 @@ describe('EmojiExtension', () => {
       expect(span?.style.backgroundImage).toContain(PARROT.src);
       expect(span?.style).toMatchObject({
         height: '1.25em',
+        margin: '0px 0.075em',
         overflow: 'hidden',
         verticalAlign: '-0.25em',
       });

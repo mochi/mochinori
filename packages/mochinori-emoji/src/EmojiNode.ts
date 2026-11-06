@@ -47,6 +47,8 @@ export interface EmojiNode {
  * below the baseline, so it sits on the text the way an emoji glyph does.
  * `overflow: hidden` makes the box's bottom edge its baseline, whatever
  * text is inside, so Unicode and custom emoji line up the same in any font.
+ * A 0.075em margin on each side keeps emoji side by side from touching, the
+ * way the side bearings of an emoji glyph do.
  */
 export const EMOJI_BOX_STYLE = {
   backgroundPosition: 'center',
@@ -54,6 +56,7 @@ export const EMOJI_BOX_STYLE = {
   backgroundSize: 'contain',
   display: 'inline-block',
   height: '1.25em',
+  margin: '0 0.075em',
   overflow: 'hidden',
   verticalAlign: '-0.25em',
 } as const satisfies Partial<CSSStyleDeclaration>;
@@ -98,6 +101,7 @@ export function renderCustomEmoji(
       'display',
       'height',
       'letter-spacing',
+      'margin',
       'overflow',
       'vertical-align',
     ]) {
