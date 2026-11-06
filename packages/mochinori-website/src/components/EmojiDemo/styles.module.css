@@ -190,3 +190,18 @@
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.875rem;
 }
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.option {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}

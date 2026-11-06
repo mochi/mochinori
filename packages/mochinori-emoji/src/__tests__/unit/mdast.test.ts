@@ -30,16 +30,16 @@ import {
   EmojiExtension,
 } from '../../index.ts';
 import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
-import {EmojiMdastExtension} from '../../mdast.ts';
+import {type EmojiMdastConfig, EmojiMdastExtension} from '../../mdast.ts';
 
 const PARROT: CustomEmoji = {name: 'partyparrot', src: 'parrot.gif'};
 
-function buildEditor() {
+function buildEditor(mdastConfig: Partial<EmojiMdastConfig> = {}) {
   const editor = buildEditorFromExtensions(
     defineExtension({
       dependencies: [
         configExtension(EmojiExtension, {customEmoji: [PARROT]}),
-        EmojiMdastExtension,
+        configExtension(EmojiMdastExtension, mdastConfig),
         MdastExtension,
       ],
       name: '[root]',
@@ -176,5 +176,79 @@ describe('EmojiMdastExtension', () => {
       },
       {discrete: true},
     );
+  });
+
+  it('exports standard emoji as shortcodes when asked, like Slack', () => {
+    using editor = buildEditor({exportFormat: 'shortcode'});
+    editor.update(
+      () => {
+        $getRoot()
+          .clear()
+          .append(
+            $createParagraphNode().append(
+              $createTextNode('hi '),
+              $createEmojiNode('👍🏼', ':+1::skin-tone-3:'),
+              $createTextNode(' '),
+              $createCustomEmojiNode('partyparrot'),
+              $createTextNode(' '),
+              // Matched from a text, it still exports by its short name
+              $createEmojiNode('🙂', ':)'),
+              $createEmojiNode('🍎', ':apple:').setFormat(IS_BOLD),
+              $createEmojiNode('😼'),
+            ),
+          );
+      },
+      {discrete: true},
+    );
+    const markdown = exportMarkdown(editor);
+    expect(markdown).toBe(
+      'hi :+1::skin-tone-3: :partyparrot: :slightly_smiling_face:**:apple:**:smirk_cat:',
+    );
+    importMarkdown(editor, markdown);
+    expect(
+      describeText(editor).map(node =>
+        typeof node === 'string' || 'custom' in node ? node : node.emoji,
+      ),
+    ).toEqual([
+      'hi ',
+      '👍🏼',
+      ' ',
+      {custom: 'partyparrot', format: 0},
+      ' ',
+      '🙂',
+      '🍎',
+      '😼',
+    ]);
+    // The format can change while the editor runs
+    getExtensionDependencyFromEditor(
+      editor,
+      EmojiMdastExtension,
+    ).output.exportFormat.value = 'unicode';
+    expect(exportMarkdown(editor)).toBe('hi 👍🏼 :partyparrot: 🙂**🍎**😼');
+  });
+
+  it('imports only the kinds of emoji that the config asks for', () => {
+    const markdown = 'a :+1: 👍 :partyparrot:';
+    const kinds = (config: Partial<EmojiMdastConfig>) => {
+      using editor = buildEditor(config);
+      importMarkdown(editor, markdown);
+      return describeText(editor).map(node =>
+        typeof node === 'string' ? node : 'emoji',
+      );
+    };
+    expect(kinds({importUnicode: false})).toEqual([
+      'a ',
+      'emoji',
+      ' 👍 ',
+      'emoji',
+    ]);
+    expect(kinds({importShortcodes: false})).toEqual([
+      'a :+1: ',
+      'emoji',
+      ' :partyparrot:',
+    ]);
+    expect(kinds({importShortcodes: false, importUnicode: false})).toEqual([
+      markdown,
+    ]);
   });
 });

@@ -6,7 +6,8 @@ title: '@mochinori/emoji'
 
 Emoji for Lexical. Typing a short name such as `:tada:` or
 `:man-facepalming:`, or a smiley such as `:)` followed by a space, replaces it
-with an `EmojiNode`. Emoji are drawn with the 64×64 images from
+with an `EmojiNode`, and so does a Unicode emoji typed with the system's
+emoji picker or pasted. Emoji are drawn with the 64×64 images from
 [emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so they
 look the same on every platform. Apps can add custom emoji beyond Unicode,
 like a Slack workspace or a Discord server, and change them while the editor
@@ -239,8 +240,8 @@ const AppExtension = defineExtension({
 ```
 
 - Export writes a Unicode emoji as itself (👍🏼), which any Markdown reader
-  shows, and a custom emoji as its `:name:`, as Slack, Discord and GitHub
-  write them. Formatting around emoji is kept (`**🍎**`).
+  shows, as Discord and GitHub store them, and a custom emoji as its
+  `:name:`. Formatting around emoji is kept (`**🍎**`).
 - Import turns Unicode emoji, shortcodes (`:+1:`, `:+1::skin-tone-3:`, `:)`)
   and custom emoji names back into emoji, so a document round-trips.
   Names that aren't emoji, code, and symbols drawn as text by default
@@ -248,12 +249,30 @@ const AppExtension = defineExtension({
   short names don't take the person's skin tone.
 - Import needs the emoji database. In a browser it loads when the editor
   is created; Markdown imported before then keeps its emoji as text, and
-  only shortcodes convert later, while the editor is editable. Wait for
+  they convert later, while the editor is editable. Wait for
   `searchEmoji` to be set before importing if that matters.
 
-The import is `EmojiMdastImportRule`, a `text` rule built on
-`EmojiExtension`'s `$createEmojiNodesFromText(node)`, which an app can also
-use to split text it imports some other way.
+Each direction is an option of `EmojiMdastExtension`:
+
+| Config | Default | Description |
+| --- | --- | --- |
+| `exportFormat` | `'unicode'` | `'shortcode'` writes standard emoji by short name instead (`:+1::skin-tone-3:`, and `:slightly_smiling_face:` for one typed as `:)`), as Slack stores them. Custom emoji always export as `:name:` |
+| `importShortcodes` | `true` | Whether import turns shortcodes, texts and custom emoji names into emoji |
+| `importUnicode` | `true` | Whether import turns Unicode emoji into emoji |
+
+```ts
+configExtension(EmojiMdastExtension, {exportFormat: 'shortcode'});
+```
+
+Whether Unicode emoji typed or pasted into the editor become emoji is
+`EmojiExtension`'s `convertUnicodeEmoji`. With it and `importUnicode` off,
+Unicode emoji stay text in the font, while shortcodes still become images.
+
+The rules are `EmojiMdastImportRule`, a `text` rule built on
+`EmojiExtension`'s `$createEmojiNodesFromText(node, options?)`, which an app
+can also use to split text it imports some other way, and
+`EmojiMdastExportRule`. Both read `EmojiMdastExtension`'s config, so use
+them through it.
 
 ## How it loads
 
@@ -269,8 +288,9 @@ arrives is left alone.
 Each emoji's image is loaded with the page's own document. Until it loads,
 the font's emoji is shown.
 
-Shortcodes are only converted while the editor is editable. When a
-read-only editor becomes editable, any shortcodes in it are converted.
+Shortcodes and Unicode emoji are only converted while the editor is
+editable. When a read-only editor becomes editable, any in it are
+converted.
 
 ## API
 
@@ -291,6 +311,7 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
 | `skinTone` | `1` | The skin tone (1 to 6) of typed short names, suggestions and searches, the initial value of the `skinTone` output signal |
+| `convertUnicodeEmoji` | `true` | Whether Unicode emoji typed or pasted into the editor become emoji drawn with the images, as in Slack and Discord, rather than staying text in the font. Only emoji in the database convert. The initial value of the `convertUnicodeEmoji` output signal |
 
 Its output has:
 
@@ -301,8 +322,10 @@ Its output has:
 | `searchEmoji` | A signal of a search over the standard and custom emoji, null until the database loads |
 | `emojiCategories` | A signal of the emoji by category, null until the database loads |
 | `skinTone` | A signal of the skin tone to use |
+| `convertUnicodeEmoji` | A signal of whether Unicode emoji convert; turning it on converts those already in the document |
 | `getEmojiSrc(suggestion)` | The image of a search result |
-| `$createEmojiNodesFromText(node)` | Splits a text node that isn't in the document yet into text and emoji nodes |
+| `getEmojiShortcode(emoji)` | The short name of a Unicode emoji, such as `:+1::skin-tone-3:`, or null |
+| `$createEmojiNodesFromText(node, options?)` | Splits a text node that isn't in the document yet into text and emoji nodes; `options` (`{shortcodes, unicode}`) can leave out either kind |
 
 It also adds `EmojiImportRules` to `DOMImportExtension`, which turn the
 `data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`,
@@ -362,7 +385,7 @@ The emoji by category, with `skinTone` applied if given. Like
 `searchEmoji`, importing it puts the database in your bundle; in an editor,
 use the `emojiCategories` signal.
 
-### `EmojiMdastExtension` and `EmojiMdastImportRule`
+### `EmojiMdastExtension`, `EmojiMdastImportRule` and `EmojiMdastExportRule`
 
 From `@mochinori/emoji/mdast`; see [Markdown](#markdown).
 

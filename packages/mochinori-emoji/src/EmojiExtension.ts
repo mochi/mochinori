@@ -1,3 +1,4 @@
+import type {SplitEmojiTextOptions} from './$splitEmojiText.ts';
 import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
 import type {
   EmojiCategory,
@@ -136,6 +137,15 @@ export interface EmojiExtensionConfig {
    * no skin tone.
    */
   skinTone: SkinTone;
+  /**
+   * Whether Unicode emoji typed or pasted into the editor, such as 👍 from
+   * the system's emoji picker, turn into emoji nodes drawn with the same
+   * images as the rest, as Slack and Discord do. Otherwise they stay text in
+   * the font. Only emoji in the database convert, and only while the
+   * editor is editable. This is the initial value of the
+   * `convertUnicodeEmoji` output signal. Default: true.
+   */
+  convertUnicodeEmoji: boolean;
 }
 
 export interface EmojiExtensionOutput {
@@ -167,16 +177,32 @@ export interface EmojiExtensionOutput {
    * already in the document keep theirs.
    */
   skinTone: Signal<SkinTone>;
+  /**
+   * Whether typed and pasted Unicode emoji turn into emoji nodes (see
+   * {@link EmojiExtensionConfig.convertUnicodeEmoji}). Setting it to true
+   * converts the ones already in the document; setting it to false leaves
+   * the emoji nodes there as they are.
+   */
+  convertUnicodeEmoji: Signal<boolean>;
+  /**
+   * The shortcode of a Unicode emoji of the database, such as `:+1:` for 👍
+   * and `:+1::skin-tone-3:` for 👍🏼, or null for one that isn't in it.
+   * It is null until the emoji database has loaded.
+   */
+  getEmojiShortcode: (emoji: string) => string | null;
   /** The URL of the image of an emoji that {@link searchEmoji} found */
   getEmojiSrc: (suggestion: EmojiSuggestion) => string;
   /**
    * Splits a text node that isn't in the document yet, such as one an
    * import made, into text and emoji nodes: for each shortcode, custom
-   * emoji `:name:` and Unicode emoji in it. It returns the node as it is
-   * until the emoji database has loaded. `EmojiMdastExtension` uses it for
-   * Markdown.
+   * emoji `:name:` and Unicode emoji in it, or only the kinds that
+   * `options` asks for. It returns the node as it is until the emoji
+   * database has loaded. `EmojiMdastExtension` uses it for Markdown.
    */
-  $createEmojiNodesFromText: (node: TextNode) => LexicalNode[];
+  $createEmojiNodesFromText: (
+    node: TextNode,
+    options?: SplitEmojiTextOptions,
+  ) => LexicalNode[];
 }
 
 /** {@link searchEmoji} over the standard and custom emoji of an editor */
@@ -253,6 +279,7 @@ export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
     const customEmoji = signal(config.customEmoji);
     const skinTone = signal(config.skinTone);
+    const convertUnicodeEmoji = signal(config.convertUnicodeEmoji);
     const customEmojiByName = computed<CustomEmojiMap>(
       () => new Map(customEmoji.value.map(emoji => [emoji.name, emoji])),
     );
@@ -265,10 +292,11 @@ export const EmojiExtension = defineExtension({
       ),
     );
     const output: EmojiExtensionOutput = {
-      $createEmojiNodesFromText: node => {
+      $createEmojiNodesFromText: (node, options) => {
         const split = splitter.peek();
-        return split ? split(node) : [node];
+        return split ? split(node, options) : [node];
       },
+      convertUnicodeEmoji,
       customEmoji,
       customEmojiByName,
       emojiCategories: computed(
@@ -276,6 +304,8 @@ export const EmojiExtension = defineExtension({
           database.value?.getEmojiCategories({skinTone: skinTone.value}) ??
           null,
       ),
+      getEmojiShortcode: emoji =>
+        database.peek()?.lookUpEmoji(emoji)?.shortcode ?? null,
       getEmojiSrc: suggestion =>
         suggestion.custom
           ? suggestion.custom.src
@@ -299,6 +329,7 @@ export const EmojiExtension = defineExtension({
     return output;
   },
   config: safeCast<EmojiExtensionConfig>({
+    convertUnicodeEmoji: true,
     customEmoji: [],
     customEmojiClass: 'mochinori-custom-emoji',
     customEmojiLookupMinLength: 2,
@@ -472,7 +503,8 @@ export const EmojiExtension = defineExtension({
         abortSignal.addEventListener(
           'abort',
           // Registered only while the editor is editable, and again when the
-          // custom emoji change, which runs it over all of the text
+          // custom emoji or convertUnicodeEmoji change, which runs it over
+          // all of the text
           effect(() =>
             editable.value
               ? editor.registerNodeTransform(
@@ -481,6 +513,7 @@ export const EmojiExtension = defineExtension({
                     config.parseEmojiReplacementEntry,
                     customEmojiByName.value,
                     () => output.skinTone.peek(),
+                    output.convertUnicodeEmoji.value,
                   ),
                 )
               : undefined,

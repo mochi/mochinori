@@ -500,23 +500,85 @@ function EmojiPicker(): JSX.Element {
   );
 }
 
+// Sets an extension's option signal (outside render, so React allows it)
+function setOption<T>(option: Signal<T>, value: T): void {
+  option.value = value;
+}
+
+// A checkbox for a boolean option signal
+function OptionCheckbox({
+  label,
+  option,
+}: {
+  label: string;
+  option: Signal<boolean>;
+}): JSX.Element {
+  const [checked, setChecked] = useState(option.peek());
+  useEffect(() => option.subscribe(setChecked), [option]);
+  return (
+    <label className={styles.option}>
+      <input
+        checked={checked}
+        onChange={event => setOption(option, event.target.checked)}
+        type="checkbox"
+      />{' '}
+      {label}
+    </label>
+  );
+}
+
+// Each way emoji can be written and read: in the editor and in Markdown
+function EmojiOptions(): JSX.Element {
+  const {convertUnicodeEmoji} = useExtensionDependency(EmojiExtension).output;
+  const {exportFormat, importShortcodes, importUnicode} =
+    useExtensionDependency(EmojiMdastExtension).output;
+  const format = useExtensionSignalValue(EmojiMdastExtension, 'exportFormat');
+  return (
+    <div className={styles.options}>
+      <OptionCheckbox
+        label="Typed and pasted Unicode emoji become images"
+        option={convertUnicodeEmoji}
+      />
+      <label className={styles.option}>
+        Export emoji as{' '}
+        <select
+          className={styles.input}
+          onChange={event =>
+            setOption(
+              exportFormat,
+              event.target.value === 'shortcode' ? 'shortcode' : 'unicode',
+            )
+          }
+          value={format}>
+          <option value="unicode">Unicode (👍), like Discord</option>
+          <option value="shortcode">Shortcodes (:+1:), like Slack</option>
+        </select>
+      </label>
+      <OptionCheckbox label="Import Unicode emoji" option={importUnicode} />
+      <OptionCheckbox label="Import shortcodes" option={importShortcodes} />
+    </div>
+  );
+}
+
 // The document as Markdown, kept up to date, and a box to import Markdown
 function MarkdownPanel(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const [markdown, setMarkdown] = useState('');
   const [draft, setDraft] = useState<string | null>(null);
-  useEffect(
-    () =>
-      editor.registerUpdateListener(({editorState}) => {
-        setMarkdown(
-          editorState.read(() => $convertToMarkdownString(), {editor}),
-        );
-      }),
-    [editor],
+  const exportFormat = useExtensionSignalValue(
+    EmojiMdastExtension,
+    'exportFormat',
   );
+  useEffect(() => {
+    const exportDocument = () =>
+      setMarkdown(editor.read(() => $convertToMarkdownString()));
+    exportDocument();
+    return editor.registerUpdateListener(exportDocument);
+  }, [editor, exportFormat]);
   return (
     <details className={styles.markdown}>
-      <summary>Markdown</summary>
+      <summary>Markdown and emoji options</summary>
+      <EmojiOptions />
       <textarea
         aria-label="Markdown"
         className={styles.markdownText}

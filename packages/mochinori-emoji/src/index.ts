@@ -1,3 +1,4 @@
+export {type SplitEmojiTextOptions} from './$splitEmojiText.ts';
 export {type CustomEmoji, type CustomEmojiMap} from './customEmoji.ts';
 export {
   type EmojiEntry,

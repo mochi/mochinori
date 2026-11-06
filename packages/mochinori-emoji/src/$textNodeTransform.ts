@@ -11,6 +11,7 @@ import {
   type EmojiNode,
 } from './EmojiNode.ts';
 import {createEmojiMatcher, type EmojiMatch} from './findEmoji.ts';
+import {findUnicodeEmoji} from './findUnicodeEmoji.ts';
 import {applySkinTone, getSkinTone, takesSkinTone} from './skinTone.ts';
 import {SKIN_TONE_SHORTCODE, skinToneShortcode} from './skinToneNames.ts';
 
@@ -76,12 +77,15 @@ export function $addSkinTone(
  * `parseEntry` produces with an {@link EmojiNode}, and the `:name:` of each
  * of the `customEmoji` with a custom emoji. Short names get the skin tone
  * that `getSkinTone` returns, and a `:skin-tone-N:` right after an emoji
- * gives it that tone.
+ * gives it that tone. With `convertUnicode`, Unicode emoji of the database,
+ * such as 👍 typed with the system's emoji picker or pasted, become emoji
+ * nodes too.
  */
 export function createTextNodeTransform(
   parseEntry: EmojiEntryParser,
   customEmoji?: CustomEmojiMap,
   getDefaultSkinTone: () => SkinTone = () => 1,
+  convertUnicode = false,
 ): (node: TextNode) => void {
   const findEmoji = createEmojiMatcher(parseEntry, customEmoji);
   return function $textNodeTransform(node: TextNode): void {
@@ -91,27 +95,45 @@ export function createTextNodeTransform(
 
     // Find only 1st occurrence as transform will be re-run anyway for the rest
     // because newly inserted nodes are considered to be dirty
-    const emojiMatch = findEmoji(node.getTextContent());
-    if (emojiMatch === null) {
+    const text = node.getTextContent();
+    let shortcodeMatch = findEmoji(text);
+    const unicode = convertUnicode ? findUnicodeEmoji(text) : null;
+    if (
+      unicode &&
+      shortcodeMatch &&
+      unicode.position < shortcodeMatch.position
+    ) {
+      shortcodeMatch = null;
+    }
+    const match = shortcodeMatch
+      ? {...shortcodeMatch, length: shortcodeMatch.shortcode.length}
+      : unicode;
+    if (!match) {
       return;
     }
 
-    const {position, shortcode} = emojiMatch;
+    const {length, position} = match;
     const [targetNode] =
       position === 0
         ? // First text chunk within string, splitting into 2 parts
-          node.splitText(shortcode.length)
+          node.splitText(length)
         : // In the middle of a string
-          node.splitText(position, position + shortcode.length).slice(1);
+          node.splitText(position, position + length).slice(1);
     if (targetNode === undefined) {
       return;
     }
-    if ($addSkinTone(targetNode.getPreviousSibling(), emojiMatch)) {
+    if (
+      shortcodeMatch &&
+      $addSkinTone(targetNode.getPreviousSibling(), shortcodeMatch)
+    ) {
       targetNode.remove();
       return;
     }
     targetNode.replace(
-      $createEmojiNodeForMatch(emojiMatch, getDefaultSkinTone())
+      (shortcodeMatch
+        ? $createEmojiNodeForMatch(shortcodeMatch, getDefaultSkinTone())
+        : $createEmojiNode(match.emoji, match.shortcode)
+      )
         .setFormat(targetNode.getFormat())
         .setStyle(targetNode.getStyle()),
     );

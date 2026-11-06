@@ -130,6 +130,42 @@ describe('EmojiExtension', () => {
     expect(describeText(editor)).toEqual(['a :smile: b']);
   });
 
+  it('turns typed and pasted Unicode emoji into emoji nodes', () => {
+    using editor = buildEditor();
+    setText(editor, 'a 👍🏼b:smile:🇯🇵 © ☺️');
+    expect(describeText(editor)).toEqual([
+      'a ',
+      {emoji: '👍🏼', shortcode: ':+1::skin-tone-3:'},
+      'b',
+      {emoji: '😄', shortcode: ':smile:'},
+      {emoji: '🇯🇵', shortcode: ':jp:'},
+      // A symbol drawn as text by default stays text
+      ' © ',
+      {emoji: '☺️', shortcode: ':relaxed:'},
+    ]);
+  });
+
+  it('leaves Unicode emoji as text without convertUnicodeEmoji', () => {
+    using editor = buildEditor({convertUnicodeEmoji: false});
+    setText(editor, 'a 👍 :+1:');
+    expect(describeText(editor)).toEqual([
+      'a 👍 ',
+      {emoji: '👍', shortcode: ':+1:'},
+    ]);
+    // Turning it on converts the ones already there
+    getExtensionDependencyFromEditor(
+      editor,
+      EmojiExtension,
+    ).output.convertUnicodeEmoji.value = true;
+    editor.update(() => {}, {discrete: true});
+    expect(describeText(editor)).toEqual([
+      'a ',
+      {emoji: '👍', shortcode: ':+1:'},
+      ' ',
+      {emoji: '👍', shortcode: ':+1:'},
+    ]);
+  });
+
   it('uses parseEmojiReplacementEntry', () => {
     using editor = buildEditor({
       parseEmojiReplacementEntry: parseEmojiShortNames,

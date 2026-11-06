@@ -130,7 +130,7 @@ describe('EmojiTypeaheadExtension', () => {
   it('opens right after another emoji', () => {
     using editor = buildEditor();
     const {state} = typeahead(editor);
-    // An emoji typed with the system keyboard is plain text
+    // An emoji typed with the system keyboard becomes an emoji node
     type(editor, '😀:pe');
     expect(state.value?.query).toBe('pe');
     press(editor, KEY_ENTER_COMMAND, 'Enter');
@@ -139,7 +139,7 @@ describe('EmojiTypeaheadExtension', () => {
     expect(state.value?.query).toBe('ap');
     press(editor, KEY_ENTER_COMMAND, 'Enter');
     expect(describeText(editor)).toEqual([
-      '😀',
+      {emoji: '😀'},
       {emoji: '🍐'},
       ' ',
       {emoji: '🍎'},
