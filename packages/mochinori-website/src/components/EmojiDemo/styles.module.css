@@ -1,0 +1,207 @@
+.demo {
+  /* No overflow: hidden, which would clip the picker */
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 1rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.editor {
+  min-height: 8rem;
+  padding: 1rem;
+  outline: none;
+}
+
+.paragraph {
+  margin: 0 0 0.75rem;
+}
+
+/* The size and position of the image are inline styles; the font's emoji
+   is hidden once it loads, so keep the caret visible */
+.emoji {
+  caret-color: var(--ifm-font-color-base);
+}
+
+/* Once the image has loaded, hide the font's emoji behind it */
+.emojiLoaded {
+  color: transparent;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.input {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 0.4rem;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font: inherit;
+}
+
+.form {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* The typeahead menu, placed under the typed :query */
+.menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 14rem;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.6rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: var(--ifm-global-shadow-md);
+}
+
+.menuItem {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.menuItem[aria-selected='true'] {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.suggestionImage {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+}
+
+.picker {
+  position: relative;
+}
+
+.pickerPanel {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  width: 21rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0.6rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: var(--ifm-global-shadow-md);
+}
+
+.pickerHeader {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.pickerHeader .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The skin tone menu opens in place, to the right of the search box */
+.toneMenu {
+  display: flex;
+}
+
+.pickerTabs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.pickerScroll {
+  height: 15rem;
+  margin-top: 0.25rem;
+  overflow-y: auto;
+}
+
+.pickerHeading {
+  margin: 0.5rem 0.25rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0.125rem;
+}
+
+.pickerItem {
+  padding: 0.25rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pickerItem:hover,
+.pickerItem:focus-visible {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.markdown {
+  padding: 0.5rem 1rem 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.markdown summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.markdownText {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 0.4rem;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.875rem;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.option {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}

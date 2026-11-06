@@ -2,6 +2,7 @@ import type {JSX} from 'react';
 
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Link from '@docusaurus/Link';
+import EmojiDemo from '@site/src/components/EmojiDemo';
 import ImagesDemo from '@site/src/components/ImagesDemo';
 import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
@@ -24,6 +25,22 @@ export default function Demos(): JSX.Element {
           </p>
           <BrowserOnly fallback={<div>Loading editor…</div>}>
             {() => <ImagesDemo />}
+          </BrowserOnly>
+        </section>
+
+        <section className="margin-top--lg">
+          <Heading as="h2" id="emoji">
+            <code>@mochinori/emoji</code>
+          </Heading>
+          <p>
+            Shortcodes turn into emoji as you type, shown with the same images
+            on every platform. Type <code>:app</code> for suggestions, browse
+            the picker's categories, pick a skin tone, add custom emoji while
+            the editor runs, or open the Markdown below the editor. See the{' '}
+            <Link to="/docs/packages/emoji">docs</Link>.
+          </p>
+          <BrowserOnly fallback={<div>Loading editor…</div>}>
+            {() => <EmojiDemo />}
           </BrowserOnly>
         </section>
       </main>
