@@ -1,5 +1,10 @@
 import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
-import type {EmojiSuggestion, SearchEmojiOptions} from './searchEmoji.ts';
+import type {
+  EmojiCategory,
+  EmojiSuggestion,
+  SearchEmojiOptions,
+} from './searchEmoji.ts';
+import type {SkinTone} from './skinToneNames.ts';
 
 import {
   computed,
@@ -19,6 +24,7 @@ import {
   createCommand,
   defineExtension,
   type LexicalEditor,
+  type LexicalNode,
   mergeRegister,
   type NodeKey,
   removeClassNamesFromElement,
@@ -45,6 +51,7 @@ import {
   registerCustomEmojiLookup,
 } from './registerCustomEmojiLookup.ts';
 import {registerEmojiNavigation} from './registerEmojiNavigation.ts';
+import {skinToneShortcode} from './skinToneNames.ts';
 import {unifiedIDFromText} from './unifiedID.ts';
 
 /**
@@ -122,6 +129,13 @@ export interface EmojiExtensionConfig {
    * `customEmoji` shows its text instead.
    */
   customEmojiClass: string;
+  /**
+   * The skin tone that emoji typed by short name (`:+1:`) and the
+   * suggestions and picker get, like the one Slack and Discord let people
+   * choose: the initial value of the `skinTone` output signal. Default: 1,
+   * no skin tone.
+   */
+  skinTone: SkinTone;
 }
 
 export interface EmojiExtensionOutput {
@@ -141,14 +155,34 @@ export interface EmojiExtensionOutput {
    * that reads it searches again then.
    */
   searchEmoji: ReadonlySignal<SearchEmoji | null>;
+  /**
+   * The emoji of the database by category, in the order pickers show them,
+   * with the current skin tone, for a picker's tabs. It is null until the
+   * emoji database has loaded.
+   */
+  emojiCategories: ReadonlySignal<readonly EmojiCategory[] | null>;
+  /**
+   * The skin tone that typed short names, {@link searchEmoji} and
+   * {@link emojiCategories} use. Set it when the person picks one; emoji
+   * already in the document keep theirs.
+   */
+  skinTone: Signal<SkinTone>;
   /** The URL of the image of an emoji that {@link searchEmoji} found */
   getEmojiSrc: (suggestion: EmojiSuggestion) => string;
+  /**
+   * Splits a text node that isn't in the document yet, such as one an
+   * import made, into text and emoji nodes: for each shortcode, custom
+   * emoji `:name:` and Unicode emoji in it. It returns the node as it is
+   * until the emoji database has loaded. `EmojiMdastExtension` uses it for
+   * Markdown.
+   */
+  $createEmojiNodesFromText: (node: TextNode) => LexicalNode[];
 }
 
 /** {@link searchEmoji} over the standard and custom emoji of an editor */
 export type SearchEmoji = (
   query: string,
-  options?: Omit<SearchEmojiOptions, 'customEmoji'>,
+  options?: Omit<SearchEmojiOptions, 'customEmoji' | 'skinTone'>,
 ) => EmojiSuggestion[];
 
 type EmojiDatabase = typeof import('./emojiDatabase.ts');
@@ -186,7 +220,10 @@ export function $createEmojiNodeFromSuggestion(
 ): EmojiNode {
   return suggestion.custom
     ? $createCustomEmojiNode(suggestion.custom.name)
-    : $createEmojiNode(suggestion.emoji ?? '', `:${suggestion.name}:`);
+    : $createEmojiNode(
+        suggestion.emoji ?? '',
+        `:${suggestion.name}:${skinToneShortcode(suggestion.skinTone ?? 1)}`,
+      );
 }
 
 /**
@@ -215,13 +252,30 @@ export function $createEmojiNodeFromSuggestion(
 export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
     const customEmoji = signal(config.customEmoji);
+    const skinTone = signal(config.skinTone);
     const customEmojiByName = computed<CustomEmojiMap>(
       () => new Map(customEmoji.value.map(emoji => [emoji.name, emoji])),
     );
     const database = signal<EmojiDatabase | null>(null);
+    // Splits text for the current custom emoji, once the database loads
+    const splitter = computed(() =>
+      database.value?.createEmojiTextSplitter(
+        config.parseEmojiReplacementEntry,
+        customEmojiByName.value,
+      ),
+    );
     const output: EmojiExtensionOutput = {
+      $createEmojiNodesFromText: node => {
+        const split = splitter.peek();
+        return split ? split(node) : [node];
+      },
       customEmoji,
       customEmojiByName,
+      emojiCategories: computed(
+        () =>
+          database.value?.getEmojiCategories({skinTone: skinTone.value}) ??
+          null,
+      ),
       getEmojiSrc: suggestion =>
         suggestion.custom
           ? suggestion.custom.src
@@ -229,11 +283,17 @@ export const EmojiExtension = defineExtension({
       searchEmoji: computed(() => {
         const db = database.value;
         const custom = customEmoji.value;
+        const tone = skinTone.value;
         return db
           ? (query, options) =>
-              db.searchEmoji(query, {...options, customEmoji: custom})
+              db.searchEmoji(query, {
+                ...options,
+                customEmoji: custom,
+                skinTone: tone,
+              })
           : null;
       }),
+      skinTone,
     };
     loadedDatabases.set(output, database);
     return output;
@@ -249,6 +309,7 @@ export const EmojiExtension = defineExtension({
     loadCustomEmoji: undefined,
     lookupCustomEmoji: undefined,
     parseEmojiReplacementEntry: parseEmojiShortNamesAndTexts,
+    skinTone: 1,
   }),
   dependencies: [
     WatchEditableExtension,
@@ -419,6 +480,7 @@ export const EmojiExtension = defineExtension({
                   createTextNodeTransform(
                     config.parseEmojiReplacementEntry,
                     customEmojiByName.value,
+                    () => output.skinTone.peek(),
                   ),
                 )
               : undefined,

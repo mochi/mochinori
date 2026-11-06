@@ -18,6 +18,7 @@
     "@lexical/extension": "catalog:",
     "@lexical/history": "catalog:",
     "@lexical/html": "catalog:",
+    "@lexical/mdast": "catalog:",
     "@lexical/react": "catalog:",
     "@lexical/rich-text": "catalog:",
     "@lexical/selection": "catalog:",

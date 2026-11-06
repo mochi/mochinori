@@ -191,9 +191,73 @@ Search ranks a name that is the query first, then names that start with
 it, then names with a word that starts with it (`green_apple`), then names
 that contain it (`pineapple`); custom emoji come first within each.
 
+For a picker's tabs, the `emojiCategories` output signal holds the emoji by
+category (`Smileys & Emotion`, `People & Body` and so on), in the order
+pickers show them, once the database has loaded:
+
+```ts
+const {emojiCategories} = getExtensionDependencyFromEditor(
+  editor,
+  EmojiExtension,
+).output;
+for (const {name, emoji} of emojiCategories.value ?? []) {
+  // A heading for `name`, then a button for each of `emoji`
+}
+```
+
+## Skin tones
+
+Emoji such as 👍 take a skin tone, as in Slack and Discord:
+
+- Typing `:+1::skin-tone-3:` gives 👍🏼, and its shortcode is kept whole.
+  A `:skin-tone-N:` typed right after an emoji that takes one changes that
+  emoji's tone; after any other, it stays the modifier on its own.
+- The `skinTone` output signal (config `skinTone`, from 1, no tone, to 6)
+  is the person's choice: short names typed after it is set, suggestions,
+  `searchEmoji` and `emojiCategories` use it. Set it from the picker's
+  skin tone menu. Emoji already in the document keep their tone, and
+  texts such as `:)` never take one.
+- `SKIN_TONES` lists the six, for that menu.
+
+Emoji for two people with a tone each, such as 🧑🏻‍🤝‍🧑🏿, take no tone.
+
+## Markdown
+
+`EmojiMdastExtension`, from `@mochinori/emoji/mdast`, adds emoji to
+[`@lexical/mdast`](https://lexical.dev/docs/api/modules/lexical_mdast)
+Markdown. Install `@lexical/mdast` too; it is an optional peer dependency,
+needed only for this entry.
+
+```ts
+import {MdastExtension} from '@lexical/mdast';
+import {EmojiMdastExtension} from '@mochinori/emoji/mdast';
+
+const AppExtension = defineExtension({
+  dependencies: [EmojiExtension, MdastExtension, EmojiMdastExtension],
+  name: '@my-app/Editor',
+});
+```
+
+- Export writes a Unicode emoji as itself (👍🏼), which any Markdown reader
+  shows, and a custom emoji as its `:name:`, as Slack, Discord and GitHub
+  write them. Formatting around emoji is kept (`**🍎**`).
+- Import turns Unicode emoji, shortcodes (`:+1:`, `:+1::skin-tone-3:`, `:)`)
+  and custom emoji names back into emoji, so a document round-trips.
+  Names that aren't emoji, code, and symbols drawn as text by default
+  (such as © or ☺ without its variation selector) stay text. Imported
+  short names don't take the person's skin tone.
+- Import needs the emoji database. In a browser it loads when the editor
+  is created; Markdown imported before then keeps its emoji as text, and
+  only shortcodes convert later, while the editor is editable. Wait for
+  `searchEmoji` to be set before importing if that matters.
+
+The import is `EmojiMdastImportRule`, a `text` rule built on
+`EmojiExtension`'s `$createEmojiNodesFromText(node)`, which an app can also
+use to split text it imports some other way.
+
 ## How it loads
 
-The emoji database (about 36 KB) is loaded with a dynamic `import()`, so
+The emoji database (about 70 KB, 19 KB compressed) is loaded with a dynamic `import()`, so
 bundlers put it in its own chunk, and it is only fetched when an editor with
 `EmojiExtension` is created. Node and other non-browser runtimes load it
 synchronously, so a headless editor converts shortcodes from its first update.
@@ -226,11 +290,19 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `customEmojiLookupMinLength` | `2` | How much of a name is typed after the `:` before `lookupCustomEmoji` is asked |
 | `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
+| `skinTone` | `1` | The skin tone (1 to 6) of typed short names, suggestions and searches, the initial value of the `skinTone` output signal |
 
-Its output has `customEmoji`, a signal of the custom emoji to set while the
-editor runs, `customEmojiByName`, the same as a `Map`, `searchEmoji`, a
-signal of a search over both (null until the database loads), and
-`getEmojiSrc(suggestion)`, the image of a search result.
+Its output has:
+
+| Output | Description |
+| --- | --- |
+| `customEmoji` | A signal of the custom emoji, to set while the editor runs |
+| `customEmojiByName` | The same, as a `Map` |
+| `searchEmoji` | A signal of a search over the standard and custom emoji, null until the database loads |
+| `emojiCategories` | A signal of the emoji by category, null until the database loads |
+| `skinTone` | A signal of the skin tone to use |
+| `getEmojiSrc(suggestion)` | The image of a search result |
+| `$createEmojiNodesFromText(node)` | Splits a text node that isn't in the document yet into text and emoji nodes |
 
 It also adds `EmojiImportRules` to `DOMImportExtension`, which turn the
 `data-emoji-shortcode` element `EmojiNode` exports back into an `EmojiNode`,
@@ -279,9 +351,20 @@ Its output has `state` (a signal of the menu, or null), `select(index?)`,
 ### `searchEmoji(query, options?)`
 
 Searches the standard emoji, and `customEmoji` if given, by short name, up
-to `limit` (default 8). It needs the emoji database, so importing it puts
+to `limit` (default 8), giving those that take one the `skinTone` if given
+(the result then has `skinTone` set). It needs the emoji database, so importing it puts
 the database in your bundle; in an editor, use `EmojiExtension`'s
 `searchEmoji` signal, which loads it lazily.
+
+### `getEmojiCategories(options?)`
+
+The emoji by category, with `skinTone` applied if given. Like
+`searchEmoji`, importing it puts the database in your bundle; in an editor,
+use the `emojiCategories` signal.
+
+### `EmojiMdastExtension` and `EmojiMdastImportRule`
+
+From `@mochinori/emoji/mdast`; see [Markdown](#markdown).
 
 ### `INSERT_EMOJI_COMMAND`
 

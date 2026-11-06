@@ -44,8 +44,11 @@ export {
 } from './findEmoji.ts';
 export {type CustomEmojiLookup} from './registerCustomEmojiLookup.ts';
 export {
+  type EmojiCategory,
   type EmojiSuggestion,
+  getEmojiCategories,
   searchEmoji,
   type SearchEmojiOptions,
 } from './searchEmoji.ts';
+export {SKIN_TONES, type SkinTone} from './skinToneNames.ts';
 export {textFromUnifiedID, unifiedIDFromText} from './unifiedID.ts';

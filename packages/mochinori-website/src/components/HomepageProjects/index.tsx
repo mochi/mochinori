@@ -25,7 +25,7 @@ const PROJECTS: Project[] = [
   {
     demo: '/demos#emoji',
     description:
-      'Type :tada: or :) and get an emoji node, drawn with the same images on every platform, with suggestions as you type, a headless picker, and custom emoji like a Slack workspace has.',
+      'Type :tada: or :) and get an emoji node, drawn with the same images on every platform, with suggestions as you type, a headless picker with categories and skin tones, custom emoji like a Slack workspace has, and Markdown.',
     docs: '/docs/packages/emoji',
     name: '@mochinori/emoji',
     status: 'In progress',

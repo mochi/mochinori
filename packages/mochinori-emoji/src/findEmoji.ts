@@ -1,10 +1,10 @@
 import type {CustomEmoji, CustomEmojiMap} from './customEmoji.ts';
 
+import {getEmojiData} from './emojiData.ts';
 import {
   type EmojiEntryParser,
   parseEmojiShortNamesAndTexts,
 } from './emojiEntries.ts';
-import {supportedEmojis} from './supportedEmojis.ts';
 
 /**
  * The location of the emoji match in the given text
@@ -26,9 +26,6 @@ export type EmojiMatch = Readonly<{
 /** Finds the first emoji shortcode in a text, see {@link findEmoji} */
 export type EmojiMatcher = (text: string) => EmojiMatch | null;
 
-const splitWords = (s: string | undefined) =>
-  s ? s.split(' ').filter(Boolean) : [];
-
 /**
  * Map where keys are possible replacements while values are emoji
  * in text form
@@ -37,16 +34,9 @@ function buildEmojiReplacementMap(
   parseEntry: EmojiEntryParser,
 ): Map<string, string> {
   const map = new Map<string, string>();
-  for (const line of supportedEmojis.split('\n')) {
-    const [emoji, shortNames, texts] = line.split('\t');
-    if (emoji) {
-      for (const [match, replacement] of parseEntry([
-        emoji,
-        splitWords(shortNames),
-        splitWords(texts),
-      ])) {
-        map.set(match, replacement);
-      }
+  for (const {emoji, shortNames, texts} of getEmojiData()) {
+    for (const [match, replacement] of parseEntry([emoji, shortNames, texts])) {
+      map.set(match, replacement);
     }
   }
   return map;

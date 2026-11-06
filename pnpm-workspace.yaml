@@ -33,6 +33,7 @@ catalog:
   '@lexical/fast-check': '0.53.0'
   '@lexical/history': '0.53.0'
   '@lexical/html': '0.53.0'
+  '@lexical/mdast': '0.53.0'
   '@lexical/react': '0.53.0'
   '@lexical/rich-text': '0.53.0'
   '@lexical/selection': '0.53.0'

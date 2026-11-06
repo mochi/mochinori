@@ -59,6 +59,38 @@ describe('loading the emoji database asynchronously', () => {
     expect(textTransformCount(editor)).toBe(1);
   });
 
+  it('splits imported text into emoji only once it arrives', async () => {
+    const load = deferred<EmojiDatabase>();
+    const {EmojiExtension, buildEditorFromExtensions, database} =
+      await importWithLoader(load.promise);
+    const [{getExtensionDependencyFromEditor}, {$createTextNode}] =
+      await Promise.all([import('@lexical/extension'), import('lexical')]);
+    using editor = buildEditorFromExtensions({
+      dependencies: [EmojiExtension],
+      name: '[root]',
+    });
+    const {$createEmojiNodesFromText, emojiCategories} =
+      getExtensionDependencyFromEditor(editor, EmojiExtension).output;
+    const split = () => {
+      let texts: string[] = [];
+      editor.update(
+        () => {
+          texts = $createEmojiNodesFromText($createTextNode('a :+1: b')).map(
+            node => node.getTextContent(),
+          );
+        },
+        {discrete: true},
+      );
+      return texts;
+    };
+    expect(split()).toEqual(['a :+1: b']);
+    expect(emojiCategories.value).toBe(null);
+    load.resolve(database);
+    await load.promise;
+    expect(split()).toEqual(['a ', '👍', ' b']);
+    expect(emojiCategories.value?.length).toBe(9);
+  });
+
   it('does nothing when the editor is disposed first', async () => {
     const load = deferred<EmojiDatabase>();
     const {EmojiExtension, buildEditorFromExtensions, database} =

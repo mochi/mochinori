@@ -24,6 +24,11 @@
       "mochinori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./mdast": {
+      "mochinori-source": "./src/mdast.ts",
+      "types": "./dist/mdast.d.ts",
+      "default": "./dist/mdast.js"
     }
   },
   "imports": {
@@ -52,12 +57,19 @@
   "peerDependencies": {
     "@lexical/extension": "^0.53.0",
     "@lexical/html": "^0.53.0",
+    "@lexical/mdast": "^0.53.0",
     "lexical": "^0.53.0"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/mdast": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@lexical/extension": "catalog:",
     "@lexical/fast-check": "catalog:",
     "@lexical/html": "catalog:",
+    "@lexical/mdast": "catalog:",
     "emoji-datasource-facebook": "15.1.2",
     "fast-check": "^4.10.2",
     "lexical": "catalog:"

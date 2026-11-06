@@ -3,6 +3,11 @@ import type {FormEvent, JSX} from 'react';
 
 import {ClipboardDOMImportExtension} from '@lexical/clipboard';
 import {HistoryExtension} from '@lexical/history';
+import {
+  $convertFromMarkdownString,
+  $convertToMarkdownString,
+  MdastExtension,
+} from '@lexical/mdast';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
@@ -19,7 +24,10 @@ import {
   type EmojiSuggestion,
   EmojiTypeaheadExtension,
   INSERT_EMOJI_COMMAND,
+  SKIN_TONES,
+  type SkinTone,
 } from '@mochinori/emoji';
+import {EmojiMdastExtension} from '@mochinori/emoji/mdast';
 import {
   $createParagraphNode,
   $createTextNode,
@@ -29,7 +37,7 @@ import {
   configExtension,
   defineExtension,
 } from 'lexical';
-import {useEffect, useId, useMemo, useReducer, useState} from 'react';
+import {useEffect, useId, useMemo, useReducer, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 
 import styles from './styles.module.css';
@@ -74,7 +82,7 @@ const EmojiDemoExtension = defineExtension({
       ),
       $createParagraphNode().append(
         $createTextNode(
-          'Type :app to pick from suggestions, or use the emoji button. ',
+          'Type :app to pick from suggestions, or use the emoji button. Add a skin tone with :wave::skin-tone-4: ',
         ),
       ),
     );
@@ -91,6 +99,9 @@ const EmojiDemoExtension = defineExtension({
     EmojiTypeaheadExtension,
     // Pasted emoji keep their shortcode
     ClipboardDOMImportExtension,
+    // Markdown with emoji, shown under the editor
+    MdastExtension,
+    EmojiMdastExtension,
   ],
   name: '@mochinori/website/EmojiDemo',
   namespace: 'EmojiDemo',
@@ -160,8 +171,21 @@ function CustomEmojiForm(): JSX.Element {
 }
 
 // An image for each suggestion, so emoji look the same as in the editor
-function SuggestionImage({src}: {src: string}): JSX.Element {
-  return <img alt="" className={styles.suggestionImage} src={src} />;
+function SuggestionImage({
+  lazy = false,
+  src,
+}: {
+  lazy?: boolean;
+  src: string;
+}): JSX.Element {
+  return (
+    <img
+      alt=""
+      className={styles.suggestionImage}
+      loading={lazy ? 'lazy' : undefined}
+      src={src}
+    />
+  );
 }
 
 // Renders the headless typeahead's state as a menu under the `:query`
@@ -288,29 +312,85 @@ function FontControls(): JSX.Element {
   );
 }
 
-// Shown in the picker before anything is searched
-const POPULAR = ['+1', 'joy', 'heart', 'tada', 'fire', 'eyes', 'pray', 'wave'];
+// A hand in each skin tone, for the skin tone menu
+const TONE_HANDS: Record<SkinTone, string> = {
+  1: '✋',
+  2: '✋🏻',
+  3: '✋🏼',
+  4: '✋🏽',
+  5: '✋🏾',
+  6: '✋🏿',
+};
 
-// An emoji picker built on the extension's searchEmoji
+// The picker's skin tone menu, which sets the extension's skinTone signal
+function SkinToneMenu(): JSX.Element {
+  const {getEmojiSrc, skinTone} = useExtensionDependency(EmojiExtension).output;
+  const current = useExtensionSignalValue(EmojiExtension, 'skinTone');
+  const [open, setOpen] = useState(false);
+  const hand = (tone: SkinTone) =>
+    getEmojiSrc({emoji: TONE_HANDS[tone], name: 'raised_hand'});
+  return (
+    <div className={styles.toneMenu}>
+      <button
+        aria-expanded={open}
+        aria-label="Skin tone"
+        className={styles.pickerItem}
+        onClick={() => setOpen(!open)}
+        title="Skin tone"
+        type="button">
+        <SuggestionImage src={hand(current)} />
+      </button>
+      {open &&
+        SKIN_TONES.filter(tone => tone !== current).map(tone => (
+          <button
+            aria-label={`Skin tone ${tone}`}
+            className={styles.pickerItem}
+            key={tone}
+            onClick={() => {
+              skinTone.value = tone;
+              setOpen(false);
+            }}
+            type="button">
+            <SuggestionImage src={hand(tone)} />
+          </button>
+        ))}
+    </div>
+  );
+}
+
+// An emoji picker built on the extension's searchEmoji and emojiCategories,
+// with a section for each category and the custom emoji first
 function EmojiPicker(): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const {getEmojiSrc} = useExtensionDependency(EmojiExtension).output;
   const search = useExtensionSignalValue(EmojiExtension, 'searchEmoji');
+  const categories = useExtensionSignalValue(EmojiExtension, 'emojiCategories');
   const customEmoji = useExtensionSignalValue(EmojiExtension, 'customEmoji');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const results = useMemo((): EmojiSuggestion[] => {
-    if (!search) {
-      return [];
-    }
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sections = useMemo((): {
+    emoji: readonly EmojiSuggestion[];
+    name: string;
+  }[] => {
     if (query) {
-      return search(query, {limit: 40});
+      return search
+        ? [{emoji: search(query, {limit: 64}), name: 'Results'}]
+        : [];
     }
     return [
-      ...customEmoji.map(custom => ({custom, name: custom.name})),
-      ...POPULAR.flatMap(name => search(name, {limit: 1})),
+      ...(customEmoji.length > 0
+        ? [
+            {
+              emoji: customEmoji.map(custom => ({custom, name: custom.name})),
+              name: 'Custom',
+            },
+          ]
+        : []),
+      ...(categories ?? []),
     ];
-  }, [customEmoji, query, search]);
+  }, [categories, customEmoji, query, search]);
+  const firstResult = sections[0]?.emoji[0];
   const pick = (suggestion: EmojiSuggestion) => {
     editor.update(() => {
       if (!$getSelection()) {
@@ -332,41 +412,131 @@ function EmojiPicker(): JSX.Element {
         Emoji
       </button>
       {open && (
-        <div className={styles.pickerPanel}>
-          <input
-            aria-label="Search emoji"
-            autoFocus={true}
-            className={styles.input}
-            onChange={event => setQuery(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === 'Escape') {
-                setOpen(false);
-                editor.focus();
-              } else if (event.key === 'Enter' && results[0]) {
-                pick(results[0]);
-              }
-            }}
-            placeholder="Search emoji"
-            value={query}
-          />
-          <div className={styles.pickerGrid}>
-            {results.map(suggestion => (
-              <button
-                aria-label={`:${suggestion.name}:`}
-                className={styles.pickerItem}
-                key={
-                  suggestion.custom ? `:${suggestion.name}` : suggestion.emoji
+        <div
+          className={styles.pickerPanel}
+          // Escape anywhere in the picker closes it
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setOpen(false);
+              editor.focus();
+            }
+          }}>
+          <div className={styles.pickerHeader}>
+            <input
+              aria-label="Search emoji"
+              autoFocus={true}
+              className={styles.input}
+              onChange={event => setQuery(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && firstResult) {
+                  pick(firstResult);
                 }
-                onClick={() => pick(suggestion)}
-                title={`:${suggestion.name}:`}
-                type="button">
-                <SuggestionImage src={getEmojiSrc(suggestion)} />
-              </button>
+              }}
+              placeholder="Search emoji"
+              value={query}
+            />
+            <SkinToneMenu />
+          </div>
+          {!query && (
+            <div className={styles.pickerTabs} role="tablist">
+              {sections.map(section => {
+                const [icon] = section.emoji;
+                return (
+                  icon && (
+                    <button
+                      aria-label={section.name}
+                      className={styles.pickerItem}
+                      key={section.name}
+                      onClick={() => {
+                        // Scrolls the grid only, not the page
+                        const grid = gridRef.current;
+                        const target = grid?.querySelector<HTMLElement>(
+                          `[data-section="${section.name}"]`,
+                        );
+                        if (grid && target) {
+                          grid.scrollTop = target.offsetTop - grid.offsetTop;
+                        }
+                      }}
+                      role="tab"
+                      title={section.name}
+                      type="button">
+                      <SuggestionImage src={getEmojiSrc(icon)} />
+                    </button>
+                  )
+                );
+              })}
+            </div>
+          )}
+          <div className={styles.pickerScroll} ref={gridRef}>
+            {sections.map(section => (
+              <section data-section={section.name} key={section.name}>
+                <h4 className={styles.pickerHeading}>{section.name}</h4>
+                <div className={styles.pickerGrid}>
+                  {section.emoji.map(suggestion => (
+                    <button
+                      aria-label={`:${suggestion.name}:`}
+                      className={styles.pickerItem}
+                      key={
+                        suggestion.custom
+                          ? `:${suggestion.name}`
+                          : suggestion.emoji
+                      }
+                      onClick={() => pick(suggestion)}
+                      title={`:${suggestion.name}:`}
+                      type="button">
+                      <SuggestionImage
+                        lazy={true}
+                        src={getEmojiSrc(suggestion)}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// The document as Markdown, kept up to date, and a box to import Markdown
+function MarkdownPanel(): JSX.Element {
+  const [editor] = useLexicalComposerContext();
+  const [markdown, setMarkdown] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  useEffect(
+    () =>
+      editor.registerUpdateListener(({editorState}) => {
+        setMarkdown(
+          editorState.read(() => $convertToMarkdownString(), {editor}),
+        );
+      }),
+    [editor],
+  );
+  return (
+    <details className={styles.markdown}>
+      <summary>Markdown</summary>
+      <textarea
+        aria-label="Markdown"
+        className={styles.markdownText}
+        onChange={event => setDraft(event.target.value)}
+        rows={6}
+        value={draft ?? markdown}
+      />
+      <button
+        className="button button--sm button--secondary"
+        disabled={draft === null}
+        onClick={() => {
+          if (draft !== null) {
+            editor.update(() => $convertFromMarkdownString(draft));
+            setDraft(null);
+          }
+        }}
+        type="button">
+        Import
+      </button>
+    </details>
   );
 }
 
@@ -404,6 +574,7 @@ export default function EmojiDemo(): JSX.Element {
           <CustomEmojiForm />
         </div>
         <EmojiEditor />
+        <MarkdownPanel />
       </LexicalExtensionComposer>
     </div>
   );

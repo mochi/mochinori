@@ -1,7 +1,7 @@
 .demo {
+  /* No overflow: hidden, which would clip the picker */
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 1rem;
-  overflow: hidden;
   background: var(--ifm-background-surface-color);
 }
 
@@ -102,7 +102,8 @@
   z-index: 100;
   top: calc(100% + 0.25rem);
   left: 0;
-  width: 18rem;
+  width: 21rem;
+  max-width: calc(100vw - 2rem);
   padding: 0.5rem;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 0.6rem;
@@ -110,17 +111,46 @@
   box-shadow: var(--ifm-global-shadow-md);
 }
 
-.pickerPanel .input {
-  width: 100%;
+.pickerHeader {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.pickerHeader .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The skin tone menu opens in place, to the right of the search box */
+.toneMenu {
+  display: flex;
+}
+
+.pickerTabs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.pickerScroll {
+  height: 15rem;
+  margin-top: 0.25rem;
+  overflow-y: auto;
+}
+
+.pickerHeading {
+  margin: 0.5rem 0.25rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-700);
 }
 
 .pickerGrid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(9, 1fr);
   gap: 0.125rem;
-  max-height: 12rem;
-  margin-top: 0.5rem;
-  overflow-y: auto;
 }
 
 .pickerItem {
@@ -136,4 +166,27 @@
 .pickerItem:hover,
 .pickerItem:focus-visible {
   background: var(--ifm-color-emphasis-200);
+}
+
+.markdown {
+  padding: 0.5rem 1rem 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.markdown summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.markdownText {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 0.4rem;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.875rem;
 }

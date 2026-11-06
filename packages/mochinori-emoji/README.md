@@ -6,7 +6,10 @@ the images from
 [emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so emoji
 look the same on every platform. Custom emoji, like a Slack workspace's,
 extend the set with your own images and can change while the editor runs.
-The emoji database loads lazily in its own chunk.
+Emoji take skin tones (`:+1::skin-tone-3:`), a headless typeahead and the
+emoji's categories help apps build Slack- and Discord-style pickers, and
+`@mochinori/emoji/mdast` adds them to `@lexical/mdast` Markdown. The emoji
+database loads lazily in its own chunk.
 
 ## Install
 
@@ -29,13 +32,12 @@ const AppExtension = defineExtension({
 });
 ```
 
+Each emoji's image size and position are inline styles. Hide the font's
+emoji once the image loads, keeping the caret visible:
+
 ```css
 .mochinori-emoji {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  background: center / 1em 1em no-repeat;
-  vertical-align: top;
+  caret-color: CanvasText;
 }
 .mochinori-emoji--loaded {
   color: transparent;
