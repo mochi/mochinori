@@ -1,20 +1,12 @@
-import {
-  CoreImportExtension,
-  defineImportRule,
-  DOMImportExtension,
-  sel,
-} from '@lexical/html';
+import {defineImportRule, sel} from '@lexical/html';
 import {
   $createParagraphNode,
   $isElementNode,
   $isLineBreakNode,
-  configExtension,
-  defineExtension,
   type LexicalNode,
 } from 'lexical';
 
 import {$createImageNode, type ImagePayload} from './ImageNode.tsx';
-import {ImagesExtension} from './ImagesExtension.ts';
 
 function parseDimension(value: string | null): number | undefined {
   const n = value === null ? NaN : Number.parseFloat(value);
@@ -86,17 +78,3 @@ export const ImageFigureImportRule = defineImportRule({
 });
 
 export const ImagesImportRules = [ImageFigureImportRule, ImageImportRule];
-
-/**
- * Adds `<img>` and `<figure>` import to {@link DOMImportExtension}, for HTML paste and
- * `$generateNodesFromDOM`. Images are not imported through the legacy
- * `importDOM` path.
- */
-export const ImagesImportExtension = defineExtension({
-  dependencies: [
-    ImagesExtension,
-    CoreImportExtension,
-    configExtension(DOMImportExtension, {rules: ImagesImportRules}),
-  ],
-  name: '@mochinori/images/ImagesImport',
-});

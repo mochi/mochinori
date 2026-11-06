@@ -18,7 +18,6 @@ import {
   $isImageNode,
   type ImageNode,
   ImagesExtension,
-  ImagesImportExtension,
   INSERT_IMAGE_COMMAND,
 } from '../../index.ts';
 
@@ -30,7 +29,7 @@ function buildEditor() {
         $getRoot().append(paragraph);
         paragraph.select();
       },
-      dependencies: [RichTextExtension, ImagesExtension, ImagesImportExtension],
+      dependencies: [RichTextExtension, ImagesExtension],
       name: '[root]',
     }),
   );

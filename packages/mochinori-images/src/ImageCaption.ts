@@ -35,6 +35,12 @@ export const SET_IMAGE_BLOCK_COMMAND: LexicalCommand<{
   nodeKey: NodeKey;
 }> = createCommand('SET_IMAGE_BLOCK_COMMAND');
 
+/** Sets the alt text of the image with `nodeKey` */
+export const SET_IMAGE_ALT_TEXT_COMMAND: LexicalCommand<{
+  altText: string;
+  nodeKey: NodeKey;
+}> = createCommand('SET_IMAGE_ALT_TEXT_COMMAND');
+
 /** Selects the image as a whole (a NodeSelection) */
 export function $selectImage(nodeKey: NodeKey): void {
   const selection = $createNodeSelection();

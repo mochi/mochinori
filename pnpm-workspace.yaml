@@ -26,15 +26,15 @@ minimumReleaseAgeExclude:
 # same exact version (devDependencies), and the published libraries declare
 # a compatible range in peerDependencies. Bump both together.
 catalog:
-  lexical: '0.52.0'
-  '@lexical/clipboard': '0.52.0'
-  '@lexical/eslint-plugin': '0.52.0'
-  '@lexical/extension': '0.52.0'
-  '@lexical/history': '0.52.0'
-  '@lexical/html': '0.52.0'
-  '@lexical/react': '0.52.0'
-  '@lexical/rich-text': '0.52.0'
-  '@lexical/utils': '0.52.0'
+  lexical: '0.53.0'
+  '@lexical/clipboard': '0.53.0'
+  '@lexical/eslint-plugin': '0.53.0'
+  '@lexical/extension': '0.53.0'
+  '@lexical/history': '0.53.0'
+  '@lexical/html': '0.53.0'
+  '@lexical/react': '0.53.0'
+  '@lexical/rich-text': '0.53.0'
+  '@lexical/utils': '0.53.0'
   react: '^19.2.5'
   react-dom: '^19.2.5'
 
