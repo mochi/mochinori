@@ -238,6 +238,31 @@ describe('EmojiExtension', () => {
     );
   });
 
+  it('redraws the emoji in place when emojiSet changes', () => {
+    using editor = buildEditor({emojiLoadedClass: 'loaded'});
+    const root = document.createElement('div');
+    editor.setRootElement(root);
+    setText(editor, ':smile:');
+    const span = root.querySelector<HTMLElement>('[data-emoji-shortcode]');
+    const {emojiSet, getEmojiSrc} = getExtensionDependencyFromEditor(
+      editor,
+      EmojiExtension,
+    ).output;
+    const twemoji = `url("${emojiSetBaseUrl('twitter')}/1f604.png")`;
+    expect(span?.style.backgroundImage).toBe(twemoji);
+    // Pretend the Twemoji image loaded
+    span?.classList.add('loaded');
+    emojiSet.value = 'google';
+    // The same element keeps its image until Noto's loads
+    expect(root.querySelector('[data-emoji-shortcode]')).toBe(span);
+    expect(span?.style.backgroundImage).toBe(twemoji);
+    expect(span?.classList.contains('loaded')).toBe(true);
+    expect(getEmojiSrc({emoji: '😄', name: 'smile'})).toBe(
+      `${emojiSetBaseUrl('google')}/1f604.png`,
+    );
+    editor.setRootElement(null);
+  });
+
   it('keeps its shortcode when cloned by a later update', () => {
     using editor = buildEditor();
     setText(editor, ':smile:');

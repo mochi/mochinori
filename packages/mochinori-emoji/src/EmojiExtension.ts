@@ -90,8 +90,9 @@ export function emojiSetBaseUrl(set: EmojiSet): string {
 export interface EmojiExtensionConfig {
   /**
    * Which emoji images to show (see {@link EMOJI_SETS}), from jsDelivr
-   * unless {@link emojiBaseUrl} is set. Default: `'twitter'` (Twemoji,
-   * CC BY 4.0, so credit it).
+   * unless {@link emojiBaseUrl} is set: the initial value of the `emojiSet`
+   * output signal. Default: `'twitter'` (Twemoji, CC BY 4.0, so credit
+   * it).
    */
   emojiSet: EmojiSet;
   /**
@@ -224,6 +225,19 @@ export interface EmojiExtensionOutput {
    * It is null until the emoji database has loaded.
    */
   getEmojiShortcode: (emoji: string) => string | null;
+  /**
+   * The emoji images to show. Set it to switch sets while the editor runs:
+   * the emoji in the document are redrawn, each keeping its current image
+   * until the new one loads. It has no effect when
+   * {@link EmojiExtensionConfig.emojiBaseUrl} is set.
+   */
+  emojiSet: Signal<EmojiSet>;
+  /**
+   * Where the images of the current {@link emojiSet} are (or
+   * {@link EmojiExtensionConfig.emojiBaseUrl}). {@link getEmojiSrc} reads
+   * it, so a picker that draws with that redraws when the set changes.
+   */
+  emojiBaseUrl: ReadonlySignal<string>;
   /** The URL of the image of an emoji that {@link searchEmoji} found */
   getEmojiSrc: (suggestion: EmojiSuggestion) => string;
   /**
@@ -311,7 +325,10 @@ export function $createEmojiNodeFromSuggestion(
  */
 export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
-    const baseUrl = config.emojiBaseUrl || emojiSetBaseUrl(config.emojiSet);
+    const emojiSet = signal(config.emojiSet);
+    const emojiBaseUrl = computed(
+      () => config.emojiBaseUrl || emojiSetBaseUrl(emojiSet.value),
+    );
     const customEmoji = signal(config.customEmoji);
     const skinTone = signal(config.skinTone);
     const convertUnicodeEmoji = signal(config.convertUnicodeEmoji);
@@ -334,17 +351,19 @@ export const EmojiExtension = defineExtension({
       convertUnicodeEmoji,
       customEmoji,
       customEmojiByName,
+      emojiBaseUrl,
       emojiCategories: computed(
         () =>
           database.value?.getEmojiCategories({skinTone: skinTone.value}) ??
           null,
       ),
+      emojiSet,
       getEmojiShortcode: emoji =>
         database.peek()?.lookUpEmoji(emoji)?.shortcode ?? null,
       getEmojiSrc: suggestion =>
         suggestion.custom
           ? suggestion.custom.src
-          : `${baseUrl}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
+          : `${emojiBaseUrl.value}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
       searchEmoji: computed(() => {
         const db = database.value;
         const custom = customEmoji.value;
@@ -386,11 +405,12 @@ export const EmojiExtension = defineExtension({
   name: '@mochinori/emoji/Emoji',
   nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {
-    const baseUrl = config.emojiBaseUrl || emojiSetBaseUrl(config.emojiSet);
     const editable = state.getDependency(WatchEditableExtension).output;
     const output = state.getOutput();
-    const {customEmoji, customEmojiByName} = output;
+    const {customEmoji, customEmojiByName, emojiBaseUrl} = output;
     const customEmojiKeys = new Set<NodeKey>();
+    // The standard emoji drawn with an image, to redraw when the set changes
+    const emojiKeys = new Set<NodeKey>();
     const nodeCleanup = new Map<NodeKey, () => void>();
     const runNodeCleanup = (nodeKey: NodeKey) => {
       const fn = nodeCleanup.get(nodeKey);
@@ -398,6 +418,54 @@ export const EmojiExtension = defineExtension({
         nodeCleanup.delete(nodeKey);
         fn();
       }
+    };
+    // Draws a standard emoji with its image from the current set. Until the
+    // image loads, the font's emoji shows, or with `keepCurrent` the image
+    // it already has (when the set changes).
+    const showImage = (
+      nodeKey: NodeKey,
+      dom: HTMLElement,
+      baseUrl: string,
+      keepCurrent: boolean,
+    ) => {
+      runNodeCleanup(nodeKey);
+      const imageUrl = `${baseUrl}/${unifiedIDFromText(dom.textContent ?? '')}.png`;
+      const backgroundImage = `url(${imageUrl})`;
+      const swap = !keepCurrent || !dom.style.backgroundImage;
+      addClassNamesToElement(dom, config.emojiClass);
+      Object.assign(dom.style, EMOJI_BOX_STYLE, {
+        // The font's emoji, until the image loads, centered in the box
+        lineHeight: '1.25em',
+        textAlign: 'center',
+        width: '1.25em',
+      });
+      if (swap) {
+        removeClassNamesFromElement(dom, config.emojiLoadedClass);
+        addClassNamesToElement(dom, config.emojiLoadingClass);
+        dom.style.backgroundImage = backgroundImage;
+      }
+      const img = dom.ownerDocument.createElement('img');
+      const cleanupImg = () => {
+        img.onload = img.onerror = null;
+      };
+      const eagerNodeCleanup = () => {
+        cleanupImg();
+        nodeCleanup.delete(nodeKey);
+        removeClassNamesFromElement(dom, config.emojiLoadingClass);
+      };
+      img.onerror = () => {
+        eagerNodeCleanup();
+        // The font's emoji, rather than another set's image
+        removeClassNamesFromElement(dom, config.emojiLoadedClass);
+        dom.style.backgroundImage = backgroundImage;
+      };
+      img.onload = () => {
+        eagerNodeCleanup();
+        dom.style.backgroundImage = backgroundImage;
+        addClassNamesToElement(dom, config.emojiLoadedClass);
+      };
+      nodeCleanup.set(nodeKey, cleanupImg);
+      img.src = imageUrl;
     };
     const cleanup = mergeRegister(
       // no need for init since we are synchronously registering at editor creation
@@ -409,6 +477,7 @@ export const EmojiExtension = defineExtension({
           runNodeCleanup(nodeKey);
           const dom =
             mutation === 'destroyed' ? null : editor.getElementByKey(nodeKey);
+          emojiKeys.delete(nodeKey);
           if (dom?.dataset.customEmoji !== undefined) {
             customEmojiKeys.add(nodeKey);
             continue;
@@ -417,39 +486,8 @@ export const EmojiExtension = defineExtension({
           if (!dom?.textContent) {
             continue;
           }
-          // A possible future enhancement would be to allow both image
-          // emojis and plain text emojis that we do not have images for,
-          // in which case we would want to have a separate class and not
-          // use a background image if we don't have one.
-          const imageUrl = `${baseUrl}/${unifiedIDFromText(dom.textContent)}.png`;
-          addClassNamesToElement(
-            dom,
-            config.emojiClass,
-            config.emojiLoadingClass,
-          );
-          Object.assign(dom.style, EMOJI_BOX_STYLE, {
-            backgroundImage: `url(${imageUrl})`,
-            // The font's emoji, until the image loads, centered in the box
-            lineHeight: '1.25em',
-            textAlign: 'center',
-            width: '1.25em',
-          });
-          const img = dom.ownerDocument.createElement('img');
-          const cleanupImg = () => {
-            img.onload = img.onerror = null;
-          };
-          const eagerNodeCleanup = () => {
-            cleanupImg();
-            nodeCleanup.delete(nodeKey);
-            removeClassNamesFromElement(dom, config.emojiLoadingClass);
-          };
-          img.onerror = eagerNodeCleanup;
-          img.onload = () => {
-            eagerNodeCleanup();
-            addClassNamesToElement(dom, config.emojiLoadedClass);
-          };
-          nodeCleanup.set(nodeKey, cleanupImg);
-          img.src = imageUrl;
+          emojiKeys.add(nodeKey);
+          showImage(nodeKey, dom, emojiBaseUrl.peek(), false);
         }
       }),
       () => {
@@ -474,6 +512,16 @@ export const EmojiExtension = defineExtension({
         },
         COMMAND_PRIORITY_EDITOR,
       ),
+      // Redraw the standard emoji when the emoji set changes
+      effect(() => {
+        const baseUrl = emojiBaseUrl.value;
+        for (const nodeKey of emojiKeys) {
+          const dom = editor.getElementByKey(nodeKey);
+          if (dom?.textContent) {
+            showImage(nodeKey, dom, baseUrl, true);
+          }
+        }
+      }),
       // Show the current image of each custom emoji when the set changes
       effect(() => {
         const byName = customEmojiByName.value;

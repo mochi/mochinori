@@ -287,6 +287,10 @@ an image for every emoji of the database, in every skin tone.
 configExtension(EmojiExtension, {emojiSet: 'google'});
 ```
 
+The `emojiSet` output signal switches sets while the editor runs: the emoji
+in the document are redrawn in place, each keeping its current image until
+the new one loads.
+
 Apple's images aren't licensed for commercial use, and Facebook's have no
 clear license and stop at Unicode 15, so neither is offered. To serve the
 images yourself, copy `img/<set>/64` from `emoji-datasource-<set>` and set
@@ -341,6 +345,8 @@ Its output has:
 | `searchEmoji` | A signal of a search over the standard and custom emoji, null until the database loads |
 | `emojiCategories` | A signal of the emoji by category, null until the database loads |
 | `skinTone` | A signal of the skin tone to use |
+| `emojiSet` | A signal of the emoji images to show; setting it redraws the emoji in place |
+| `emojiBaseUrl` | A signal of where the current set's images are, which `getEmojiSrc` reads |
 | `convertUnicodeEmoji` | A signal of whether Unicode emoji convert; turning it on converts those already in the document |
 | `getEmojiSrc(suggestion)` | The image of a search result |
 | `getEmojiShortcode(emoji)` | The short name of a Unicode emoji, such as `:+1::skin-tone-3:`, or null |
