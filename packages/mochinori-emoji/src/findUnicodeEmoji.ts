@@ -5,7 +5,8 @@ import {SKIN_TONES, skinToneShortcode} from './skinToneNames.ts';
 const VARIATION_SELECTOR = '️';
 const SKIN_TONE_MODIFIERS = /[\u{1F3FB}-\u{1F3FF}]/gu;
 
-let byKey: Map<string, {emoji: string; name: string}> | undefined;
+let byKey:
+  Map<string, {emoji: string; name: string; version: number}> | undefined;
 
 /** An emoji with no variation selector or skin tone, to look it up by */
 function keyOf(emoji: string): string {
@@ -14,18 +15,23 @@ function keyOf(emoji: string): string {
     .replace(SKIN_TONE_MODIFIERS, '');
 }
 
-/**
- * The emoji of the database that a grapheme is, as the database spells it,
- * and its shortcode
- */
-export function lookUpEmoji(
-  grapheme: string,
-): {emoji: string; shortcode: string} | null {
+/** An emoji of the database, as {@link lookUpEmoji} finds it */
+export interface FoundEmoji {
+  /** As the database spells it, with the skin tone it was looked up with */
+  emoji: string;
+  /** Such as `:+1:` or `:+1::skin-tone-3:` */
+  shortcode: string;
+  /** The Emoji version that added it when 16 or later, otherwise 0 */
+  version: number;
+}
+
+/** The emoji of the database that a grapheme is */
+export function lookUpEmoji(grapheme: string): FoundEmoji | null {
   if (!byKey) {
     byKey = new Map();
-    for (const {emoji, shortNames} of getEmojiData()) {
+    for (const {emoji, shortNames, version} of getEmojiData()) {
       if (shortNames[0]) {
-        byKey.set(keyOf(emoji), {emoji, name: shortNames[0]});
+        byKey.set(keyOf(emoji), {emoji, name: shortNames[0], version});
       }
     }
   }
@@ -35,7 +41,11 @@ export function lookUpEmoji(
   }
   const tone = getSkinTone(grapheme);
   if (tone === 1) {
-    return {emoji: found.emoji, shortcode: `:${found.name}:`};
+    return {
+      emoji: found.emoji,
+      shortcode: `:${found.name}:`,
+      version: found.version,
+    };
   }
   // An emoji whose tones aren't one modifier (two people, a tone each)
   // stays text rather than losing them
@@ -43,6 +53,7 @@ export function lookUpEmoji(
     ? {
         emoji: applySkinTone(found.emoji, tone),
         shortcode: `:${found.name}:${skinToneShortcode(tone)}`,
+        version: found.version,
       }
     : null;
 }

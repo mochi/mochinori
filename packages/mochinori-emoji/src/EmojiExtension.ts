@@ -53,23 +53,36 @@ import {
 } from './registerCustomEmojiLookup.ts';
 import {registerEmojiNavigation} from './registerEmojiNavigation.ts';
 import {skinToneShortcode} from './skinToneNames.ts';
-import {unifiedIDFromText} from './unifiedID.ts';
 
 /**
- * The version of emoji-datasource that the emoji database and the default
- * image URLs ({@link emojiSetBaseUrl}) come from
+ * The release of [jdecked/twemoji](https://github.com/jdecked/twemoji), the
+ * maintained Twemoji, that the `twitter` set's images come from
  */
-export const EMOJI_DATASOURCE_VERSION = '16.0.0';
+export const TWEMOJI_VERSION = '17.0.3';
 
 /**
- * The sets of emoji images that emoji-datasource publishes, are openly
- * licensed and are kept up to date. Each has an image for every emoji of
- * the database, in each skin tone.
+ * The newest Emoji version that the images of {@link TWEMOJI_VERSION}
+ * cover. Newer emoji show in the font until Twemoji draws them.
+ */
+export const TWEMOJI_EMOJI_VERSION = 17;
+
+/**
+ * The Google Fonts stylesheet of the Noto Color Emoji font, which the
+ * `google` set draws with. Google Fonts splits the font by Unicode range,
+ * so a page downloads only the parts with the emoji it shows.
+ */
+export const NOTO_COLOR_EMOJI_STYLESHEET =
+  'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap';
+
+/**
+ * The emoji sets, both openly licensed and kept up to date:
  *
- * - `twitter`: Twemoji (the maintained jdecked/twemoji fork), CC BY 4.0,
- *   which needs a credit such as "Emoji graphics by Twemoji, CC BY 4.0".
- *   Discord uses it.
- * - `google`: Noto Color Emoji, Apache 2.0.
+ * - `twitter`: Twemoji images from jdecked/twemoji ({@link TWEMOJI_VERSION})
+ *   on jsDelivr, CC BY 4.0, which needs a credit such as "Emoji graphics by
+ *   Twemoji, CC BY 4.0". Discord uses it.
+ * - `google`: the Noto Color Emoji font from Google Fonts
+ *   ({@link NOTO_COLOR_EMOJI_STYLESHEET}), SIL Open Font License, which
+ *   Google updates for each Unicode release.
  *
  * Apple's set isn't licensed for commercial use, and Facebook's has no clear
  * license and stopped at Unicode 15.
@@ -80,31 +93,68 @@ export const EMOJI_SETS = ['twitter', 'google'] as const;
 export type EmojiSet = (typeof EMOJI_SETS)[number];
 
 /**
- * The 64×64 images of an emoji set on jsDelivr, from the
- * `emoji-datasource-<set>` package (`img/<set>/64` in it)
+ * Where the images of an emoji set are: Twemoji's 72×72 PNGs on jsDelivr
+ * for `twitter`, or `''` for `google`, which draws with a font
  */
 export function emojiSetBaseUrl(set: EmojiSet): string {
-  return `https://cdn.jsdelivr.net/npm/emoji-datasource-${set}@${EMOJI_DATASOURCE_VERSION}/img/${set}/64`;
+  return set === 'twitter'
+    ? `https://cdn.jsdelivr.net/gh/jdecked/twemoji@${TWEMOJI_VERSION}/assets/72x72`
+    : '';
+}
+
+/**
+ * The name of an emoji's Twemoji image, without `.png`, as Twemoji's own
+ * parser spells it: its code points in lowercase hexadecimal without
+ * leading zeros, joined by `-`, leaving out variation selectors unless it
+ * has a zero width joiner, such as `1f44d-1f3fc` for 👍🏼, `2764` for ❤️ and
+ * `23-20e3` for #️⃣
+ */
+export function twemojiID(emoji: string): string {
+  // The one image that leaves them out despite a zero width joiner
+  if (emoji === '\u{1F441}\uFE0F\u200D\u{1F5E8}\uFE0F') {
+    return '1f441-200d-1f5e8';
+  }
+  const text = emoji.includes('\u200D')
+    ? emoji
+    : emoji.replaceAll('\uFE0F', '');
+  return Array.from(text, c => c.codePointAt(0)!.toString(16)).join('-');
 }
 
 export interface EmojiExtensionConfig {
   /**
-   * Which emoji images to show (see {@link EMOJI_SETS}), from jsDelivr
-   * unless {@link emojiBaseUrl} is set: the initial value of the `emojiSet`
-   * output signal. Default: `'twitter'` (Twemoji, CC BY 4.0, so credit
+   * Which emoji set to draw with (see {@link EMOJI_SETS}), unless
+   * {@link emojiBaseUrl} is set: the initial value of the `emojiSet` output
+   * signal. Default: `'twitter'` (Twemoji, CC BY 4.0, so credit
    * it).
    */
   emojiSet: EmojiSet;
   /**
    * The base URL of the emoji PNG files, to serve them yourself: a copy of
-   * `img/<set>/64` from the `emoji-datasource-<set>` package at
-   * {@link EMOJI_DATASOURCE_VERSION}. Each file is named by the emoji's
-   * unified id, such as `1f642.png`. Do not add a trailing slash.
+   * `assets/72x72` from jdecked/twemoji at {@link TWEMOJI_VERSION}, or other
+   * images named the same way ({@link twemojiID}, such as `1f642.png`) that
+   * cover Emoji {@link TWEMOJI_EMOJI_VERSION}. It replaces
+   * {@link emojiSet}. Do not add a trailing slash.
    *
-   * Default: `''`, the {@link emojiSet} on jsDelivr
-   * ({@link emojiSetBaseUrl}).
+   * Default: `''`, the {@link emojiSet}.
    */
   emojiBaseUrl: string;
+  /**
+   * The CSS `font-family` of the emoji that have no image: all of them with
+   * the `google` set, and those newer than Twemoji's images with the
+   * `twitter` set. `''` leaves them in the platform's font.
+   *
+   * Default: `"Noto Color Emoji"`.
+   */
+  emojiFontFamily: string;
+  /**
+   * The stylesheet that loads {@link emojiFontFamily}, added to the
+   * editor's document when an emoji is drawn with it (or the `google` set
+   * is chosen). Set it to `''` to load the font yourself, such as from the
+   * `@fontsource/noto-color-emoji` package.
+   *
+   * Default: {@link NOTO_COLOR_EMOJI_STYLESHEET}.
+   */
+  emojiFontStylesheet: string;
   /**
    * The class to use for emoji nodes. The image's size and position are
    * inline styles (1.25em square, sitting on the baseline like a glyph), so
@@ -226,19 +276,29 @@ export interface EmojiExtensionOutput {
    */
   getEmojiShortcode: (emoji: string) => string | null;
   /**
-   * The emoji images to show. Set it to switch sets while the editor runs:
-   * the emoji in the document are redrawn, each keeping its current image
-   * until the new one loads. It has no effect when
+   * The emoji set to draw with. Set it to switch sets while the editor
+   * runs: the emoji in the document are redrawn, each keeping its current
+   * image until the new one loads. It has no effect when
    * {@link EmojiExtensionConfig.emojiBaseUrl} is set.
    */
   emojiSet: Signal<EmojiSet>;
   /**
    * Where the images of the current {@link emojiSet} are (or
-   * {@link EmojiExtensionConfig.emojiBaseUrl}). {@link getEmojiSrc} reads
-   * it, so a picker that draws with that redraws when the set changes.
+   * {@link EmojiExtensionConfig.emojiBaseUrl}), or `''` when it draws with
+   * a font. {@link getEmojiSrc} reads it, so a picker that draws with that
+   * redraws when the set changes.
    */
   emojiBaseUrl: ReadonlySignal<string>;
-  /** The URL of the image of an emoji that {@link searchEmoji} found */
+  /**
+   * {@link EmojiExtensionConfig.emojiFontFamily}: a picker draws an emoji
+   * that has no image ({@link getEmojiSrc} is `''`) as text in this font.
+   */
+  emojiFontFamily: string;
+  /**
+   * The URL of the image of an emoji that {@link searchEmoji} found, or
+   * `''` when it has none: the set draws with a font, or the emoji is newer
+   * than the set's images. Draw those as text in {@link emojiFontFamily}.
+   */
   getEmojiSrc: (suggestion: EmojiSuggestion) => string;
   /**
    * Splits a text node that isn't in the document yet, such as one an
@@ -301,11 +361,40 @@ export function $createEmojiNodeFromSuggestion(
 }
 
 /**
- * An extension to use the emoji-datasource emoji database to convert
- * short names such as :man-facepalming: or :) to their corresponding
- * emoji, and uses an image from the same package rather than the current
- * font to display it so that the display is consistent regardless of the
- * platform.
+ * The URL of a standard emoji's image in the images at `baseUrl`, or `''`
+ * when there are none (a set that draws with a font) or the database says
+ * the emoji is newer than they are
+ */
+function emojiImageSrc(
+  baseUrl: string,
+  emoji: string,
+  database: EmojiDatabase | null,
+): string {
+  return !baseUrl ||
+    !emoji ||
+    (database?.lookUpEmoji(emoji)?.version ?? 0) > TWEMOJI_EMOJI_VERSION
+    ? ''
+    : `${baseUrl}/${twemojiID(emoji)}.png`;
+}
+
+/** Adds a stylesheet to a document, unless it already has it */
+function addStylesheet(doc: Document, href: string) {
+  for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+    if (link.getAttribute('href') === href) {
+      return;
+    }
+  }
+  const link = doc.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  doc.head.append(link);
+}
+
+/**
+ * An extension to use the emojibase emoji database (Emoji 18, with Slack's
+ * short names) to convert short names such as :man-facepalming: or :) to
+ * their corresponding emoji, drawn with an {@link EmojiSet} rather than the
+ * platform's font so that they look the same everywhere.
  *
  * Loading the emoji database is done using an async import so will typically
  * be a lazy loaded module in a separate chunk (Node loads it synchronously).
@@ -313,7 +402,7 @@ export function $createEmojiNodeFromSuggestion(
  *
  * Images are also maximally lazily loaded, before they load the font's
  * representation of that emoji is used and then the emojiLoadedClass is
- * added.
+ * added. An emoji newer than the set's images stays in the font.
  *
  * Custom emoji (`customEmoji`) extend the set beyond Unicode with images,
  * typed as `:name:` and stored as an {@link EmojiNode} with that name.
@@ -357,13 +446,18 @@ export const EmojiExtension = defineExtension({
           database.value?.getEmojiCategories({skinTone: skinTone.value}) ??
           null,
       ),
+      emojiFontFamily: config.emojiFontFamily,
       emojiSet,
       getEmojiShortcode: emoji =>
         database.peek()?.lookUpEmoji(emoji)?.shortcode ?? null,
       getEmojiSrc: suggestion =>
         suggestion.custom
           ? suggestion.custom.src
-          : `${emojiBaseUrl.value}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
+          : emojiImageSrc(
+              emojiBaseUrl.value,
+              suggestion.emoji ?? '',
+              database.peek(),
+            ),
       searchEmoji: computed(() => {
         const db = database.value;
         const custom = customEmoji.value;
@@ -389,6 +483,8 @@ export const EmojiExtension = defineExtension({
     customEmojiLookupMinLength: 2,
     emojiBaseUrl: '',
     emojiClass: 'mochinori-emoji',
+    emojiFontFamily: '"Noto Color Emoji"',
+    emojiFontStylesheet: NOTO_COLOR_EMOJI_STYLESHEET,
     emojiLoadedClass: 'mochinori-emoji--loaded',
     emojiLoadingClass: '',
     emojiSet: 'twitter',
@@ -408,6 +504,19 @@ export const EmojiExtension = defineExtension({
     const editable = state.getDependency(WatchEditableExtension).output;
     const output = state.getOutput();
     const {customEmoji, customEmojiByName, emojiBaseUrl} = output;
+    // Draws an emoji as text in the emoji font, loading it if it isn't
+    const showFont = (dom: HTMLElement) => {
+      removeClassNamesFromElement(
+        dom,
+        config.emojiLoadedClass,
+        config.emojiLoadingClass,
+      );
+      dom.style.backgroundImage = '';
+      dom.style.fontFamily = config.emojiFontFamily;
+      if (config.emojiFontFamily && config.emojiFontStylesheet) {
+        addStylesheet(dom.ownerDocument, config.emojiFontStylesheet);
+      }
+    };
     const customEmojiKeys = new Set<NodeKey>();
     // The standard emoji drawn with an image, to redraw when the set changes
     const emojiKeys = new Set<NodeKey>();
@@ -419,19 +528,22 @@ export const EmojiExtension = defineExtension({
         fn();
       }
     };
-    // Draws a standard emoji with its image from the current set. Until the
-    // image loads, the font's emoji shows, or with `keepCurrent` the image
-    // it already has (when the set changes).
-    const showImage = (
+    // Draws a standard emoji with the current set: its image, or the emoji
+    // font when it has none. Until the image loads, the platform's emoji
+    // shows, or with `keepCurrent` the image it already has (when the set
+    // changes).
+    const showEmoji = (
       nodeKey: NodeKey,
       dom: HTMLElement,
       baseUrl: string,
       keepCurrent: boolean,
     ) => {
       runNodeCleanup(nodeKey);
-      const imageUrl = `${baseUrl}/${unifiedIDFromText(dom.textContent ?? '')}.png`;
-      const backgroundImage = `url(${imageUrl})`;
-      const swap = !keepCurrent || !dom.style.backgroundImage;
+      const imageUrl = emojiImageSrc(
+        baseUrl,
+        dom.textContent ?? '',
+        loadedDatabases.get(output)?.peek() ?? null,
+      );
       addClassNamesToElement(dom, config.emojiClass);
       Object.assign(dom.style, EMOJI_BOX_STYLE, {
         // The font's emoji, until the image loads, centered in the box
@@ -439,7 +551,15 @@ export const EmojiExtension = defineExtension({
         textAlign: 'center',
         width: '1.25em',
       });
-      if (swap) {
+      if (!imageUrl) {
+        showFont(dom);
+        return;
+      }
+      // Only the platform's font until the image loads, so the emoji font
+      // isn't downloaded for emoji that have images
+      dom.style.fontFamily = '';
+      const backgroundImage = `url(${imageUrl})`;
+      if (!keepCurrent || !dom.style.backgroundImage) {
         removeClassNamesFromElement(dom, config.emojiLoadedClass);
         addClassNamesToElement(dom, config.emojiLoadingClass);
         dom.style.backgroundImage = backgroundImage;
@@ -456,8 +576,7 @@ export const EmojiExtension = defineExtension({
       img.onerror = () => {
         eagerNodeCleanup();
         // The font's emoji, rather than another set's image
-        removeClassNamesFromElement(dom, config.emojiLoadedClass);
-        dom.style.backgroundImage = backgroundImage;
+        showFont(dom);
       };
       img.onload = () => {
         eagerNodeCleanup();
@@ -487,7 +606,7 @@ export const EmojiExtension = defineExtension({
             continue;
           }
           emojiKeys.add(nodeKey);
-          showImage(nodeKey, dom, emojiBaseUrl.peek(), false);
+          showEmoji(nodeKey, dom, emojiBaseUrl.peek(), false);
         }
       }),
       () => {
@@ -518,10 +637,23 @@ export const EmojiExtension = defineExtension({
         for (const nodeKey of emojiKeys) {
           const dom = editor.getElementByKey(nodeKey);
           if (dom?.textContent) {
-            showImage(nodeKey, dom, baseUrl, true);
+            showEmoji(nodeKey, dom, baseUrl, true);
           }
         }
       }),
+      // Load the font of a set that draws every emoji with it, for pickers
+      // too
+      effect(() =>
+        !emojiBaseUrl.value &&
+        config.emojiFontFamily &&
+        config.emojiFontStylesheet
+          ? editor.registerRootListener(root => {
+              if (root) {
+                addStylesheet(root.ownerDocument, config.emojiFontStylesheet);
+              }
+            })
+          : undefined,
+      ),
       // Show the current image of each custom emoji when the set changes
       effect(() => {
         const byName = customEmojiByName.value;

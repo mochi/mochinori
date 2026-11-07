@@ -1,11 +1,13 @@
-// Writes src/supportedEmojis.ts from the emoji-datasource database.
+// Writes src/supportedEmojis.ts from the emojibase-data database.
 //
 // The database is rewritten as plain text, one emoji per line with tab
 // separated fields (emoji, short names, texts, whether it takes a skin
-// tone) and space separated values, in the order emoji pickers show them,
-// under a `#Category` line for each category. That is much smaller than the
-// JSON and quicker to parse. Only emoji that have an image in every set an
-// editor can show (IMAGE_SETS) are kept, in every skin tone they take.
+// tone, the Emoji version that added it) and space separated values, in
+// the order emoji pickers show them, under a `#Category` line for each
+// category. That is much smaller than the JSON and quicker to parse.
+//
+// Short names are Slack's (emojibase's `iamcal` set, the names
+// emoji-datasource uses), or emojibase's own for emoji Slack hasn't named.
 
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -20,96 +22,128 @@ export const OUTPUT_FILE = path.resolve(
   '../src/supportedEmojis.ts',
 );
 
-function textFromUnifiedID(unifiedID) {
-  return String.fromCodePoint(
-    ...unifiedID.split('-').map(v => parseInt(v, 16)),
-  );
-}
+// The names pickers show for emojibase's groups
+const CATEGORIES = [
+  'Smileys & Emotion',
+  'People & Body',
+  'Component',
+  'Animals & Nature',
+  'Food & Drink',
+  'Travel & Places',
+  'Activities',
+  'Objects',
+  'Symbols',
+  'Flags',
+];
 
-const SKIN_TONES = ['1F3FB', '1F3FC', '1F3FD', '1F3FE', '1F3FF'];
+const COMPONENT_GROUP = CATEGORIES.indexOf('Component');
 
-// EMOJI_SETS in src/EmojiExtension.ts
-export const IMAGE_SETS = ['twitter', 'google'];
+// The texts that turn into an emoji, by its first short name. emojibase's
+// emoticons include ones like `8)`, `:s` and `:3` that are too easy to type
+// by accident, so these are the ones Slack converts.
+const TEXTS = {
+  angry: ['>:(', '>:-('],
+  anguished: ['D:'],
+  broken_heart: ['</3'],
+  confused: [':\\', ':-\\', ':/', ':-/'],
+  disappointed: [':(', '):', ':-('],
+  heart: ['<3'],
+  kissing_heart: [':*', ':-*'],
+  laughing: [':>', ':->'],
+  monkey_face: [':o)'],
+  neutral_face: [':|', ':-|'],
+  open_mouth: [':o', ':-o', ':O', ':-O'],
+  slightly_smiling_face: [':)', '(:', ':-)'],
+  smile: ['C:', 'c:', ':D', ':-D'],
+  smiley: ['=)', '=-)'],
+  sob: [":'("],
+  stuck_out_tongue: [':p', ':-p', ':P', ':-P', ':b', ':-b'],
+  stuck_out_tongue_winking_eye: [';p', ';-p', ';b', ';-b', ';P', ';-P'],
+  sunglasses: ['8)'],
+  wink: [';)', ';-)'],
+};
 
-/** Whether an emoji, or a skin tone of one, has an image in every set */
-const hasImages = data => IMAGE_SETS.every(set => data[`has_img_${set}`]);
+const asArray = value =>
+  value === undefined ? [] : Array.isArray(value) ? value : [value];
 
 /**
  * Whether each of the five skin tones of `emoji` is the emoji with the tone
  * modifier after its first code point (dropping a variation selector
- * there), which is how the database's own code computes them. Emoji for two
- * people with a tone each (`people_holding_hands`) don't, and keep no tone.
+ * there). Emoji for two people with a tone each (`people_holding_hands`)
+ * aren't, and keep no tone.
  */
-function takesSkinTone(emoji) {
-  const {skin_variations, unified} = emoji;
-  if (!hasImages(emoji) || !skin_variations) {
+function takesSkinTone({emoji, skins}) {
+  if (!skins) {
     return false;
   }
-  const [first, ...rest] = unified.split('-');
-  const tail = rest[0] === 'FE0F' ? rest.slice(1) : rest;
-  return SKIN_TONES.every(tone => {
-    const variation = skin_variations[tone];
-    return (
-      variation !== undefined &&
-      hasImages(variation) &&
-      variation.unified === [first, tone, ...tail].join('-')
-    );
-  });
+  const [first, ...rest] = Array.from(emoji);
+  const tail = rest[0] === '\uFE0F' ? rest.slice(1) : rest;
+  return [0x1f3fb, 0x1f3fc, 0x1f3fd, 0x1f3fe, 0x1f3ff].every(modifier =>
+    skins.some(
+      skin =>
+        skin.emoji ===
+        [first, String.fromCodePoint(modifier), ...tail].join(''),
+    ),
+  );
 }
-
-const unique = values => [...new Set(values.filter(Boolean))].join(' ');
 
 /** @returns {Promise<string>} the formatted contents of src/supportedEmojis.ts */
 export async function generateEmojiData() {
-  const {version} = require('emoji-datasource/package.json');
-  const emojis = require('emoji-datasource/emoji.json');
-  // A text such as `:)` that several emoji list goes to the last of them in
-  // the database's own order (by unified id), as it did when the lines were
-  // in that order
-  const textOwner = new Map();
-  for (const emoji of [...emojis].sort((a, b) =>
-    a.unified < b.unified ? -1 : 1,
-  )) {
-    if (hasImages(emoji)) {
-      for (const text of [emoji.text, ...(emoji.texts ?? [])]) {
-        if (text) {
-          textOwner.set(text, emoji.unified);
-        }
-      }
-    }
-  }
+  const {version} = require('emojibase-data/package.json');
+  const emojis = require('emojibase-data/en/data.json');
+  const slackNames = require('emojibase-data/en/shortcodes/iamcal.json');
+  const emojibaseNames = require('emojibase-data/en/shortcodes/emojibase.json');
+  const lookUp = (names, hexcode) =>
+    asArray(names[hexcode] ?? names[hexcode.replaceAll('-FE0F', '')]);
+  const slackNamed = ({hexcode}) => lookUp(slackNames, hexcode).length > 0;
+  const namesOf = ({hexcode}) => {
+    const slack = lookUp(slackNames, hexcode);
+    return slack.length > 0 ? slack : lookUp(emojibaseNames, hexcode);
+  };
   const lines = [];
   let category;
+  // Regional indicators have no group: they aren't emoji on their own
   for (const emoji of emojis
-    .filter(hasImages)
-    .sort((a, b) => a.sort_order - b.sort_order)) {
-    if (emoji.category !== category) {
-      category = emoji.category;
+    .filter(({group}) => group !== undefined)
+    .sort((a, b) => a.order - b.order)) {
+    const names = namesOf(emoji);
+    // Components that Slack doesn't name (the hair styles) aren't emoji of
+    // their own either
+    if (
+      names.length === 0 ||
+      (emoji.group === COMPONENT_GROUP && !slackNamed(emoji))
+    ) {
+      continue;
+    }
+    if (CATEGORIES[emoji.group] !== category) {
+      category = CATEGORIES[emoji.group];
       lines.push(`#${category}`);
     }
     lines.push(
       [
-        textFromUnifiedID(emoji.unified),
-        unique([emoji.short_name, ...(emoji.short_names ?? [])]),
-        unique(
-          [emoji.text, ...(emoji.texts ?? [])].filter(
-            text => textOwner.get(text) === emoji.unified,
-          ),
-        ),
+        emoji.emoji,
+        names.join(' '),
+        (TEXTS[names[0]] ?? []).join(' '),
         takesSkinTone(emoji) ? 't' : '',
-      ].join('\t'),
+        // Only the newer emoji, which an emoji set may not have yet
+        emoji.version >= 16 ? String(emoji.version) : '',
+      ]
+        .join('\t')
+        .replace(/\t+$/, ''),
     );
   }
   const supportedEmojis = lines.join('\n');
   const source = [
-    `// Generated from emoji-datasource@${version} by`,
+    `// Generated from emojibase-data@${version} by`,
     '// scripts/generateEmojiData.mjs (`pnpm run generate`). Do not edit.',
     '',
     '/**',
     ' * One emoji per line: the emoji, its short names, its texts (such as',
-    ' * `:)`) and `t` if it takes a skin tone, separated by tabs. Names and',
-    ' * texts are separated by spaces. Emoji are in the order pickers show',
-    ' * them, after a `#Category` line for each category.',
+    ' * `:)`), `t` if it takes a skin tone, and the Emoji version that added',
+    ' * it if that is 16 or later, separated by tabs (trailing empty fields',
+    ' * left out). Names and texts are separated by spaces. Emoji are in the',
+    ' * order pickers show them, after a `#Category` line, which has no tabs,',
+    ' * for each category.',
     ' */',
     `export const supportedEmojis = ${JSON.stringify(supportedEmojis)};`,
     '',

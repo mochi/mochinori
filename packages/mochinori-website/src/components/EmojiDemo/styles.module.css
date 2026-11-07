@@ -104,6 +104,12 @@ select.input {
   object-fit: contain;
 }
 
+.suggestionText {
+  display: inline-block;
+  line-height: 1.25em;
+  text-align: center;
+}
+
 .picker {
   position: relative;
 }

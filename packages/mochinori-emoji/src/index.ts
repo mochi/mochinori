@@ -10,7 +10,6 @@ export {
 } from './emojiEntries.ts';
 export {
   $createEmojiNodeFromSuggestion,
-  EMOJI_DATASOURCE_VERSION,
   EMOJI_SETS,
   EmojiExtension,
   type EmojiExtensionConfig,
@@ -18,7 +17,11 @@ export {
   type EmojiSet,
   emojiSetBaseUrl,
   INSERT_EMOJI_COMMAND,
+  NOTO_COLOR_EMOJI_STYLESHEET,
   type SearchEmoji,
+  TWEMOJI_EMOJI_VERSION,
+  TWEMOJI_VERSION,
+  twemojiID,
 } from './EmojiExtension.ts';
 export {
   CustomEmojiImportRule,
@@ -55,4 +58,3 @@ export {
   type SearchEmojiOptions,
 } from './searchEmoji.ts';
 export {SKIN_TONES, type SkinTone} from './skinToneNames.ts';
-export {textFromUnifiedID, unifiedIDFromText} from './unifiedID.ts';

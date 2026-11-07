@@ -47,6 +47,10 @@ export interface EmojiTypeaheadConfig {
 
 /** A suggestion, with the URL of its image */
 export interface EmojiTypeaheadSuggestion extends EmojiSuggestion {
+  /**
+   * Its image, or `''` to draw its `emoji` as text in `EmojiExtension`'s
+   * `emojiFontFamily` (see `getEmojiSrc`)
+   */
   readonly src: string;
 }
 

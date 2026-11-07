@@ -7,9 +7,10 @@ title: '@mochinori/emoji'
 Emoji for Lexical. Typing a short name such as `:tada:` or
 `:man-facepalming:`, or a smiley such as `:)` followed by a space, replaces it
 with an `EmojiNode`, and so does a Unicode emoji typed with the system's
-emoji picker or pasted. Emoji are drawn with 64×64 images, Twemoji or
-Google's Noto, from [emoji-data](https://github.com/iamcal/emoji-data), so
-they look the same on every platform. Apps can add custom emoji beyond Unicode,
+emoji picker or pasted. It knows every emoji up to Emoji 18, with Slack's
+short names, from [emojibase](https://emojibase.dev). Emoji are drawn with
+Twemoji images or Google's Noto Color Emoji font, so they look the same on
+every platform. Apps can add custom emoji beyond Unicode,
 like a Slack workspace or a Discord server, and change them while the editor
 runs.
 
@@ -176,8 +177,11 @@ editor as a combobox for screen readers (`aria-expanded`,
 
 For a picker, `EmojiExtension`'s `searchEmoji` output signal holds a search
 over the standard and custom emoji once the database has loaded (null
-before), and `getEmojiSrc(suggestion)` gives each one's image. Insert the
-emoji the person picks with `INSERT_EMOJI_COMMAND`:
+before), and `getEmojiSrc(suggestion)` gives each one's image. It is `''`
+for an emoji that has no image (with the `google` set, or one newer than
+Twemoji), which the picker draws as text in the `emojiFontFamily` output's
+font. Insert the emoji the person picks with
+`INSERT_EMOJI_COMMAND`:
 
 ```ts
 const {searchEmoji, getEmojiSrc} = getExtensionDependencyFromEditor(
@@ -274,27 +278,55 @@ them through it.
 
 ## Emoji images
 
-`emojiSet` picks the images, from the `emoji-datasource-<set>` packages
-(version `EMOJI_DATASOURCE_VERSION`, Unicode 16) on jsDelivr. Both sets have
-an image for every emoji of the database, in every skin tone.
+`emojiSet` picks how emoji are drawn:
 
-| `emojiSet` | Images | License |
+| `emojiSet` | Drawn with | License |
 | --- | --- | --- |
-| `'twitter'` (default) | [Twemoji](https://github.com/jdecked/twemoji), as Discord shows them | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): credit it, such as "Emoji graphics by Twemoji, CC BY 4.0". Twemoji accepts a mention in your README, an About screen, or the page source |
-| `'google'` | [Noto Color Emoji](https://github.com/googlefonts/noto-emoji) | [Apache 2.0](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE) |
+| `'twitter'` (default) | [Twemoji](https://github.com/jdecked/twemoji) 72×72 images (`TWEMOJI_VERSION`, Emoji 17) on jsDelivr, as Discord shows them | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): credit it, such as "Emoji graphics by Twemoji, CC BY 4.0". Twemoji accepts a mention in your README, an About screen, or the page source |
+| `'google'` | The [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji) font from Google Fonts, which Google updates for each Unicode release | [SIL Open Font License](https://openfontlicense.org) |
 
 ```ts
 configExtension(EmojiExtension, {emojiSet: 'google'});
 ```
+
+Twemoji has an image for every emoji up to Emoji 17 (`TWEMOJI_EMOJI_VERSION`),
+in every skin tone. The few newer ones are drawn with the Noto font until
+Twemoji draws them.
+
+To draw with Noto, the extension adds the Google Fonts stylesheet
+(`NOTO_COLOR_EMOJI_STYLESHEET`) to the editor's document. Google Fonts splits
+the font by Unicode range, so a page downloads only the parts with the emoji
+it shows, and a page with Twemoji loads none of it until it shows an emoji
+newer than Twemoji. To load the font yourself, such as from
+`@fontsource/noto-color-emoji`, set `emojiFontStylesheet` to `''`; to use
+another font, set `emojiFontFamily`.
+
+### Content Security Policy
+
+The extension sets its styles through `element.style`, which a CSP's
+`style-src` doesn't restrict, and needs no inline scripts. What a policy has
+to allow depends on where the emoji come from:
+
+| Emoji from | Directives |
+| --- | --- |
+| Twemoji on jsDelivr (default) | `img-src https://cdn.jsdelivr.net` |
+| Noto from Google Fonts | `style-src https://fonts.googleapis.com` and `font-src https://fonts.gstatic.com` |
+| Custom emoji | `img-src` for wherever their images are |
+
+A policy that allows stylesheets only by nonce or hash blocks the stylesheet
+the extension adds. Set `emojiFontStylesheet: ''` and load the font
+yourself: a `<link>` with your nonce, or `@fontsource/noto-color-emoji`
+bundled with your app's CSS. Serving Twemoji yourself (`emojiBaseUrl`) and
+bundling the font keeps everything on `'self'`.
 
 The `emojiSet` output signal switches sets while the editor runs: the emoji
 in the document are redrawn in place, each keeping its current image until
 the new one loads.
 
 Apple's images aren't licensed for commercial use, and Facebook's have no
-clear license and stop at Unicode 15, so neither is offered. To serve the
-images yourself, copy `img/<set>/64` from `emoji-datasource-<set>` and set
-`emojiBaseUrl` to where they are.
+clear license and stop at Unicode 15, so neither is offered. To serve
+Twemoji yourself, copy `assets/72x72` from jdecked/twemoji at
+`TWEMOJI_VERSION` and set `emojiBaseUrl` to where it is.
 
 ## How it loads
 
@@ -322,8 +354,10 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 
 | Config | Default | Description |
 | --- | --- | --- |
-| `emojiSet` | `'twitter'` | The images to show: `'twitter'` (Twemoji) or `'google'` (Noto); see [Emoji images](#emoji-images) |
-| `emojiBaseUrl` | `''` | Where the `<unified id>.png` images are, without a trailing slash, to serve them yourself: a copy of `img/<set>/64` from `emoji-datasource-<set>@16.0.0` (`EMOJI_DATASOURCE_VERSION`). Empty uses the `emojiSet` on jsDelivr (`emojiSetBaseUrl(set)`) |
+| `emojiSet` | `'twitter'` | What to draw emoji with: `'twitter'` (Twemoji images) or `'google'` (the Noto Color Emoji font); see [Emoji images](#emoji-images) |
+| `emojiBaseUrl` | `''` | Where your own copy of Twemoji's images is, without a trailing slash: `assets/72x72` from jdecked/twemoji at `TWEMOJI_VERSION`, named by `twemojiID`. It replaces `emojiSet`. Empty uses the `emojiSet` (`emojiSetBaseUrl(set)`) |
+| `emojiFontFamily` | `'"Noto Color Emoji"'` | The CSS `font-family` of emoji that have no image (all of them with `'google'`); `''` for the platform's font |
+| `emojiFontStylesheet` | `NOTO_COLOR_EMOJI_STYLESHEET` | The stylesheet that loads `emojiFontFamily`, added to the editor's document when it is used; `''` to load the font yourself |
 | `emojiClass` | `'mochinori-emoji'` | Class of every emoji |
 | `emojiLoadingClass` | `''` | Added until the image loads |
 | `emojiLoadedClass` | `'mochinori-emoji--loaded'` | Added once the image loads |
@@ -345,10 +379,11 @@ Its output has:
 | `searchEmoji` | A signal of a search over the standard and custom emoji, null until the database loads |
 | `emojiCategories` | A signal of the emoji by category, null until the database loads |
 | `skinTone` | A signal of the skin tone to use |
-| `emojiSet` | A signal of the emoji images to show; setting it redraws the emoji in place |
-| `emojiBaseUrl` | A signal of where the current set's images are, which `getEmojiSrc` reads |
+| `emojiSet` | A signal of the emoji set to draw with; setting it redraws the emoji in place |
+| `emojiBaseUrl` | A signal of where the current set's images are, `''` for a font, which `getEmojiSrc` reads |
+| `emojiFontFamily` | The `emojiFontFamily` config, to draw emoji that have no image |
 | `convertUnicodeEmoji` | A signal of whether Unicode emoji convert; turning it on converts those already in the document |
-| `getEmojiSrc(suggestion)` | The image of a search result |
+| `getEmojiSrc(suggestion)` | The image of a search result, `''` for one to draw as text in `emojiFontFamily` |
 | `getEmojiShortcode(emoji)` | The short name of a Unicode emoji, such as `:+1::skin-tone-3:`, or null |
 | `$createEmojiNodesFromText(node, options?)` | Splits a text node that isn't in the document yet into text and emoji nodes; `options` (`{shortcodes, unicode}`) can leave out either kind |
 
@@ -425,6 +460,8 @@ emoji, or `null`. `createEmojiMatcher` returns the same kind of function for
 another `parseEmojiReplacementEntry`, and also matches the `:name:` of a map
 of custom emoji (the match then has `custom` set).
 
-### `unifiedIDFromText(emoji)` and `textFromUnifiedID(id)`
+### `twemojiID(emoji)`
 
-Convert between an emoji and its unified id, such as `1f642` for 🙂.
+The name of an emoji's Twemoji image, without `.png`, as Twemoji spells it,
+such as `1f642` for 🙂, `2764` for ❤️ and `23-20e3` for #️⃣. Use it to
+draw an emoji with your own copy of the images.

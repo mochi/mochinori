@@ -70,7 +70,7 @@
     "@lexical/fast-check": "catalog:",
     "@lexical/html": "catalog:",
     "@lexical/mdast": "catalog:",
-    "emoji-datasource": "16.0.0",
+    "emojibase-data": "18.0.0",
     "fast-check": "^4.10.2",
     "lexical": "catalog:"
   }

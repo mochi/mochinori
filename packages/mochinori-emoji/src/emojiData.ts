@@ -12,6 +12,11 @@ export interface EmojiData {
   readonly skinTones: boolean;
   /** Its category, such as `Smileys & Emotion` */
   readonly category: string;
+  /**
+   * The Emoji version that added it, such as 17, when that is 16 or later
+   * (older emoji have 0), to leave out of an image set that predates it
+   */
+  readonly version: number;
 }
 
 /**
@@ -36,7 +41,7 @@ export function getEmojiData(): readonly EmojiData[] {
         category = line.slice(1);
         continue;
       }
-      const [emoji, shortNames, texts, skinTones] = line.split('\t');
+      const [emoji, shortNames, texts, skinTones, version] = line.split('\t');
       if (emoji) {
         emojiData.push({
           category,
@@ -44,6 +49,7 @@ export function getEmojiData(): readonly EmojiData[] {
           shortNames: splitWords(shortNames),
           skinTones: skinTones === 't',
           texts: splitWords(texts),
+          version: Number(version ?? 0),
         });
       }
     }

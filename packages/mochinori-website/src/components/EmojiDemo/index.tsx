@@ -116,7 +116,7 @@ const EmojiDemoExtension = defineExtension({
 });
 
 const EMOJI_SET_NAMES: Record<EmojiSet, string> = {
-  google: 'Noto emoji',
+  google: 'Noto Color Emoji',
   twitter: 'Twemoji',
 };
 
@@ -204,21 +204,33 @@ function CustomEmojiForm(): JSX.Element {
   );
 }
 
-// An image for each suggestion, so emoji look the same as in the editor
+// Draws a suggestion the way the editor does: its image, or (for a font
+// set, or an emoji newer than the images) its emoji in the set's font
 function SuggestionImage({
+  emoji,
+  fontFamily,
   lazy = false,
   src,
 }: {
+  emoji?: string;
+  fontFamily: string;
   lazy?: boolean;
   src: string;
 }): JSX.Element {
-  return (
+  return src ? (
     <img
       alt=""
       className={styles.suggestionImage}
       loading={lazy ? 'lazy' : undefined}
       src={src}
     />
+  ) : (
+    <span
+      aria-hidden="true"
+      className={`${styles.suggestionImage} ${styles.suggestionText}`}
+      style={{fontFamily: fontFamily || undefined}}>
+      {emoji}
+    </span>
   );
 }
 
@@ -229,6 +241,8 @@ function EmojiTypeaheadMenu({id}: {id: string}): JSX.Element | null {
     EmojiTypeaheadExtension,
   ).output;
   const state = useExtensionSignalValue(EmojiTypeaheadExtension, 'state');
+  const fontFamily =
+    useExtensionDependency(EmojiExtension).output.emojiFontFamily;
   // Moves the menu with the text when the page scrolls
   const [, reposition] = useReducer((n: number) => n + 1, 0);
   const view = editor.getRootElement()?.ownerDocument.defaultView;
@@ -266,7 +280,12 @@ function EmojiTypeaheadMenu({id}: {id: string}): JSX.Element | null {
           onClick={() => select(index)}
           onMouseEnter={() => setSelectedIndex(index)}
           role="option">
-          <SuggestionImage src={suggestion.src} />:{suggestion.name}:
+          <SuggestionImage
+            emoji={suggestion.emoji}
+            fontFamily={fontFamily}
+            src={suggestion.src}
+          />
+          :{suggestion.name}:
         </li>
       ))}
     </ul>,
@@ -361,10 +380,17 @@ function SkinToneMenu(): JSX.Element {
   const {getEmojiSrc, skinTone} = useExtensionDependency(EmojiExtension).output;
   // Redraw with the current emoji set
   useExtensionSignalValue(EmojiExtension, 'emojiBaseUrl');
+  const fontFamily =
+    useExtensionDependency(EmojiExtension).output.emojiFontFamily;
   const current = useExtensionSignalValue(EmojiExtension, 'skinTone');
   const [open, setOpen] = useState(false);
-  const hand = (tone: SkinTone) =>
-    getEmojiSrc({emoji: TONE_HANDS[tone], name: 'raised_hand'});
+  const hand = (tone: SkinTone) => (
+    <SuggestionImage
+      emoji={TONE_HANDS[tone]}
+      fontFamily={fontFamily}
+      src={getEmojiSrc({emoji: TONE_HANDS[tone], name: 'raised_hand'})}
+    />
+  );
   return (
     <div className={styles.toneMenu}>
       <button
@@ -374,7 +400,7 @@ function SkinToneMenu(): JSX.Element {
         onClick={() => setOpen(!open)}
         title="Skin tone"
         type="button">
-        <SuggestionImage src={hand(current)} />
+        {hand(current)}
       </button>
       {open &&
         SKIN_TONES.filter(tone => tone !== current).map(tone => (
@@ -387,7 +413,7 @@ function SkinToneMenu(): JSX.Element {
               setOpen(false);
             }}
             type="button">
-            <SuggestionImage src={hand(tone)} />
+            {hand(tone)}
           </button>
         ))}
     </div>
@@ -401,6 +427,8 @@ function EmojiPicker(): JSX.Element {
   const {getEmojiSrc} = useExtensionDependency(EmojiExtension).output;
   // Redraw with the current emoji set
   useExtensionSignalValue(EmojiExtension, 'emojiBaseUrl');
+  const fontFamily =
+    useExtensionDependency(EmojiExtension).output.emojiFontFamily;
   const search = useExtensionSignalValue(EmojiExtension, 'searchEmoji');
   const categories = useExtensionSignalValue(EmojiExtension, 'emojiCategories');
   const customEmoji = useExtensionSignalValue(EmojiExtension, 'customEmoji');
@@ -498,7 +526,11 @@ function EmojiPicker(): JSX.Element {
                       role="tab"
                       title={section.name}
                       type="button">
-                      <SuggestionImage src={getEmojiSrc(icon)} />
+                      <SuggestionImage
+                        emoji={icon.emoji}
+                        fontFamily={fontFamily}
+                        src={getEmojiSrc(icon)}
+                      />
                     </button>
                   )
                 );
@@ -523,6 +555,8 @@ function EmojiPicker(): JSX.Element {
                       title={`:${suggestion.name}:`}
                       type="button">
                       <SuggestionImage
+                        emoji={suggestion.emoji}
+                        fontFamily={fontFamily}
                         lazy={true}
                         src={getEmojiSrc(suggestion)}
                       />

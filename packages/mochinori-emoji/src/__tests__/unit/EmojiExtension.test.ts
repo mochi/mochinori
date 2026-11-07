@@ -28,11 +28,12 @@ import {
   $isCustomEmojiNode,
   $isEmojiNode,
   type CustomEmoji,
-  EMOJI_DATASOURCE_VERSION,
   EmojiExtension,
   type EmojiExtensionConfig,
   emojiSetBaseUrl,
+  NOTO_COLOR_EMOJI_STYLESHEET,
   parseEmojiShortNames,
+  TWEMOJI_VERSION,
 } from '../../index.ts';
 import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
 
@@ -221,21 +222,69 @@ describe('EmojiExtension', () => {
   });
 
   it('shows Twemoji by default, or the emojiSet', () => {
-    const src = (config: Partial<EmojiExtensionConfig>) => {
+    const draw = (config: Partial<EmojiExtensionConfig>, text = ':smile:') => {
       using editor = buildEditor(config);
       const root = document.createElement('div');
+      document.body.append(root);
       editor.setRootElement(root);
-      setText(editor, ':smile:');
+      setText(editor, text);
       const span = root.querySelector<HTMLElement>('[data-emoji-shortcode]');
       editor.setRootElement(null);
-      return span?.style.backgroundImage;
+      root.remove();
+      return {
+        backgroundImage: span?.style.backgroundImage,
+        fontFamily: span?.style.fontFamily,
+      };
     };
-    expect(src({})).toBe(
-      `url("https://cdn.jsdelivr.net/npm/emoji-datasource-twitter@${EMOJI_DATASOURCE_VERSION}/img/twitter/64/1f604.png")`,
-    );
-    expect(src({emojiSet: 'google'})).toBe(
-      `url("${emojiSetBaseUrl('google')}/1f604.png")`,
-    );
+    expect(draw({})).toEqual({
+      backgroundImage: `url("https://cdn.jsdelivr.net/gh/jdecked/twemoji@${TWEMOJI_VERSION}/assets/72x72/1f604.png")`,
+      fontFamily: '',
+    });
+    expect(draw({emojiSet: 'google'})).toEqual({
+      backgroundImage: '',
+      fontFamily: '"Noto Color Emoji"',
+    });
+    expect(draw({emojiBaseUrl: '/emoji', emojiSet: 'google'})).toEqual({
+      backgroundImage: 'url("/emoji/1f604.png")',
+      fontFamily: '',
+    });
+    // Emoji 18 is newer than Twemoji's images, so it is drawn with Noto
+    expect(draw({}, ':cracking_face:')).toEqual({
+      backgroundImage: '',
+      fontFamily: '"Noto Color Emoji"',
+    });
+    expect(draw({emojiFontFamily: ''}, ':cracking_face:')).toEqual({
+      backgroundImage: '',
+      fontFamily: '',
+    });
+  });
+
+  it("loads the font of the google set into the editor's document", () => {
+    const fontLinks = (doc: Document) =>
+      [...doc.querySelectorAll('link[rel="stylesheet"]')].filter(
+        link => link.getAttribute('href') === NOTO_COLOR_EMOJI_STYLESHEET,
+      ).length;
+    using editor = buildEditor();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const doc = iframe.contentDocument!;
+    const root = doc.createElement('div');
+    doc.body.append(root);
+    editor.setRootElement(root);
+    const {emojiSet} = getExtensionDependencyFromEditor(
+      editor,
+      EmojiExtension,
+    ).output;
+    const linksInPage = fontLinks(document);
+    expect(fontLinks(doc)).toBe(0);
+    emojiSet.value = 'google';
+    emojiSet.value = 'twitter';
+    emojiSet.value = 'google';
+    expect(fontLinks(doc)).toBe(1);
+    // Only the editor's document
+    expect(fontLinks(document)).toBe(linksInPage);
+    editor.setRootElement(null);
+    iframe.remove();
   });
 
   it('redraws the emoji in place when emojiSet changes', () => {
@@ -244,22 +293,25 @@ describe('EmojiExtension', () => {
     editor.setRootElement(root);
     setText(editor, ':smile:');
     const span = root.querySelector<HTMLElement>('[data-emoji-shortcode]');
-    const {emojiSet, getEmojiSrc} = getExtensionDependencyFromEditor(
-      editor,
-      EmojiExtension,
-    ).output;
-    const twemoji = `url("${emojiSetBaseUrl('twitter')}/1f604.png")`;
-    expect(span?.style.backgroundImage).toBe(twemoji);
+    const {emojiFontFamily, emojiSet, getEmojiSrc} =
+      getExtensionDependencyFromEditor(editor, EmojiExtension).output;
+    const twemoji = `${emojiSetBaseUrl('twitter')}/1f604.png`;
+    expect(span?.style.backgroundImage).toBe(`url("${twemoji}")`);
+    expect(getEmojiSrc({emoji: '😄', name: 'smile'})).toBe(twemoji);
     // Pretend the Twemoji image loaded
     span?.classList.add('loaded');
     emojiSet.value = 'google';
-    // The same element keeps its image until Noto's loads
+    // The same element, now drawn with the font
     expect(root.querySelector('[data-emoji-shortcode]')).toBe(span);
-    expect(span?.style.backgroundImage).toBe(twemoji);
-    expect(span?.classList.contains('loaded')).toBe(true);
-    expect(getEmojiSrc({emoji: '😄', name: 'smile'})).toBe(
-      `${emojiSetBaseUrl('google')}/1f604.png`,
-    );
+    expect(span?.style.backgroundImage).toBe('');
+    expect(span?.style.fontFamily).toBe('"Noto Color Emoji"');
+    expect(span?.classList.contains('loaded')).toBe(false);
+    expect(emojiFontFamily).toBe('"Noto Color Emoji"');
+    expect(getEmojiSrc({emoji: '😄', name: 'smile'})).toBe('');
+    // And back: it keeps the font's emoji until Twemoji's image loads
+    emojiSet.value = 'twitter';
+    expect(span?.style.backgroundImage).toBe(`url("${twemoji}")`);
+    expect(span?.style.fontFamily).toBe('');
     editor.setRootElement(null);
   });
 
