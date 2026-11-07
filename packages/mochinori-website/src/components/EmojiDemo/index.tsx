@@ -144,18 +144,6 @@ function EmojiSetSelect(): JSX.Element {
   );
 }
 
-// Twemoji's license asks for this credit
-function EmojiCredit(): JSX.Element | null {
-  const emojiSet = useExtensionSignalValue(EmojiExtension, 'emojiSet');
-  return emojiSet === 'twitter' ? (
-    <p className={styles.credit}>
-      Emoji graphics by <a href="https://github.com/jdecked/twemoji">Twemoji</a>
-      , licensed under{' '}
-      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
-    </p>
-  ) : null;
-}
-
 // Adds a custom emoji, or replaces the one with the same name
 function addCustomEmoji(
   customEmoji: Signal<readonly CustomEmoji[]>,
@@ -692,7 +680,6 @@ export default function EmojiDemo(): JSX.Element {
         </div>
         <EmojiEditor />
         <MarkdownPanel />
-        <EmojiCredit />
       </LexicalExtensionComposer>
     </div>
   );
