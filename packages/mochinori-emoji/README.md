@@ -2,9 +2,9 @@
 
 Emoji for [Lexical](https://lexical.dev) editors. Typing a short name such as
 `:tada:`, a smiley such as `:)`, or a Unicode emoji such as 👍, replaces it
-with an `EmojiNode` drawn with the images from
-[emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so emoji
-look the same on every platform. Custom emoji, like a Slack workspace's,
+with an `EmojiNode` drawn with Twemoji or Noto images from
+[emoji-data](https://github.com/iamcal/emoji-data), so emoji look the same on
+every platform. Custom emoji, like a Slack workspace's,
 extend the set with your own images and can change while the editor runs.
 Emoji take skin tones (`:+1::skin-tone-3:`), a headless typeahead and the
 emoji's categories help apps build Slack- and Discord-style pickers, and
@@ -45,3 +45,11 @@ emoji once the image loads, keeping the caret visible:
 ```
 
 See the [docs](https://github.com/mochi/mochinori/blob/main/packages/mochinori-website/docs/packages/emoji.md).
+
+## Emoji images
+
+The default images are [Twemoji](https://github.com/jdecked/twemoji), under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), so an app that
+shows them credits them, such as "Emoji graphics by Twemoji, CC BY 4.0". Set
+`emojiSet: 'google'` for [Noto Color Emoji](https://github.com/googlefonts/noto-emoji)
+(Apache 2.0) instead.

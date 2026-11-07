@@ -216,3 +216,10 @@ select.input {
   gap: 0.25rem;
   align-items: center;
 }
+
+.credit {
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.75rem;
+}

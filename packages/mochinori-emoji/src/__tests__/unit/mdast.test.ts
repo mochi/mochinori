@@ -128,8 +128,8 @@ describe('EmojiMdastExtension', () => {
 
   it('imports the longest emoji, and text-style symbols only as emoji', () => {
     using editor = buildEditor();
-    // Keycaps have no Facebook image, so they aren't in the database
-    importMarkdown(editor, '👨‍👩‍👧 👨 #️⃣ ☺ ☺️ 👍🏽‍');
+    // A keycap is an emoji, but not the # it starts with
+    importMarkdown(editor, '👨‍👩‍👧 👨 #️⃣ # ☺ ☺️ 👍🏽‍');
     expect(
       describeText(editor).map(node =>
         typeof node === 'string' ? node : node.shortcode,
@@ -138,7 +138,9 @@ describe('EmojiMdastExtension', () => {
       ':man-woman-girl:',
       ' ',
       ':man:',
-      ' #️⃣ ☺ ',
+      ' ',
+      ':hash:',
+      ' # ☺ ',
       ':relaxed:',
       ' ',
       ':+1::skin-tone-4:',

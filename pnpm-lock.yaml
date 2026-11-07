@@ -167,9 +167,9 @@ importers:
       '@lexical/mdast':
         specifier: 'catalog:'
         version: 0.53.0(supports-color@10.2.2)(typescript@6.0.3)
-      emoji-datasource-facebook:
-        specifier: 15.1.2
-        version: 15.1.2
+      emoji-datasource:
+        specifier: 16.0.0
+        version: 16.0.0
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
@@ -4881,8 +4881,8 @@ packages:
     resolution: {integrity: sha512-gYCwo7kh5S3IDyZPLZf6hSS0MnZT8QmJFqYvbqlDZSbwdZlY6QZWxJ4i/6UhITOJ4XzyI647Bm2MXKCLqnJ4nQ==}
     engines: {node: '>4.0'}
 
-  emoji-datasource-facebook@15.1.2:
-    resolution: {integrity: sha512-6uQXO3FOpkkxclzI0YvoHorSoUyA4NnCWCXBMWDgy5mymtnWGLDkoY+/wTQCmW1/3PIUUh47SOWPp3hdq4+Svg==}
+  emoji-datasource@16.0.0:
+    resolution: {integrity: sha512-/qHKqK5Nr3+8zhgO6kHmF43Fm5C8HNn0AaFRIpgw8HF3+uF0Vfc8jgLI1ZQS5ba1vBzksS8NBCjHejwLb2D/Sg==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -14152,7 +14152,7 @@ snapshots:
 
   email-validator@2.0.4: {}
 
-  emoji-datasource-facebook@15.1.2: {}
+  emoji-datasource@16.0.0: {}
 
   emoji-regex@8.0.0: {}
 

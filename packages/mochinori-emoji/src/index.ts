@@ -11,9 +11,12 @@ export {
 export {
   $createEmojiNodeFromSuggestion,
   EMOJI_DATASOURCE_VERSION,
+  EMOJI_SETS,
   EmojiExtension,
   type EmojiExtensionConfig,
   type EmojiExtensionOutput,
+  type EmojiSet,
+  emojiSetBaseUrl,
   INSERT_EMOJI_COMMAND,
   type SearchEmoji,
 } from './EmojiExtension.ts';

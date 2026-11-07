@@ -7,9 +7,9 @@ title: '@mochinori/emoji'
 Emoji for Lexical. Typing a short name such as `:tada:` or
 `:man-facepalming:`, or a smiley such as `:)` followed by a space, replaces it
 with an `EmojiNode`, and so does a Unicode emoji typed with the system's
-emoji picker or pasted. Emoji are drawn with the 64×64 images from
-[emoji-datasource-facebook](https://github.com/iamcal/emoji-data), so they
-look the same on every platform. Apps can add custom emoji beyond Unicode,
+emoji picker or pasted. Emoji are drawn with 64×64 images, Twemoji or
+Google's Noto, from [emoji-data](https://github.com/iamcal/emoji-data), so
+they look the same on every platform. Apps can add custom emoji beyond Unicode,
 like a Slack workspace or a Discord server, and change them while the editor
 runs.
 
@@ -272,6 +272,26 @@ can also use to split text it imports some other way, and
 `EmojiMdastExportRule`. Both read `EmojiMdastExtension`'s config, so use
 them through it.
 
+## Emoji images
+
+`emojiSet` picks the images, from the `emoji-datasource-<set>` packages
+(version `EMOJI_DATASOURCE_VERSION`, Unicode 16) on jsDelivr. Both sets have
+an image for every emoji of the database, in every skin tone.
+
+| `emojiSet` | Images | License |
+| --- | --- | --- |
+| `'twitter'` (default) | [Twemoji](https://github.com/jdecked/twemoji), as Discord shows them | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): credit it, such as "Emoji graphics by Twemoji, CC BY 4.0" |
+| `'google'` | [Noto Color Emoji](https://github.com/googlefonts/noto-emoji) | [Apache 2.0](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE) |
+
+```ts
+configExtension(EmojiExtension, {emojiSet: 'google'});
+```
+
+Apple's images aren't licensed for commercial use, and Facebook's have no
+clear license and stop at Unicode 15, so neither is offered. To serve the
+images yourself, copy `img/<set>/64` from `emoji-datasource-<set>` and set
+`emojiBaseUrl` to where they are.
+
 ## How it loads
 
 The emoji database (about 70 KB, 19 KB compressed) is loaded with a dynamic `import()`, so
@@ -298,7 +318,8 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 
 | Config | Default | Description |
 | --- | --- | --- |
-| `emojiBaseUrl` | emoji-datasource-facebook on jsDelivr | Where the `<unified id>.png` images are, without a trailing slash. To serve them yourself, copy `img/facebook/64` from `emoji-datasource-facebook@15.1.2` (`EMOJI_DATASOURCE_VERSION`). |
+| `emojiSet` | `'twitter'` | The images to show: `'twitter'` (Twemoji) or `'google'` (Noto); see [Emoji images](#emoji-images) |
+| `emojiBaseUrl` | `''` | Where the `<unified id>.png` images are, without a trailing slash, to serve them yourself: a copy of `img/<set>/64` from `emoji-datasource-<set>@16.0.0` (`EMOJI_DATASOURCE_VERSION`). Empty uses the `emojiSet` on jsDelivr (`emojiSetBaseUrl(set)`) |
 | `emojiClass` | `'mochinori-emoji'` | Class of every emoji |
 | `emojiLoadingClass` | `''` | Added until the image loads |
 | `emojiLoadedClass` | `'mochinori-emoji--loaded'` | Added once the image loads |

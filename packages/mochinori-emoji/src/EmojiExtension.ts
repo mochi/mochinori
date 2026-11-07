@@ -56,19 +56,52 @@ import {skinToneShortcode} from './skinToneNames.ts';
 import {unifiedIDFromText} from './unifiedID.ts';
 
 /**
- * The version of emoji-datasource-facebook that the emoji database and the
- * default {@link EmojiExtensionConfig.emojiBaseUrl} come from
+ * The version of emoji-datasource that the emoji database and the default
+ * image URLs ({@link emojiSetBaseUrl}) come from
  */
-export const EMOJI_DATASOURCE_VERSION = '15.1.2';
+export const EMOJI_DATASOURCE_VERSION = '16.0.0';
+
+/**
+ * The sets of emoji images that emoji-datasource publishes, are openly
+ * licensed and are kept up to date. Each has an image for every emoji of
+ * the database, in each skin tone.
+ *
+ * - `twitter`: Twemoji (the maintained jdecked/twemoji fork), CC BY 4.0,
+ *   which needs a credit such as "Emoji graphics by Twemoji, CC BY 4.0".
+ *   Discord uses it.
+ * - `google`: Noto Color Emoji, Apache 2.0.
+ *
+ * Apple's set isn't licensed for commercial use, and Facebook's has no clear
+ * license and stopped at Unicode 15.
+ */
+export const EMOJI_SETS = ['twitter', 'google'] as const;
+
+/** One of {@link EMOJI_SETS} */
+export type EmojiSet = (typeof EMOJI_SETS)[number];
+
+/**
+ * The 64×64 images of an emoji set on jsDelivr, from the
+ * `emoji-datasource-<set>` package (`img/<set>/64` in it)
+ */
+export function emojiSetBaseUrl(set: EmojiSet): string {
+  return `https://cdn.jsdelivr.net/npm/emoji-datasource-${set}@${EMOJI_DATASOURCE_VERSION}/img/${set}/64`;
+}
 
 export interface EmojiExtensionConfig {
   /**
-   * The base URL to find the emoji PNG files, from the 64x64 set in
-   * emoji-datasource-facebook (`img/facebook/64` in that package). Each file
-   * is named by the emoji's unified id, such as `1f642.png`.
+   * Which emoji images to show (see {@link EMOJI_SETS}), from jsDelivr
+   * unless {@link emojiBaseUrl} is set. Default: `'twitter'` (Twemoji,
+   * CC BY 4.0, so credit it).
+   */
+  emojiSet: EmojiSet;
+  /**
+   * The base URL of the emoji PNG files, to serve them yourself: a copy of
+   * `img/<set>/64` from the `emoji-datasource-<set>` package at
+   * {@link EMOJI_DATASOURCE_VERSION}. Each file is named by the emoji's
+   * unified id, such as `1f642.png`. Do not add a trailing slash.
    *
-   * Default: the emoji-datasource-facebook package on jsDelivr.
-   * Do not add a trailing slash to the path.
+   * Default: `''`, the {@link emojiSet} on jsDelivr
+   * ({@link emojiSetBaseUrl}).
    */
   emojiBaseUrl: string;
   /**
@@ -254,7 +287,7 @@ export function $createEmojiNodeFromSuggestion(
 }
 
 /**
- * An extension to use the emoji-datasource-facebook emoji database to convert
+ * An extension to use the emoji-datasource emoji database to convert
  * short names such as :man-facepalming: or :) to their corresponding
  * emoji, and uses an image from the same package rather than the current
  * font to display it so that the display is consistent regardless of the
@@ -278,6 +311,7 @@ export function $createEmojiNodeFromSuggestion(
  */
 export const EmojiExtension = defineExtension({
   build(_editor, config): EmojiExtensionOutput {
+    const baseUrl = config.emojiBaseUrl || emojiSetBaseUrl(config.emojiSet);
     const customEmoji = signal(config.customEmoji);
     const skinTone = signal(config.skinTone);
     const convertUnicodeEmoji = signal(config.convertUnicodeEmoji);
@@ -310,7 +344,7 @@ export const EmojiExtension = defineExtension({
       getEmojiSrc: suggestion =>
         suggestion.custom
           ? suggestion.custom.src
-          : `${config.emojiBaseUrl}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
+          : `${baseUrl}/${unifiedIDFromText(suggestion.emoji ?? '')}.png`,
       searchEmoji: computed(() => {
         const db = database.value;
         const custom = customEmoji.value;
@@ -334,10 +368,11 @@ export const EmojiExtension = defineExtension({
     customEmoji: [],
     customEmojiClass: 'mochinori-custom-emoji',
     customEmojiLookupMinLength: 2,
-    emojiBaseUrl: `https://cdn.jsdelivr.net/npm/emoji-datasource-facebook@${EMOJI_DATASOURCE_VERSION}/img/facebook/64`,
+    emojiBaseUrl: '',
     emojiClass: 'mochinori-emoji',
     emojiLoadedClass: 'mochinori-emoji--loaded',
     emojiLoadingClass: '',
+    emojiSet: 'twitter',
     loadCustomEmoji: undefined,
     lookupCustomEmoji: undefined,
     parseEmojiReplacementEntry: parseEmojiShortNamesAndTexts,
@@ -351,6 +386,7 @@ export const EmojiExtension = defineExtension({
   name: '@mochinori/emoji/Emoji',
   nodes: () => [EmojiNode],
   register(editor: LexicalEditor, config, state) {
+    const baseUrl = config.emojiBaseUrl || emojiSetBaseUrl(config.emojiSet);
     const editable = state.getDependency(WatchEditableExtension).output;
     const output = state.getOutput();
     const {customEmoji, customEmojiByName} = output;
@@ -385,7 +421,7 @@ export const EmojiExtension = defineExtension({
           // emojis and plain text emojis that we do not have images for,
           // in which case we would want to have a separate class and not
           // use a background image if we don't have one.
-          const imageUrl = `${config.emojiBaseUrl}/${unifiedIDFromText(dom.textContent)}.png`;
+          const imageUrl = `${baseUrl}/${unifiedIDFromText(dom.textContent)}.png`;
           addClassNamesToElement(
             dom,
             config.emojiClass,

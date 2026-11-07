@@ -20,7 +20,9 @@ import {
 } from '@lexical/selection';
 import {
   type CustomEmoji,
+  EMOJI_SETS,
   EmojiExtension,
+  type EmojiSet,
   type EmojiSuggestion,
   EmojiTypeaheadExtension,
   INSERT_EMOJI_COMMAND,
@@ -64,51 +66,92 @@ function lookupCustomEmoji(
   });
 }
 
-const EmojiDemoExtension = defineExtension({
-  $initialEditorState: () => {
-    $getRoot().append(
-      $createParagraphNode().append(
-        $createTextNode(
-          'Type a short name like :tada: or :man-facepalming:, or a smiley like :) followed by a space.',
-        ),
+// The demo's starting document
+function $initialContent() {
+  $getRoot().append(
+    $createParagraphNode().append(
+      $createTextNode(
+        'Type a short name like :tada: or :man-facepalming:, or a smiley like :) followed by a space.',
       ),
-      $createParagraphNode().append(
-        $createTextNode('Emoji look the same on every platform :+1:'),
+    ),
+    $createParagraphNode().append(
+      $createTextNode('Emoji look the same on every platform :+1:'),
+    ),
+    $createParagraphNode().append(
+      $createTextNode(
+        'Custom emoji go beyond Unicode: :mochinori: and :mochi:',
       ),
-      $createParagraphNode().append(
-        $createTextNode(
-          'Custom emoji go beyond Unicode: :mochinori: and :mochi:',
-        ),
+    ),
+    $createParagraphNode().append(
+      $createTextNode(
+        'Type :app to pick from suggestions, or use the emoji button. Add a skin tone with :wave::skin-tone-4:',
       ),
-      $createParagraphNode().append(
-        $createTextNode(
-          'Type :app to pick from suggestions, or use the emoji button. Add a skin tone with :wave::skin-tone-4:',
-        ),
-      ),
-    );
-  },
-  dependencies: [
-    RichTextExtension,
-    HistoryExtension,
-    configExtension(EmojiExtension, {
-      emojiClass: styles.emoji,
-      emojiLoadedClass: styles.emojiLoaded,
-      lookupCustomEmoji,
-    }),
-    // Suggestions as `:app` is typed, rendered by EmojiTypeaheadMenu
-    EmojiTypeaheadExtension,
-    // Pasted emoji keep their shortcode
-    ClipboardDOMImportExtension,
-    // Markdown with emoji, shown under the editor
-    MdastExtension,
-    EmojiMdastExtension,
-  ],
-  name: '@mochinori/website/EmojiDemo',
-  namespace: 'EmojiDemo',
-  theme: {
-    paragraph: styles.paragraph,
-  },
-});
+    ),
+  );
+}
+
+// The demo's editor, showing `emojiSet`, starting from `savedState` (the
+// document as JSON) when the set changes
+const createDemoExtension = (emojiSet: EmojiSet, savedState: string | null) =>
+  defineExtension({
+    $initialEditorState: savedState ?? $initialContent,
+    dependencies: [
+      RichTextExtension,
+      HistoryExtension,
+      configExtension(EmojiExtension, {
+        emojiClass: styles.emoji,
+        emojiLoadedClass: styles.emojiLoaded,
+        emojiSet,
+        lookupCustomEmoji,
+      }),
+      // Suggestions as `:app` is typed, rendered by EmojiTypeaheadMenu
+      EmojiTypeaheadExtension,
+      // Pasted emoji keep their shortcode
+      ClipboardDOMImportExtension,
+      // Markdown with emoji, shown under the editor
+      MdastExtension,
+      EmojiMdastExtension,
+    ],
+    name: '@mochinori/website/EmojiDemo',
+    namespace: 'EmojiDemo',
+    theme: {
+      paragraph: styles.paragraph,
+    },
+  });
+
+const EMOJI_SET_NAMES: Record<EmojiSet, string> = {
+  google: 'Noto emoji',
+  twitter: 'Twemoji',
+};
+
+// Picks the emoji images, which rebuilds the editor with the same document
+function EmojiSetSelect({
+  current,
+  onChange,
+}: {
+  current: EmojiSet;
+  onChange: (next: EmojiSet, savedState: string) => void;
+}): JSX.Element {
+  const [editor] = useLexicalComposerContext();
+  return (
+    <select
+      aria-label="Emoji images"
+      className={styles.input}
+      onChange={event => {
+        const next = EMOJI_SETS.find(set => set === event.target.value);
+        if (next) {
+          onChange(next, JSON.stringify(editor.getEditorState().toJSON()));
+        }
+      }}
+      value={current}>
+      {EMOJI_SETS.map(set => (
+        <option key={set} value={set}>
+          {EMOJI_SET_NAMES[set]}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 // Adds a custom emoji, or replaces the one with the same name
 function addCustomEmoji(
@@ -628,13 +671,28 @@ function EmojiEditor(): JSX.Element {
 }
 
 export default function EmojiDemo(): JSX.Element {
+  const [{emojiSet, savedState}, setDemo] = useState<{
+    emojiSet: EmojiSet;
+    savedState: string | null;
+  }>({emojiSet: 'twitter', savedState: null});
+  const extension = useMemo(
+    () => createDemoExtension(emojiSet, savedState),
+    [emojiSet, savedState],
+  );
   return (
     <div className={styles.demo}>
       <LexicalExtensionComposer
         contentEditable={null}
-        extension={EmojiDemoExtension}>
+        extension={extension}
+        key={emojiSet}>
         <div className={styles.toolbar}>
           <EmojiPicker />
+          <EmojiSetSelect
+            current={emojiSet}
+            onChange={(next, saved) =>
+              setDemo({emojiSet: next, savedState: saved})
+            }
+          />
           <FontControls />
           <UnicodeEmojiOption />
           <CustomEmojiForm />
@@ -642,6 +700,14 @@ export default function EmojiDemo(): JSX.Element {
         <EmojiEditor />
         <MarkdownPanel />
       </LexicalExtensionComposer>
+      {emojiSet === 'twitter' ? (
+        <p className={styles.credit}>
+          Emoji graphics by{' '}
+          <a href="https://github.com/jdecked/twemoji">Twemoji</a>, licensed
+          under{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+        </p>
+      ) : null}
     </div>
   );
 }

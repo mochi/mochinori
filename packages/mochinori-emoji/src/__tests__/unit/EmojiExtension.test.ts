@@ -28,8 +28,10 @@ import {
   $isCustomEmojiNode,
   $isEmojiNode,
   type CustomEmoji,
+  EMOJI_DATASOURCE_VERSION,
   EmojiExtension,
   type EmojiExtensionConfig,
+  emojiSetBaseUrl,
   parseEmojiShortNames,
 } from '../../index.ts';
 import {loadEmojiDatabase} from '../../loadEmojiDatabase.ts';
@@ -216,6 +218,24 @@ describe('EmojiExtension', () => {
       width: '1.25em',
     });
     editor.setRootElement(null);
+  });
+
+  it('shows Twemoji by default, or the emojiSet', () => {
+    const src = (config: Partial<EmojiExtensionConfig>) => {
+      using editor = buildEditor(config);
+      const root = document.createElement('div');
+      editor.setRootElement(root);
+      setText(editor, ':smile:');
+      const span = root.querySelector<HTMLElement>('[data-emoji-shortcode]');
+      editor.setRootElement(null);
+      return span?.style.backgroundImage;
+    };
+    expect(src({})).toBe(
+      `url("https://cdn.jsdelivr.net/npm/emoji-datasource-twitter@${EMOJI_DATASOURCE_VERSION}/img/twitter/64/1f604.png")`,
+    );
+    expect(src({emojiSet: 'google'})).toBe(
+      `url("${emojiSetBaseUrl('google')}/1f604.png")`,
+    );
   });
 
   it('keeps its shortcode when cloned by a later update', () => {

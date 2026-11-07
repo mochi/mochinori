@@ -31,7 +31,8 @@ export function getEmojiData(): readonly EmojiData[] {
     emojiData = [];
     let category = '';
     for (const line of supportedEmojis.split('\n')) {
-      if (line.startsWith('#')) {
+      // A category line has no tabs; an emoji line can start with # (#️⃣)
+      if (line.startsWith('#') && !line.includes('\t')) {
         category = line.slice(1);
         continue;
       }
