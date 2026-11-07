@@ -97,6 +97,10 @@ const EmojiDemoExtension = defineExtension({
     HistoryExtension,
     configExtension(EmojiExtension, {
       emojiClass: styles.emoji,
+      // The demos page links the Noto font's stylesheet in its HTML, as a
+      // page with a Content Security Policy would (with its nonce), so the
+      // extension doesn't add one
+      emojiFontStylesheet: '',
       emojiLoadedClass: styles.emojiLoaded,
       lookupCustomEmoji,
     }),

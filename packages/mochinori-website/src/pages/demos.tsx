@@ -1,7 +1,9 @@
 import type {JSX} from 'react';
 
 import BrowserOnly from '@docusaurus/BrowserOnly';
+import Head from '@docusaurus/Head';
 import Link from '@docusaurus/Link';
+import {NOTO_COLOR_EMOJI_STYLESHEET} from '@mochinori/emoji';
 import EmojiDemo from '@site/src/components/EmojiDemo';
 import ImagesDemo from '@site/src/components/ImagesDemo';
 import Heading from '@theme/Heading';
@@ -10,6 +12,12 @@ import Layout from '@theme/Layout';
 export default function Demos(): JSX.Element {
   return (
     <Layout description="Live demos of mochinori packages" title="Demos">
+      <Head>
+        {/* The emoji demo's Noto font, linked in the page's HTML rather than
+            added by EmojiExtension (emojiFontStylesheet: ''), which is what
+            a page with a Content Security Policy does */}
+        <link href={NOTO_COLOR_EMOJI_STYLESHEET} rel="stylesheet" />
+      </Head>
       <main className="container margin-vert--xl">
         <Heading as="h1">Demos</Heading>
         <p>Each demo is a real Lexical editor running in your browser.</p>

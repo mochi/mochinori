@@ -319,6 +319,10 @@ yourself: a `<link>` with your nonce, or `@fontsource/noto-color-emoji`
 bundled with your app's CSS. Serving Twemoji yourself (`emojiBaseUrl`) and
 bundling the font keeps everything on `'self'`.
 
+The [demo](/demos#emoji) loads the font this way: its page links
+`NOTO_COLOR_EMOJI_STYLESHEET` in its HTML, and the editor sets
+`emojiFontStylesheet: ''`.
+
 The `emojiSet` output signal switches sets while the editor runs: the emoji
 in the document are redrawn in place, each keeping its current image until
 the new one loads.
