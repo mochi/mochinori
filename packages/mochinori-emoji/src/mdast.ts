@@ -21,19 +21,6 @@ export interface EmojiMdastConfig {
    * Default: `'unicode'`.
    */
   exportFormat: 'unicode' | 'shortcode';
-  /**
-   * Whether import turns shortcodes and texts such as `:+1:` and `:)`, and
-   * custom emoji `:name:`, into emoji nodes. Otherwise they stay text (and
-   * convert as if typed once the editor is editable). Default: true.
-   */
-  importShortcodes: boolean;
-  /**
-   * Whether import turns Unicode emoji such as 👍 into emoji nodes, drawn
-   * with the emoji images. Otherwise they stay text in the font (and
-   * convert once the editor is editable, if `EmojiExtension`'s
-   * `convertUnicodeEmoji` is on). Default: true.
-   */
-  importUnicode: boolean;
 }
 
 /** The text of each `text` node of `nodes`, the emoji's phrasing, replaced */
@@ -53,19 +40,15 @@ function replaceText(nodes: MdastNode[], value: string): MdastNode[] {
 /**
  * Imports the Markdown text that has emoji in it as emoji nodes: shortcodes
  * such as `:+1:` and `:+1::skin-tone-3:`, custom emoji `:name:`, and Unicode
- * emoji such as 👍, as {@link EmojiMdastExtension}'s config allows. It runs
- * after the other `text` rules, on the text nodes they make. It needs
- * {@link EmojiMdastExtension} in the editor.
+ * emoji such as 👍 unless `EmojiExtension`'s `convertUnicodeEmoji` is off,
+ * the same as typing and pasting. It runs after the other `text` rules, on
+ * the text nodes they make.
  */
 export const EmojiMdastImportRule: MdastImportRule = {
   $import: (_node, context) => {
-    const {$createEmojiNodesFromText} = $getExtensionOutput(EmojiExtension);
-    const {importShortcodes, importUnicode} =
-      $getExtensionOutput(EmojiMdastExtension);
-    const options = {
-      shortcodes: importShortcodes.peek(),
-      unicode: importUnicode.peek(),
-    };
+    const {$createEmojiNodesFromText, convertUnicodeEmoji} =
+      $getExtensionOutput(EmojiExtension);
+    const options = {unicode: convertUnicodeEmoji.peek()};
     return context
       .next()
       .flatMap(node =>
@@ -117,8 +100,6 @@ export const EmojiMdastExtension = defineExtension({
   build: (_editor, config) => namedSignals(config),
   config: safeCast<EmojiMdastConfig>({
     exportFormat: 'unicode',
-    importShortcodes: true,
-    importUnicode: true,
   }),
   dependencies: [
     EmojiExtension,

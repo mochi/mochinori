@@ -140,9 +140,10 @@ export interface EmojiExtensionConfig {
   /**
    * Whether Unicode emoji typed or pasted into the editor, such as 👍 from
    * the system's emoji picker, turn into emoji nodes drawn with the same
-   * images as the rest, as Slack and Discord do. Otherwise they stay text in
-   * the font. Only emoji in the database convert, and only while the
-   * editor is editable. This is the initial value of the
+   * images as the rest, as Slack and Discord do, and whether Markdown
+   * import (`EmojiMdastExtension`) does the same. Otherwise they stay text
+   * in the font. Only emoji in the database convert, and typed and pasted
+   * ones only while the editor is editable. This is the initial value of the
    * `convertUnicodeEmoji` output signal. Default: true.
    */
   convertUnicodeEmoji: boolean;

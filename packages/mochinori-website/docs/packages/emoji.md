@@ -252,21 +252,19 @@ const AppExtension = defineExtension({
   they convert later, while the editor is editable. Wait for
   `searchEmoji` to be set before importing if that matters.
 
-Each direction is an option of `EmojiMdastExtension`:
+How standard emoji export is an option of `EmojiMdastExtension`:
 
 | Config | Default | Description |
 | --- | --- | --- |
 | `exportFormat` | `'unicode'` | `'shortcode'` writes standard emoji by short name instead (`:+1::skin-tone-3:`, and `:slightly_smiling_face:` for one typed as `:)`), as Slack stores them. Custom emoji always export as `:name:` |
-| `importShortcodes` | `true` | Whether import turns shortcodes, texts and custom emoji names into emoji |
-| `importUnicode` | `true` | Whether import turns Unicode emoji into emoji |
 
 ```ts
 configExtension(EmojiMdastExtension, {exportFormat: 'shortcode'});
 ```
 
-Whether Unicode emoji typed or pasted into the editor become emoji is
-`EmojiExtension`'s `convertUnicodeEmoji`. With it and `importUnicode` off,
-Unicode emoji stay text in the font, while shortcodes still become images.
+Whether Unicode emoji become emoji, whether typed, pasted or imported, is
+`EmojiExtension`'s `convertUnicodeEmoji`. With it off, Unicode emoji stay
+text in the font, while shortcodes still become images.
 
 The rules are `EmojiMdastImportRule`, a `text` rule built on
 `EmojiExtension`'s `$createEmojiNodesFromText(node, options?)`, which an app
@@ -311,7 +309,7 @@ Registers `EmojiNode`, converts shortcodes, and loads each emoji's image.
 | `customEmojiClass` | `'mochinori-custom-emoji'` | Class of every custom emoji |
 | `parseEmojiReplacementEntry` | `parseEmojiShortNamesAndTexts` | Which texts to replace: `parseEmojiShortNames` (only `:short_name:`), `parseEmojiTexts` (only smileys like `:)`), or your own function |
 | `skinTone` | `1` | The skin tone (1 to 6) of typed short names, suggestions and searches, the initial value of the `skinTone` output signal |
-| `convertUnicodeEmoji` | `true` | Whether Unicode emoji typed or pasted into the editor become emoji drawn with the images, as in Slack and Discord, rather than staying text in the font. Only emoji in the database convert. The initial value of the `convertUnicodeEmoji` output signal |
+| `convertUnicodeEmoji` | `true` | Whether Unicode emoji typed, pasted or imported from Markdown become emoji drawn with the images, as in Slack and Discord, rather than staying text in the font. Only emoji in the database convert. The initial value of the `convertUnicodeEmoji` output signal |
 
 Its output has:
 

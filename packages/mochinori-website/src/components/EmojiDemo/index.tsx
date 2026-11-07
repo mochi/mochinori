@@ -527,18 +527,23 @@ function OptionCheckbox({
   );
 }
 
-// Each way emoji can be written and read: in the editor and in Markdown
-function EmojiOptions(): JSX.Element {
+// The editor's setting for Unicode emoji typed, pasted or imported
+function UnicodeEmojiOption(): JSX.Element {
   const {convertUnicodeEmoji} = useExtensionDependency(EmojiExtension).output;
-  const {exportFormat, importShortcodes, importUnicode} =
-    useExtensionDependency(EmojiMdastExtension).output;
+  return (
+    <OptionCheckbox
+      label="Unicode emoji as images"
+      option={convertUnicodeEmoji}
+    />
+  );
+}
+
+// How Markdown writes standard emoji
+function MarkdownExportFormat(): JSX.Element {
+  const {exportFormat} = useExtensionDependency(EmojiMdastExtension).output;
   const format = useExtensionSignalValue(EmojiMdastExtension, 'exportFormat');
   return (
     <div className={styles.options}>
-      <OptionCheckbox
-        label="Typed and pasted Unicode emoji become images"
-        option={convertUnicodeEmoji}
-      />
       <label className={styles.option}>
         Export emoji as{' '}
         <select
@@ -554,8 +559,6 @@ function EmojiOptions(): JSX.Element {
           <option value="shortcode">Shortcodes (:+1:), like Slack</option>
         </select>
       </label>
-      <OptionCheckbox label="Import Unicode emoji" option={importUnicode} />
-      <OptionCheckbox label="Import shortcodes" option={importShortcodes} />
     </div>
   );
 }
@@ -577,8 +580,8 @@ function MarkdownPanel(): JSX.Element {
   }, [editor, exportFormat]);
   return (
     <details className={styles.markdown}>
-      <summary>Markdown and emoji options</summary>
-      <EmojiOptions />
+      <summary>Markdown</summary>
+      <MarkdownExportFormat />
       <textarea
         aria-label="Markdown"
         className={styles.markdownText}
@@ -633,6 +636,7 @@ export default function EmojiDemo(): JSX.Element {
         <div className={styles.toolbar}>
           <EmojiPicker />
           <FontControls />
+          <UnicodeEmojiOption />
           <CustomEmojiForm />
         </div>
         <EmojiEditor />

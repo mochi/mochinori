@@ -227,28 +227,26 @@ describe('EmojiMdastExtension', () => {
     expect(exportMarkdown(editor)).toBe('hi 👍🏼 :partyparrot: 🙂**🍎**😼');
   });
 
-  it('imports only the kinds of emoji that the config asks for', () => {
-    const markdown = 'a :+1: 👍 :partyparrot:';
-    const kinds = (config: Partial<EmojiMdastConfig>) => {
-      using editor = buildEditor(config);
-      importMarkdown(editor, markdown);
-      return describeText(editor).map(node =>
+  it('leaves Unicode emoji as text without convertUnicodeEmoji', () => {
+    using editor = buildEditorFromExtensions(
+      defineExtension({
+        dependencies: [
+          configExtension(EmojiExtension, {
+            convertUnicodeEmoji: false,
+            customEmoji: [PARROT],
+          }),
+          EmojiMdastExtension,
+          MdastExtension,
+        ],
+        name: '[root]',
+      }),
+    );
+    editor.setEditable(false);
+    importMarkdown(editor, 'a :+1: 👍 :partyparrot:');
+    expect(
+      describeText(editor).map(node =>
         typeof node === 'string' ? node : 'emoji',
-      );
-    };
-    expect(kinds({importUnicode: false})).toEqual([
-      'a ',
-      'emoji',
-      ' 👍 ',
-      'emoji',
-    ]);
-    expect(kinds({importShortcodes: false})).toEqual([
-      'a :+1: ',
-      'emoji',
-      ' :partyparrot:',
-    ]);
-    expect(kinds({importShortcodes: false, importUnicode: false})).toEqual([
-      markdown,
-    ]);
+      ),
+    ).toEqual(['a ', 'emoji', ' 👍 ', 'emoji']);
   });
 });
