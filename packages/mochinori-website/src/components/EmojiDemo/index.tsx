@@ -69,20 +69,20 @@ const EmojiDemoExtension = defineExtension({
     $getRoot().append(
       $createParagraphNode().append(
         $createTextNode(
-          'Type a short name like :tada: or :man-facepalming:, or a smiley like :) followed by a space. ',
+          'Type a short name like :tada: or :man-facepalming:, or a smiley like :) followed by a space.',
         ),
       ),
       $createParagraphNode().append(
-        $createTextNode('Emoji look the same on every platform :+1: '),
+        $createTextNode('Emoji look the same on every platform :+1:'),
       ),
       $createParagraphNode().append(
         $createTextNode(
-          'Custom emoji go beyond Unicode: :mochinori: and :mochi: ',
+          'Custom emoji go beyond Unicode: :mochinori: and :mochi:',
         ),
       ),
       $createParagraphNode().append(
         $createTextNode(
-          'Type :app to pick from suggestions, or use the emoji button. Add a skin tone with :wave::skin-tone-4: ',
+          'Type :app to pick from suggestions, or use the emoji button. Add a skin tone with :wave::skin-tone-4:',
         ),
       ),
     );
