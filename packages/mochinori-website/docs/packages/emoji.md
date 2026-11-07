@@ -280,7 +280,7 @@ an image for every emoji of the database, in every skin tone.
 
 | `emojiSet` | Images | License |
 | --- | --- | --- |
-| `'twitter'` (default) | [Twemoji](https://github.com/jdecked/twemoji), as Discord shows them | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): credit it, such as "Emoji graphics by Twemoji, CC BY 4.0" |
+| `'twitter'` (default) | [Twemoji](https://github.com/jdecked/twemoji), as Discord shows them | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): credit it, such as "Emoji graphics by Twemoji, CC BY 4.0". Twemoji accepts a mention in your README, an About screen, or the page source |
 | `'google'` | [Noto Color Emoji](https://github.com/googlefonts/noto-emoji) | [Apache 2.0](https://github.com/googlefonts/noto-emoji/blob/main/LICENSE) |
 
 ```ts

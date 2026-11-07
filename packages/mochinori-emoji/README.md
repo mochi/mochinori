@@ -50,6 +50,8 @@ See the [docs](https://github.com/mochi/mochinori/blob/main/packages/mochinori-w
 
 The default images are [Twemoji](https://github.com/jdecked/twemoji), under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), so an app that
-shows them credits them, such as "Emoji graphics by Twemoji, CC BY 4.0". Set
+shows them credits them, such as "Emoji graphics by Twemoji, CC BY 4.0".
+Twemoji accepts a mention in the app's README, an About screen, or the page
+source. Set
 `emojiSet: 'google'` for [Noto Color Emoji](https://github.com/googlefonts/noto-emoji)
 (Apache 2.0) instead.
