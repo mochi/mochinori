@@ -18,6 +18,7 @@ __screenshots__
 # generated Worker config); void.lock.json is committed.
 .void
 .void-wrangler.jsonc
+.cloudflare
 .wrangler
 .dev.vars*
 !.dev.vars.example

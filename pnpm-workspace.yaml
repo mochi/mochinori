@@ -17,10 +17,8 @@ minimumReleaseAgeExclude:
   - 'miniflare'
   - 'workerd'
   - 'wrangler'
-  # Exact versions void 0.23.0 pins; later releases wait the full week
-  - 'hono@4.13.11'
-  - 'mysql2@3.24.5'
-  - 'postal-mime@4.0.0'
+  # Exact versions void 1.6.2 pins; later releases wait the full week
+  - 'hono@4.13.16'
 
 # Lexical is a singleton within an app: every workspace package uses the
 # same exact version (devDependencies), and the published libraries declare
@@ -38,8 +36,8 @@ catalog:
   '@lexical/rich-text': '0.53.0'
   '@lexical/selection': '0.53.0'
   '@lexical/utils': '0.53.0'
-  react: '^19.2.5'
-  react-dom: '^19.2.5'
+  react: '^19.3.1'
+  react-dom: '^19.3.1'
 
 peerDependencyRules:
   allowedVersions:

@@ -32,7 +32,7 @@ scripts/                            repo scripts and their tests
 
 ## Development
 
-Requires Node 24.15 or later (see `.nvmrc`) and pnpm 11.
+Requires Node 24.22 or later (see `.nvmrc`) and pnpm 11.
 
 ```sh
 pnpm install
