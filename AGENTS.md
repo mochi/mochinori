@@ -11,7 +11,7 @@ notice.
 
 ## Commands
 
-- `pnpm install` - Install dependencies (pnpm 11, Node 24.15+; see `.nvmrc`)
+- `pnpm install` - Install dependencies (pnpm 11, Node 24.22+; see `.nvmrc`)
 - `pnpm run build` - Build the published packages into `dist/`
 - `pnpm run build-website` - Build the Docusaurus site into
   `packages/mochinori-website/build`, then the Worker that serves it

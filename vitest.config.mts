@@ -43,7 +43,7 @@ export default defineConfig({
           ],
           name: 'unit',
           // jsdom's dependencies use require(esm), which VM pools support on
-          // the Node versions this repo requires (24.15+)
+          // the Node versions this repo requires (24.22+)
           pool: 'vmThreads',
         },
       },
