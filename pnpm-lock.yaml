@@ -15,16 +15,25 @@ catalogs:
     '@lexical/extension':
       specifier: 0.53.0
       version: 0.53.0
+    '@lexical/fast-check':
+      specifier: 0.53.0
+      version: 0.53.0
     '@lexical/history':
       specifier: 0.53.0
       version: 0.53.0
     '@lexical/html':
       specifier: 0.53.0
       version: 0.53.0
+    '@lexical/mdast':
+      specifier: 0.53.0
+      version: 0.53.0
     '@lexical/react':
       specifier: 0.53.0
       version: 0.53.0
     '@lexical/rich-text':
+      specifier: 0.53.0
+      version: 0.53.0
+    '@lexical/selection':
       specifier: 0.53.0
       version: 0.53.0
     lexical:
@@ -144,6 +153,30 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(@types/node@24.13.6)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/mochinori-emoji:
+    devDependencies:
+      '@lexical/extension':
+        specifier: 'catalog:'
+        version: 0.53.0(typescript@6.0.3)
+      '@lexical/fast-check':
+        specifier: 'catalog:'
+        version: 0.53.0(fast-check@4.10.2)(typescript@6.0.3)
+      '@lexical/html':
+        specifier: 'catalog:'
+        version: 0.53.0(typescript@6.0.3)
+      '@lexical/mdast':
+        specifier: 'catalog:'
+        version: 0.53.0(supports-color@10.2.2)(typescript@6.0.3)
+      emojibase-data:
+        specifier: 18.0.0
+        version: 18.0.0(emojibase@18.0.0)
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+      lexical:
+        specifier: 'catalog:'
+        version: 0.53.0(typescript@6.0.3)
+
   packages/mochinori-eslint-plugin-internal:
     dependencies:
       eslint:
@@ -197,15 +230,24 @@ importers:
       '@lexical/html':
         specifier: 'catalog:'
         version: 0.53.0(typescript@6.0.3)
+      '@lexical/mdast':
+        specifier: 'catalog:'
+        version: 0.53.0(supports-color@10.2.2)(typescript@6.0.3)
       '@lexical/react':
         specifier: 'catalog:'
         version: 0.53.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)(yjs@13.6.33)
       '@lexical/rich-text':
         specifier: 'catalog:'
         version: 0.53.0(typescript@6.0.3)
+      '@lexical/selection':
+        specifier: 'catalog:'
+        version: 0.53.0(typescript@6.0.3)
       '@mdx-js/react':
         specifier: ^3.1.1
         version: 3.1.1(@types/react@19.3.0)(react@19.3.0)
+      '@mochinori/emoji':
+        specifier: workspace:*
+        version: link:../mochinori-emoji
       '@mochinori/images':
         specifier: workspace:*
         version: link:../mochinori-images
@@ -2691,6 +2733,15 @@ packages:
       typescript:
         optional: true
 
+  '@lexical/fast-check@0.53.0':
+    resolution: {integrity: sha512-xKnSqcvtTF2FNB6ajZ+5qkys1Mild9gaB5T97pPfUEm4iRXcqChrZ1cUT2V3ygfluKc7+Vum2NJuUW/b3EWsAg==}
+    peerDependencies:
+      fast-check: '>=4.0.0'
+      typescript: '>=5.2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   '@lexical/hashtag@0.53.0':
     resolution: {integrity: sha512-ZYw82Gj5pDFqhsqRhubiSV6Jv62Iib2pMC+Lu4oHhKox6azh+FtxLNdqoDTp9iCXGaz3YHMuIrZvtl5qYK/UYw==}
     peerDependencies:
@@ -2749,6 +2800,14 @@ packages:
 
   '@lexical/markdown@0.53.0':
     resolution: {integrity: sha512-kQ/MlE/zaG2k5NtO+15QIOVPbDO9vwfW4JpNXads2fM2v4qQVjdvuEq+Elm6CjwVz/L7fDjT2JgUjg/Ozkpqkw==}
+    peerDependencies:
+      typescript: '>=5.2'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/mdast@0.53.0':
+    resolution: {integrity: sha512-V0p235hQaWRXEE8vsnrIJLGDOtXtmK/wEjHXwneH1SfcqSiSSYXOuGDHyUPnJjn3mZ0ycgOQIqlaiQLa5Rl/TQ==}
     peerDependencies:
       typescript: '>=5.2'
     peerDependenciesMeta:
@@ -4828,6 +4887,15 @@ packages:
   emoji-regex@9.2.2:
     resolution: {integrity: sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==}
 
+  emojibase-data@18.0.0:
+    resolution: {integrity: sha512-TPPRRYv2zPd0jKI+pTpMquwWNZXYAsC3IVsCMeg2X8y8fEzKwOks4/5bz0YavF5r6d71aGPpb6oDnUEwSLLMoA==}
+    peerDependencies:
+      emojibase: '*'
+
+  emojibase@18.0.0:
+    resolution: {integrity: sha512-5PG+EEt5zQ9qvqdHZw61+T9iz96g+r621QS/w8jEzPg+3mjzAdjl8LPLc+e9ABv/yboNfMwEair7aK9qKnwAbQ==}
+    engines: {node: '>=20.0.0'}
+
   emojilib@2.4.0:
     resolution: {integrity: sha512-5U0rVMU5Y2n2+ykNLQqMoqklN9ICBT/KsvC1Gz6vqHbz2AXXGkG+Pm5rMWk/8Vjrr/mY9985Hi8DYzn1F09Nyw==}
 
@@ -5134,6 +5202,10 @@ packages:
 
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
+
+  fast-check@4.10.2:
+    resolution: {integrity: sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw==}
+    engines: {node: '>=12.17.0'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -6162,6 +6234,9 @@ packages:
   mdast-util-from-markdown@2.0.3:
     resolution: {integrity: sha512-W4mAWTvSlKvf8L6J+VN9yLSqQ9AOAAvHuoDAmPkz4dHf553m5gVj2ejadHJhoJmcmxEnOv6Pa8XJhpxE93kb8Q==}
 
+  mdast-util-from-markdown@2.1.0:
+    resolution: {integrity: sha512-KRLgmPaP2H1ul2bpoJkOS+9pAcDAAj9Nu1mqLnh8NLeJG5tlvj42TH80PIGBpROWlRXLk0lDrWNuZCFy/tsB4A==}
+
   mdast-util-frontmatter@2.0.1:
     resolution: {integrity: sha512-LRqI9+wdgC25P0URIJY9vwocIzCcksduHQ9OF2joxQoyTNVduwLAFUzjoopuRJbJAReaKrNQKAZKL3uCMugWJA==}
 
@@ -6203,6 +6278,9 @@ packages:
 
   mdast-util-to-markdown@2.1.2:
     resolution: {integrity: sha512-xj68wMTvGXVOKonmog6LwyJKrYXZPvlwabaryTjLh9LuvovB/KAH+kvi8Gjj+7rJjsFi23nkUxRQv1KqSroMqA==}
+
+  mdast-util-to-markdown@2.2.1:
+    resolution: {integrity: sha512-ThatlCBxG2GE+mljhNSfZPv56d3QrGiRh97jjYgIk80IzS4uU6d7cHAaexCYSAmUCCcOs3grJ07kX3oTGsFUOw==}
 
   mdast-util-to-string@4.0.0:
     resolution: {integrity: sha512-0H44vDimn51F0YwvxSJSm0eCDOJTRlmN0R1yBh4HLj9wiV1Dn0QoXGbvFAWj2hSItVTlCmBF1hqKlIyUBVFLPg==}
@@ -7339,6 +7417,9 @@ packages:
   pupa@3.3.0:
     resolution: {integrity: sha512-LjgDO2zPtoXP2wJpDjZrGdojii1uqO0cnwKoIoUzkfS98HDmbeiGmYiXo3lXeFlq2xvne1QFQhwYXSUCLKtEuA==}
     engines: {node: '>=12.20'}
+
+  pure-rand@8.4.2:
+    resolution: {integrity: sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==}
 
   pvtsutils@1.3.6:
     resolution: {integrity: sha512-PLgQXQ6H2FWCaeRak8vvk1GW462lMxB5s3Jm673N82zI4vqtVUPuZdffdZbPDFRoU8kAhItWFtPCWiPpp4/EDg==}
@@ -11898,6 +11979,13 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
+  '@lexical/fast-check@0.53.0(fast-check@4.10.2)(typescript@6.0.3)':
+    dependencies:
+      fast-check: 4.10.2
+      lexical: 0.53.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
+
   '@lexical/hashtag@0.53.0(typescript@6.0.3)':
     dependencies:
       '@lexical/text': 0.53.0(typescript@6.0.3)
@@ -11972,6 +12060,37 @@ snapshots:
       lexical: 0.53.0(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
+
+  '@lexical/mdast@0.53.0(supports-color@10.2.2)(typescript@6.0.3)':
+    dependencies:
+      '@lexical/code-core': 0.53.0(typescript@6.0.3)
+      '@lexical/extension': 0.53.0(typescript@6.0.3)
+      '@lexical/html': 0.53.0(typescript@6.0.3)
+      '@lexical/internal': 0.53.0(typescript@6.0.3)
+      '@lexical/link': 0.53.0(typescript@6.0.3)
+      '@lexical/list': 0.53.0(typescript@6.0.3)
+      '@lexical/rich-text': 0.53.0(typescript@6.0.3)
+      '@lexical/selection': 0.53.0(typescript@6.0.3)
+      '@lexical/table': 0.53.0(typescript@6.0.3)
+      '@lexical/utils': 0.53.0(typescript@6.0.3)
+      '@types/mdast': 4.0.4
+      lexical: 0.53.0(typescript@6.0.3)
+      mdast-util-from-markdown: 2.1.0(supports-color@10.2.2)
+      mdast-util-gfm-autolink-literal: 2.0.1
+      mdast-util-gfm-strikethrough: 2.0.0(supports-color@10.2.2)
+      mdast-util-gfm-table: 2.0.0(supports-color@10.2.2)
+      mdast-util-gfm-task-list-item: 2.0.0(supports-color@10.2.2)
+      mdast-util-to-markdown: 2.2.1
+      mdast-util-to-string: 4.0.0
+      micromark-extension-gfm-autolink-literal: 2.1.0
+      micromark-extension-gfm-strikethrough: 2.1.0
+      micromark-extension-gfm-table: 2.1.2
+      micromark-extension-gfm-task-list-item: 2.1.0
+      micromark-util-types: 2.0.2
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
 
   '@lexical/overflow@0.53.0(typescript@6.0.3)':
     dependencies:
@@ -14043,6 +14162,12 @@ snapshots:
 
   emoji-regex@9.2.2: {}
 
+  emojibase-data@18.0.0(emojibase@18.0.0):
+    dependencies:
+      emojibase: 18.0.0
+
+  emojibase@18.0.0: {}
+
   emojilib@2.4.0: {}
 
   emojis-list@3.0.0: {}
@@ -14581,6 +14706,10 @@ snapshots:
       is-extendable: 0.1.1
 
   extend@3.0.2: {}
+
+  fast-check@4.10.2:
+    dependencies:
+      pure-rand: 8.4.2
 
   fast-deep-equal@3.1.3: {}
 
@@ -15661,6 +15790,23 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  mdast-util-from-markdown@2.1.0(supports-color@10.2.2):
+    dependencies:
+      '@types/mdast': 4.0.4
+      '@types/unist': 3.0.3
+      decode-named-character-reference: 1.3.0
+      devlop: 1.1.0
+      mdast-util-to-string: 4.0.0
+      micromark: 4.0.2(supports-color@10.2.2)
+      micromark-util-decode-numeric-character-reference: 2.0.2
+      micromark-util-decode-string: 2.0.1
+      micromark-util-normalize-identifier: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+      unist-util-stringify-position: 4.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   mdast-util-frontmatter@2.0.1(supports-color@10.2.2):
     dependencies:
       '@types/mdast': 4.0.4
@@ -15804,6 +15950,20 @@ snapshots:
       mdast-util-to-string: 4.0.0
       micromark-util-classify-character: 2.0.1
       micromark-util-decode-string: 2.0.1
+      unist-util-visit: 5.1.0
+      zwitch: 2.0.4
+
+  mdast-util-to-markdown@2.2.1:
+    dependencies:
+      '@types/mdast': 4.0.4
+      '@types/unist': 3.0.3
+      longest-streak: 3.1.0
+      mdast-util-phrasing: 4.1.0
+      mdast-util-to-string: 4.0.0
+      micromark-util-character: 2.1.1
+      micromark-util-classify-character: 2.0.1
+      micromark-util-decode-string: 2.0.1
+      micromark-util-html-tag-name: 2.0.1
       unist-util-visit: 5.1.0
       zwitch: 2.0.4
 
@@ -17136,6 +17296,8 @@ snapshots:
   pupa@3.3.0:
     dependencies:
       escape-goat: 4.0.0
+
+  pure-rand@8.4.2: {}
 
   pvtsutils@1.3.6:
     dependencies:

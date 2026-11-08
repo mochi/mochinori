@@ -68,12 +68,13 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     footer: {
-      copyright: `Copyright © ${new Date().getFullYear()} Bob Ippolito. Built on <a href="https://lexical.dev">Lexical</a>.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Bob Ippolito. Built on <a href="https://lexical.dev">Lexical</a>. Emoji graphics by <a href="https://github.com/jdecked/twemoji">Twemoji</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.`,
       links: [
         {
           items: [
             {label: 'Introduction', to: '/docs/intro'},
             {label: '@mochinori/images', to: '/docs/packages/images'},
+            {label: '@mochinori/emoji', to: '/docs/packages/emoji'},
           ],
           title: 'Docs',
         },

@@ -13,6 +13,18 @@ export default defineConfig({
     ],
     dedupe: ['react', 'react-dom', 'lexical'],
   },
+  // Tests in the node environment resolve through Vite's SSR conditions
+  ssr: {
+    resolve: {
+      conditions: [
+        'mochinori-source',
+        'development',
+        'import',
+        'module',
+        'node',
+      ],
+    },
+  },
   test: {
     clearMocks: true,
     projects: [

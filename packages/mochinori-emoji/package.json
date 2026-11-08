@@ -1,0 +1,77 @@
+{
+  "name": "@mochinori/emoji",
+  "description": "Emoji shortcodes and consistent emoji images for Lexical editors, with a lazily loaded emoji database.",
+  "keywords": [
+    "lexical",
+    "editor",
+    "rich-text",
+    "emoji",
+    "extension"
+  ],
+  "license": "MIT",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mochi/mochinori.git",
+    "directory": "packages/mochinori-emoji"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "mochinori-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./mdast": {
+      "mochinori-source": "./src/mdast.ts",
+      "types": "./dist/mdast.d.ts",
+      "default": "./dist/mdast.js"
+    }
+  },
+  "imports": {
+    "#loadEmojiDatabase": {
+      "mochinori-source": {
+        "browser": "./src/loadEmojiDatabase.ts",
+        "default": "./src/loadEmojiDatabase.node.ts"
+      },
+      "types": "./dist/loadEmojiDatabase.d.ts",
+      "browser": "./dist/loadEmojiDatabase.js",
+      "default": "./dist/loadEmojiDatabase.node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "generate": "node scripts/generateEmojiData.mjs"
+  },
+  "peerDependencies": {
+    "@lexical/extension": "^0.53.0",
+    "@lexical/html": "^0.53.0",
+    "@lexical/mdast": "^0.53.0",
+    "lexical": "^0.53.0"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/mdast": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@lexical/extension": "catalog:",
+    "@lexical/fast-check": "catalog:",
+    "@lexical/html": "catalog:",
+    "@lexical/mdast": "catalog:",
+    "emojibase-data": "18.0.0",
+    "fast-check": "^4.10.2",
+    "lexical": "catalog:"
+  }
+}

@@ -5,7 +5,7 @@ const sidebars: SidebarsConfig = {
     'intro',
     'getting-started',
     {
-      items: ['packages/images'],
+      items: ['packages/images', 'packages/emoji'],
       label: 'Packages',
       type: 'category',
     },
