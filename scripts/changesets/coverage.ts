@@ -3,7 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -15,14 +14,16 @@
  * scripts and private packages need none.
  */
 
-/** @typedef {import('./repo.mjs').WorkspacePackage} WorkspacePackage */
+import type {WorkspacePackage} from './repo.ts';
 
-/**
- * @typedef {object} Change
- * @property {string} status git name-status letter(s), e.g. `M`, `A`, `D`, `R100`
- * @property {string} file repo-relative path (the new path for renames)
- * @property {string} [previous] the old path, for renames
- */
+export interface Change {
+  /** git name-status letter(s), e.g. `M`, `A`, `D`, `R100` */
+  status: string;
+  /** repo-relative path (the new path for renames) */
+  file: string;
+  /** the old path, for renames */
+  previous?: string;
+}
 
 const TEST_DIR_RE = /(?:^|\/)__(?:tests|bench|mocks)__\//;
 const TEST_FILE_RE = /\.(?:test|bench|spec)\.[cm]?[jt]sx?$/;
@@ -48,11 +49,14 @@ export const CONSUMER_MANIFEST_FIELDS = [
 ];
 
 /**
- * @param {string} file repo-relative path
- * @param {Map<string, WorkspacePackage>} packagesByDir
- * @returns {{ships: true, package: string, kind: 'source' | 'manifest'} | {ships: false, reason: string}}
+ * @param file repo-relative path
  */
-export function classifyPath(file, packagesByDir) {
+export function classifyPath(
+  file: string,
+  packagesByDir: Map<string, WorkspacePackage>,
+):
+  | {ships: true; package: string; kind: 'source' | 'manifest'}
+  | {ships: false; reason: string} {
   const m = /^(packages\/[^/]+)\/(.+)$/.exec(file);
   if (!m) {
     return {reason: 'outside the published packages', ships: false};
@@ -79,12 +83,11 @@ export function classifyPath(file, packagesByDir) {
 
 /**
  * The consumer-facing package.json fields that differ.
- *
- * @param {any} before
- * @param {any} after
- * @returns {string[]}
  */
-export function manifestDelta(before, after) {
+export function manifestDelta(
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+): string[] {
   return CONSUMER_MANIFEST_FIELDS.filter(
     field =>
       JSON.stringify(before ? before[field] : undefined) !==
@@ -92,22 +95,19 @@ export function manifestDelta(before, after) {
   );
 }
 
-/**
- * @typedef {object} ChangedChangeset
- * @property {string} file
- * @property {Record<string, string>} releases
- * @property {string | null} [category]
- * @property {string} [text] the whole file
- */
+export interface ChangedChangeset {
+  file: string;
+  releases: Record<string, string>;
+  category?: string | null;
+  /** the whole file */
+  text?: string;
+}
 
 /**
- * @param {object} input
- * @param {Change[]} input.changes
- * @param {WorkspacePackage[]} input.packages packages at the head revision
- * @param {WorkspacePackage[]} [input.basePackages] packages at the base revision
- * @param {(file: string) => string[]} input.manifestFields consumer fields a package.json change touches
- * @param {ChangedChangeset[]} input.changesets changesets this change adds or edits
- * @returns {{required: Map<string, string[]>, covered: Set<string>, removed: string[], missing: string[], problems: string[]}}
+ * @param input.packages packages at the head revision
+ * @param input.basePackages packages at the base revision
+ * @param input.manifestFields consumer fields a package.json change touches
+ * @param input.changesets changesets this change adds or edits
  */
 export function checkCoverage({
   changes,
@@ -115,7 +115,19 @@ export function checkCoverage({
   basePackages = [],
   manifestFields,
   changesets,
-}) {
+}: {
+  changes: Change[];
+  packages: WorkspacePackage[];
+  basePackages?: WorkspacePackage[];
+  manifestFields: (file: string) => string[];
+  changesets: ChangedChangeset[];
+}): {
+  required: Map<string, string[]>;
+  covered: Set<string>;
+  removed: string[];
+  missing: string[];
+  problems: string[];
+} {
   // Classify each path by the package that owns it at head, or at base for
   // a package this change deletes or moves.
   const byDir = new Map(basePackages.map(p => [p.dir, p]));
@@ -126,8 +138,7 @@ export function checkCoverage({
   const removed = basePackages
     .filter(p => !p.isPrivate && !headNames.has(p.name))
     .map(p => p.name);
-  /** @type {Map<string, string[]>} */
-  const required = new Map();
+  const required: Map<string, string[]> = new Map();
   for (const change of changes) {
     for (const file of [change.file, change.previous]) {
       if (!file) {
@@ -152,7 +163,7 @@ export function checkCoverage({
       required.set(result.package, list);
     }
   }
-  const covered = new Set();
+  const covered = new Set<string>();
   for (const {releases} of changesets) {
     for (const name of Object.keys(releases)) {
       covered.add(name);
@@ -161,8 +172,7 @@ export function checkCoverage({
   const missing = [...required.keys()].filter(
     name => !covered.has(name) && !removed.includes(name),
   );
-  /** @type {string[]} */
-  const problems = [];
+  const problems: string[] = [];
   if (missing.length > 0) {
     problems.push(coverageMessage(missing, required));
   }
@@ -192,11 +202,12 @@ export function checkCoverage({
 /**
  * A one-line summary and file name derived from a pull request title in the
  * repository's `[packages] Type: title` convention.
- *
- * @param {string} title
- * @returns {{summary: string, slug: string, category: string}}
  */
-export function fromPullRequestTitle(title) {
+export function fromPullRequestTitle(title: string): {
+  summary: string;
+  slug: string;
+  category: string;
+} {
   let rest = title.trim();
   let category = 'fix';
   rest = rest.replace(/^(?:\[[^\]]*\]\s*)+/, '');
@@ -237,13 +248,12 @@ export function fromPullRequestTitle(title) {
 
 /**
  * The text of a changeset for `packages`, ready to edit.
- *
- * @param {string[]} packages
- * @param {string} category
- * @param {string} summary
- * @returns {string}
  */
-export function changesetTemplate(packages, category, summary) {
+export function changesetTemplate(
+  packages: string[],
+  category: string,
+  summary: string,
+): string {
   const bump = category === 'breaking' ? 'minor' : 'patch';
   const lines = [
     '---',
@@ -267,24 +277,28 @@ export function changesetTemplate(packages, category, summary) {
  * A link that opens GitHub's "new file" page on the pull request's branch
  * with the changeset filled in. Built from the pull request event alone, so
  * it needs no token or extra permissions.
- *
- * @param {{repository: string, ref: string, filename: string, value: string}} input
- * @returns {string}
  */
-export function newChangesetUrl({repository, ref, filename, value}) {
+export function newChangesetUrl({
+  repository,
+  ref,
+  filename,
+  value,
+}: {
+  repository: string;
+  ref: string;
+  filename: string;
+  value: string;
+}): string {
   const branch = ref.split('/').map(encodeURIComponent).join('/');
   return (
     `https://github.com/${repository}/new/${branch}` +
     `?filename=${encodeURIComponent(filename)}&value=${encodeURIComponent(value)}`
   );
 }
-
-/**
- * @param {string[]} missing
- * @param {Map<string, string[]>} required
- * @returns {string}
- */
-function coverageMessage(missing, required) {
+function coverageMessage(
+  missing: string[],
+  required: Map<string, string[]>,
+): string {
   const lines = [
     'This pull request changes published code without a changeset for:',
   ];
@@ -320,12 +334,8 @@ function coverageMessage(missing, required) {
 /**
  * Expand changesets-style package globs (`*` within a segment, `!` to
  * exclude what earlier patterns matched).
- *
- * @param {string[]} names
- * @param {string[]} patterns
- * @returns {string[]}
  */
-export function matchPackages(names, patterns) {
+export function matchPackages(names: string[], patterns: string[]): string[] {
   const compiled = patterns.map(p => {
     const negated = p.startsWith('!');
     const body = negated ? p.slice(1) : p;
@@ -356,17 +366,15 @@ export function matchPackages(names, patterns) {
  * `.changeset/config.json` must release every public package together and
  * ignore every private one, so a new package cannot silently fall out of
  * the lockstep release.
- *
- * @param {{fixed?: string[][], ignore?: string[]}} config
- * @param {WorkspacePackage[]} packages
- * @returns {string[]}
  */
-export function configProblems(config, packages) {
+export function configProblems(
+  config: {fixed?: string[][]; ignore?: string[]},
+  packages: WorkspacePackage[],
+): string[] {
   const names = packages.map(p => p.name);
   const publicNames = packages.filter(p => !p.isPrivate).map(p => p.name);
   const privateNames = packages.filter(p => p.isPrivate).map(p => p.name);
-  /** @type {string[]} */
-  const problems = [];
+  const problems: string[] = [];
   const groups = config.fixed || [];
   if (groups.length !== 1) {
     problems.push(
@@ -405,13 +413,9 @@ export function configProblems(config, packages) {
 
 /**
  * Parse `git diff --name-status` output.
- *
- * @param {string} output
- * @returns {Change[]}
  */
-export function parseNameStatus(output) {
-  /** @type {Change[]} */
-  const changes = [];
+export function parseNameStatus(output: string): Change[] {
+  const changes: Change[] = [];
   for (const line of output.split('\n')) {
     if (line.trim() === '') {
       continue;

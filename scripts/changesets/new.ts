@@ -4,7 +4,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -25,12 +24,14 @@
  *   --name         file name (default: derived from the summary)
  */
 
+import type {Category} from './entry.ts';
+
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {parseStrict} from './cli.mjs';
-import {CATEGORIES, normalizeCategory, validateChangeset} from './entry.mjs';
-import {isMain, readPackages, ROOT, validationContext} from './repo.mjs';
+import {parseStrict} from './cli.ts';
+import {CATEGORIES, normalizeCategory, validateChangeset} from './entry.ts';
+import {isMain, readPackages, ROOT, validationContext} from './repo.ts';
 
 const USAGE = [
   'usage: pnpm run changeset:new --category <category> --packages <a,b> --summary "<one line>"',
@@ -38,12 +39,7 @@ const USAGE = [
   '         [--codemod "..."] [--verify "..."] [--replacement "..."] [--removal "..."] [--name <file>]',
   `categories: ${CATEGORIES.map(c => c.key).join(', ')}`,
 ].join('\n');
-
-/**
- * @param {string} summary
- * @returns {string}
- */
-export function slugify(summary) {
+export function slugify(summary: string): string {
   return (
     summary
       .toLowerCase()
@@ -56,21 +52,22 @@ export function slugify(summary) {
   );
 }
 
-/**
- * @typedef {object} NewChangeset
- * @property {import('./entry.mjs').Category} category
- * @property {string[]} packages
- * @property {string} summary
- * @property {number} [pr]
- * @property {string[]} [contributors]
- * @property {Partial<Record<'migration' | 'detect' | 'codemod' | 'replacement' | 'removal' | 'verify', string>>} [sections]
- */
+export interface NewChangeset {
+  category: Category;
+  packages: string[];
+  summary: string;
+  pr?: number;
+  contributors?: string[];
+  sections?: Partial<
+    Record<
+      'migration' | 'detect' | 'codemod' | 'replacement' | 'removal' | 'verify',
+      string
+    >
+  >;
+}
 
 /**
  * Build the changeset file contents.
- *
- * @param {NewChangeset} input
- * @returns {string}
  */
 export function formatChangeset({
   category,
@@ -79,7 +76,7 @@ export function formatChangeset({
   pr,
   contributors = [],
   sections = {},
-}) {
+}: NewChangeset): string {
   const bump = category === 'breaking' ? 'minor' : 'patch';
   const lines = [
     '---',
@@ -94,8 +91,7 @@ export function formatChangeset({
   if (pr !== undefined) {
     lines.push(`PR: #${pr}`);
   }
-  /** @type {Array<[string, string, boolean]>} */
-  const wanted = [];
+  const wanted: [string, string, boolean][] = [];
   if (category === 'breaking') {
     wanted.push(
       ['Migration', sections.migration || '', true],
@@ -109,14 +105,14 @@ export function formatChangeset({
       ['Removal', sections.removal || '', true],
     );
   } else {
-    for (const [label, key] of /** @type {const} */ ([
+    for (const [label, key] of [
       ['Migration', 'migration'],
       ['Detect', 'detect'],
       ['Codemod', 'codemod'],
       ['Replacement', 'replacement'],
       ['Removal', 'removal'],
       ['Verify', 'verify'],
-    ])) {
+    ] as const) {
       if (sections[key]) {
         wanted.push([label, sections[key] || '', false]);
       }
@@ -131,12 +127,7 @@ export function formatChangeset({
   }
   return lines.join('\n') + '\n';
 }
-
-/**
- * @param {string[]} argv
- * @returns {number}
- */
-export function main(argv) {
+export function main(argv: string[]): number {
   const parsed = parseStrict(argv, {
     category: {type: 'string'},
     codemod: {type: 'string'},
@@ -176,12 +167,12 @@ export function main(argv) {
     contributors: values.contributor
       ? values.contributor
           .split(',')
-          .map((/** @type {string} */ s) => s.trim())
+          .map((s: string) => s.trim())
           .filter(Boolean)
       : [],
     packages: values.packages
       .split(',')
-      .map((/** @type {string} */ s) => s.trim())
+      .map((s: string) => s.trim())
       .filter(Boolean),
     pr:
       values.pr !== undefined ? Number(values.pr.replace('#', '')) : undefined,

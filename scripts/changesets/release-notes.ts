@@ -4,7 +4,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -17,30 +16,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {compareVersions, isVersion, parseChangelog} from './changelog.mjs';
-import {exitOnEpipe, parseStrict} from './cli.mjs';
-import {isMain, ROOT} from './repo.mjs';
+import {compareVersions, isVersion, parseChangelog} from './changelog.ts';
+import {exitOnEpipe, parseStrict} from './cli.ts';
+import {isMain, ROOT} from './repo.ts';
 
 const USAGE =
   'usage: pnpm run release-notes [--version <version>] [--changelog <file>]';
 
 /**
- * @param {string} markdown CHANGELOG.md contents
- * @param {string} version
- * @returns {string | null}
+ * @param markdown CHANGELOG.md contents
  */
-export function releaseNotes(markdown, version) {
+export function releaseNotes(markdown: string, version: string): string | null {
   const found = parseChangelog(markdown).find(
     v => compareVersions(v.version, version.replace(/^v/, '')) === 0,
   );
   return found ? found.body : null;
 }
-
-/**
- * @param {string[]} argv
- * @returns {number}
- */
-export function main(argv) {
+export function main(argv: string[]): number {
   const parsed = parseStrict(argv, {
     changelog: {type: 'string'},
     version: {type: 'string'},

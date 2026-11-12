@@ -2,7 +2,7 @@
 
 import {describe, expect, it} from 'vitest';
 
-import {bumpVersion} from '../../release/version.mjs';
+import {bumpVersion} from '../../release/version.ts';
 
 describe('bumpVersion', () => {
   it('starts at 0.1.0 whichever increment is asked for', () => {

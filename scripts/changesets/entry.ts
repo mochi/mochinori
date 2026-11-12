@@ -3,7 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -32,15 +31,13 @@
  * the workspace.
  */
 
-/**
- * @typedef {'breaking' | 'deprecation' | 'feature' | 'fix' | 'perf' | 'docs' | 'chore'} Category
- */
+export type Category =
+  'breaking' | 'deprecation' | 'feature' | 'fix' | 'perf' | 'docs' | 'chore';
 
 /**
  * Categories in the order the changelog renders them.
- * @type {ReadonlyArray<{key: Category, title: string}>}
  */
-export const CATEGORIES = [
+export const CATEGORIES: readonly {key: Category; title: string}[] = [
   {key: 'breaking', title: 'Breaking changes'},
   {key: 'deprecation', title: 'Deprecations'},
   {key: 'feature', title: 'Features'},
@@ -50,8 +47,7 @@ export const CATEGORIES = [
   {key: 'chore', title: 'Other'},
 ];
 
-/** @type {Readonly<Record<string, Category>>} */
-const CATEGORY_ALIASES = {
+const CATEGORY_ALIASES: Readonly<Record<string, Category>> = {
   break: 'breaking',
   breaking: 'breaking',
   'breaking change': 'breaking',
@@ -85,16 +81,16 @@ const CATEGORY_ALIASES = {
  * beginning of a line (outside code fences); the section runs until the
  * next label or the end of the entry.
  */
-export const SECTION_LABELS = /** @type {const} */ ([
+export const SECTION_LABELS = [
   'Migration',
   'Detect',
   'Codemod',
   'Replacement',
   'Removal',
   'Verify',
-]);
+] as const;
 
-/** @typedef {Lowercase<typeof SECTION_LABELS[number]>} SectionKey */
+export type SectionKey = Lowercase<(typeof SECTION_LABELS)[number]>;
 
 // Case-sensitive, so prose that wraps onto a line starting with
 // "replacement:" or "migration:" is not mistaken for a label.
@@ -108,12 +104,9 @@ const PR_IN_SUMMARY_RE = /\(#\d+\)\s*$/;
 // breaking when existing call sites can stop compiling.
 const TYPE_CHANGE_RE =
   /\b(?:type[ -](?:param(?:eter)?s?|arguments?)|overloads?|generics?|branded|invariant|(?:return|payload) types?|narrow(?:ed|s)? (?:the )?(?:return|payload)|now returns|signatures?)\b/i;
-
-/**
- * @param {string | undefined | null} raw
- * @returns {Category | null}
- */
-export function normalizeCategory(raw) {
+export function normalizeCategory(
+  raw: string | undefined | null,
+): Category | null {
   if (raw == null) {
     return null;
   }
@@ -122,12 +115,7 @@ export function normalizeCategory(raw) {
     ? CATEGORY_ALIASES[key]
     : null;
 }
-
-/**
- * @param {Category} key
- * @returns {string}
- */
-export function titleFor(key) {
+export function titleFor(key: Category): string {
   const category = CATEGORIES.find(c => c.key === key);
   return category ? category.title : 'Other';
 }
@@ -135,11 +123,10 @@ export function titleFor(key) {
 /**
  * Split a changeset file into its frontmatter releases and its body.
  * `problems` lists frontmatter lines that are not `'package': bump`.
- *
- * @param {string} contents
- * @returns {{releases: Record<string, string>, body: string, problems: string[]} | null}
  */
-export function parseChangesetFile(contents) {
+export function parseChangesetFile(
+  contents: string,
+): {releases: Record<string, string>; body: string; problems: string[]} | null {
   const match =
     /^\s*---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)([\s\S]*)$/.exec(
       contents,
@@ -147,10 +134,8 @@ export function parseChangesetFile(contents) {
   if (!match) {
     return null;
   }
-  /** @type {Record<string, string>} */
-  const releases = {};
-  /** @type {string[]} */
-  const problems = [];
+  const releases: Record<string, string> = {};
+  const problems: string[] = [];
   for (const line of (match[1] || '').split(/\r?\n/)) {
     if (line.trim() === '') {
       continue;
@@ -177,25 +162,29 @@ export function parseChangesetFile(contents) {
   return {body: match[2].replace(/\r\n/g, '\n'), problems, releases};
 }
 
-/**
- * @typedef {object} Entry
- * @property {Category | null} category normalized category, or null
- * @property {string | null} rawCategory the tag as written
- * @property {string} summary the one-line summary
- * @property {string[]} contributors GitHub handles without the `@`
- * @property {number | null} pr pull request from a `PR: #123` line, if any
- * @property {string} details everything after the summary and handles, verbatim
- * @property {Partial<Record<SectionKey, string>>} sections labeled sections
- * @property {boolean} multiLineSummary true when the summary paragraph wraps
- */
+export interface Entry {
+  /** normalized category, or null */
+  category: Category | null;
+  /** the tag as written */
+  rawCategory: string | null;
+  /** the one-line summary */
+  summary: string;
+  /** GitHub handles without the `@` */
+  contributors: string[];
+  /** pull request from a `PR: #123` line, if any */
+  pr: number | null;
+  /** everything after the summary and handles, verbatim */
+  details: string;
+  /** labeled sections */
+  sections: Partial<Record<SectionKey, string>>;
+  /** true when the summary paragraph wraps */
+  multiLineSummary: boolean;
+}
 
 /**
  * Parse a changeset body. Tolerant: problems are reported by validateEntry.
- *
- * @param {string} body
- * @returns {Entry}
  */
-export function parseEntry(body) {
+export function parseEntry(body: string): Entry {
   const lines = String(body || '')
     .replace(/\r\n/g, '\n')
     .split('\n');
@@ -216,10 +205,8 @@ export function parseEntry(body) {
     }
     i++;
   }
-  /** @type {string[]} */
-  const contributors = [];
-  /** @type {number | null} */
-  let pr = null;
+  const contributors: string[] = [];
+  let pr: number | null = null;
   let multiLineSummary = false;
   // Lines directly under the headline: contributor handles, a `PR: #123`
   // line, or a wrapped summary (reported: the summary must be one line).
@@ -262,17 +249,13 @@ export function parseEntry(body) {
 
 /**
  * Collect the labeled sections of an entry's details.
- *
- * @param {string} details
- * @returns {Partial<Record<SectionKey, string>>}
  */
-export function parseSections(details) {
-  /** @type {Partial<Record<SectionKey, string>>} */
-  const sections = {};
-  /** @type {SectionKey | null} */
-  let current = null;
-  /** @type {string[]} */
-  let buffer = [];
+export function parseSections(
+  details: string,
+): Partial<Record<SectionKey, string>> {
+  const sections: Partial<Record<SectionKey, string>> = {};
+  let current: SectionKey | null = null;
+  let buffer: string[] = [];
   let inFence = false;
   const flush = () => {
     if (current !== null) {
@@ -287,7 +270,7 @@ export function parseSections(details) {
     const m = inFence ? null : SECTION_RE.exec(line);
     if (m) {
       flush();
-      current = /** @type {SectionKey} */ (m[1].toLowerCase());
+      current = m[1].toLowerCase() as SectionKey;
       buffer = [line.slice(m[0].length)];
     } else if (current !== null) {
       buffer.push(line);
@@ -296,12 +279,7 @@ export function parseSections(details) {
   flush();
   return sections;
 }
-
-/**
- * @param {string[]} lines
- * @returns {string[]}
- */
-function trimBlankLines(lines) {
+function trimBlankLines(lines: string[]): string[] {
   const out = [...lines];
   while (out.length && out[0].trim() === '') {
     out.shift();
@@ -312,25 +290,26 @@ function trimBlankLines(lines) {
   return out;
 }
 
-/**
- * @typedef {object} ValidationContext
- * @property {Set<string>} publicPackages npm names of releasable packages
- * @property {Set<string>} allPackages npm names of every workspace package
- */
+export interface ValidationContext {
+  /** npm names of releasable packages */
+  publicPackages: Set<string>;
+  /** npm names of every workspace package */
+  allPackages: Set<string>;
+}
 
 /**
  * Validate one changeset. Pure, so it can be unit tested without files.
  *
- * @param {string} file display name used in messages
- * @param {string} contents raw changeset markdown
- * @param {ValidationContext} ctx
- * @returns {{errors: string[], warnings: string[]}}
+ * @param file display name used in messages
+ * @param contents raw changeset markdown
  */
-export function validateChangeset(file, contents, ctx) {
-  /** @type {string[]} */
-  const errors = [];
-  /** @type {string[]} */
-  const warnings = [];
+export function validateChangeset(
+  file: string,
+  contents: string,
+  ctx: ValidationContext,
+): {errors: string[]; warnings: string[]} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
   const parsed = parseChangesetFile(contents);
   if (!parsed) {
     errors.push(
@@ -461,22 +440,19 @@ const REMOVAL_RE =
 /**
  * Is this a valid `Removal:` value: a version, "no earlier than <version>",
  * or "not scheduled", optionally followed by more text?
- *
- * @param {string} value
- * @returns {boolean}
  */
-export function isRemoval(value) {
+export function isRemoval(value: string): boolean {
   return REMOVAL_RE.test(value.trim());
 }
 
 /**
  * Does this entry change observable behavior without being breaking? Such
  * entries carry a `Verify:` paragraph and render under "Behavior changes".
- *
- * @param {{category: Category | null, details: string}} entry
- * @returns {boolean}
  */
-export function isBehaviorChange(entry) {
+export function isBehaviorChange(entry: {
+  category: Category | null;
+  details: string;
+}): boolean {
   return (
     entry.category !== 'breaking' &&
     Boolean(parseSections(entry.details).verify)
@@ -485,34 +461,30 @@ export function isBehaviorChange(entry) {
 
 /**
  * Sort npm names alphabetically.
- *
- * @param {Iterable<string>} names
- * @returns {string[]}
  */
-export function sortPackages(names) {
+export function sortPackages(names: Iterable<string>): string[] {
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
 export const REPO_URL = 'https://github.com/mochi/mochinori';
 
-/**
- * @typedef {object} ReleaseEntry
- * @property {Category} category
- * @property {string[]} packages npm names
- * @property {string} summary
- * @property {string} details
- * @property {number | null} pr pull request number, if known
- * @property {string[]} contributors handles (`@x`) or names
- */
+export interface ReleaseEntry {
+  category: Category;
+  /** npm names */
+  packages: string[];
+  summary: string;
+  details: string;
+  /** pull request number, if known */
+  pr: number | null;
+  /** handles (`@x`) or names */
+  contributors: string[];
+}
 
 /**
  * Render one changelog bullet. The details are reproduced verbatim,
  * indented so they stay inside the list item.
- *
- * @param {ReleaseEntry} entry
- * @returns {string}
  */
-export function renderEntry(entry) {
+export function renderEntry(entry: ReleaseEntry): string {
   const packages = sortPackages(entry.packages);
   const prefix = packages.length > 0 ? `**${packages.join(', ')}**: ` : '';
   const pr =

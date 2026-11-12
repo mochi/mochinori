@@ -219,5 +219,5 @@ repository:
 ```sh
 pnpm run changelog:range --from 0.1.0 --breaking
 # or against an app's installed copy:
-node scripts/changesets/range.mjs --changelog /path/to/app/node_modules/@mochinori/images/CHANGELOG.md --from 0.1.0
+node scripts/changesets/range.ts --changelog /path/to/app/node_modules/@mochinori/images/CHANGELOG.md --from 0.1.0
 ```

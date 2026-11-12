@@ -3,7 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -12,35 +11,34 @@
  * Uses only Node built-ins so CI can run it before `pnpm install`.
  */
 
+import type {Entry, ValidationContext} from './entry.ts';
+
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {parseChangesetFile, parseEntry} from './entry.mjs';
+import {parseChangesetFile, parseEntry} from './entry.ts';
 
 export const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
 );
 
-/**
- * @typedef {object} WorkspacePackage
- * @property {string} name npm name
- * @property {string} dir repo-relative directory, e.g. `packages/mochinori-images`
- * @property {boolean} isPrivate
- * @property {string} version
- */
+export interface WorkspacePackage {
+  /** npm name */
+  name: string;
+  /** repo-relative directory, e.g. `packages/mochinori-images` */
+  dir: string;
+  isPrivate: boolean;
+  version: string;
+}
 
 /**
  * Every package under `packages/` (the pnpm workspace).
- *
- * @param {string} root
- * @returns {WorkspacePackage[]}
  */
-export function readPackages(root) {
-  /** @type {WorkspacePackage[]} */
-  const out = [];
+export function readPackages(root: string): WorkspacePackage[] {
+  const out: WorkspacePackage[] = [];
   for (const parent of ['packages']) {
     const abs = path.join(root, parent);
     if (!fs.existsSync(abs)) {
@@ -68,14 +66,9 @@ export function readPackages(root) {
 
 /**
  * The packages under `packages/` at a git revision.
- *
- * @param {string} root
- * @param {string} rev
- * @returns {WorkspacePackage[]}
  */
-export function readPackagesAt(root, rev) {
-  /** @type {WorkspacePackage[]} */
-  const out = [];
+export function readPackagesAt(root: string, rev: string): WorkspacePackage[] {
+  const out: WorkspacePackage[] = [];
   const dirs = tryGit(root, ['ls-tree', '--name-only', rev, 'packages/'])
     .split('\n')
     .filter(Boolean);
@@ -100,12 +93,9 @@ export function readPackagesAt(root, rev) {
   }
   return out;
 }
-
-/**
- * @param {WorkspacePackage[]} packages
- * @returns {import('./entry.mjs').ValidationContext}
- */
-export function validationContext(packages) {
+export function validationContext(
+  packages: WorkspacePackage[],
+): ValidationContext {
   return {
     allPackages: new Set(packages.map(p => p.name)),
     publicPackages: new Set(
@@ -116,28 +106,26 @@ export function validationContext(packages) {
 
 /**
  * Is `file` (a name inside `.changeset/`) a changeset?
- *
- * @param {string} file
- * @returns {boolean}
  */
-export function isChangesetFile(file) {
+export function isChangesetFile(file: string): boolean {
   return file.endsWith('.md') && file.toLowerCase() !== 'readme.md';
 }
 
-/**
- * @typedef {object} PendingChangeset
- * @property {string} file path relative to the repo root
- * @property {string} contents
- * @property {Record<string, string>} releases
- * @property {import('./entry.mjs').Entry} entry
- */
+export interface PendingChangeset {
+  /** path relative to the repo root */
+  file: string;
+  contents: string;
+  releases: Record<string, string>;
+  entry: Entry;
+}
 
 /**
- * @param {string} dir absolute path of the changeset directory
- * @param {string} root
- * @returns {PendingChangeset[]}
+ * @param dir absolute path of the changeset directory
  */
-export function readPending(dir, root = ROOT) {
+export function readPending(
+  dir: string,
+  root: string = ROOT,
+): PendingChangeset[] {
   if (!fs.existsSync(dir)) {
     return [];
   }
@@ -157,13 +145,7 @@ export function readPending(dir, root = ROOT) {
       };
     });
 }
-
-/**
- * @param {string} root
- * @param {string[]} args
- * @returns {string}
- */
-export function git(root, args) {
+export function git(root: string, args: string[]): string {
   return execFileSync('git', args, {
     cwd: root,
     encoding: 'utf8',
@@ -176,10 +158,9 @@ export function git(root, args) {
  * True when the module at `metaUrl` is the script node was asked to run,
  * also when it was started through a symlink.
  *
- * @param {string} metaUrl `import.meta.url` of the calling module
- * @returns {boolean}
+ * @param metaUrl `import.meta.url` of the calling module
  */
-export function isMain(metaUrl) {
+export function isMain(metaUrl: string): boolean {
   if (!process.argv[1]) {
     return false;
   }
@@ -201,33 +182,28 @@ const BOT_RE =
   /\[bot\]$|^(?:dependabot|renovate|github-actions)\b|GitHub Actions Bot/i;
 
 /**
- * @param {string | null | undefined} who a GitHub login or git author name
- * @returns {boolean}
+ * @param who a GitHub login or git author name
  */
-export function isBot(who) {
+export function isBot(who: string | null | undefined): boolean {
   return who != null && BOT_RE.test(who);
 }
 
-/**
- * @typedef {object} Origin
- * @property {number | null} pr
- * @property {string | null} author `@login` when known, else the git author name
- */
+export interface Origin {
+  pr: number | null;
+  /** `@login` when known, else the git author name */
+  author: string | null;
+}
 
-/**
- * @typedef {object} OriginOptions
- * @property {number | null} [prOverride] from a `PR: #123` line
- * @property {string} [token] GitHub token; enables the API fallbacks
- * @property {typeof fetch} [fetchImpl]
- * @property {string} [repository] `owner/name`
- */
-
-/**
- * @param {string} root
- * @param {string[]} args
- * @returns {string}
- */
-function tryGit(root, args) {
+export interface OriginOptions {
+  /** from a `PR: #123` line */
+  prOverride?: number | null;
+  /** GitHub token; enables the API fallbacks */
+  token?: string;
+  fetchImpl?: typeof fetch;
+  /** `owner/name` */
+  repository?: string;
+}
+function tryGit(root: string, args: string[]): string {
   try {
     return git(root, args).trim();
   } catch {
@@ -235,12 +211,20 @@ function tryGit(root, args) {
   }
 }
 
+/** The fields of a GitHub pull request that the release reads. */
+interface GitHubPull {
+  number: number;
+  merged_at: string | null;
+  user: {login: string} | null;
+}
+
 /**
- * @param {OriginOptions} options
- * @param {string} route e.g. `pulls/123`
- * @returns {Promise<any>}
+ * @param route e.g. `pulls/123`
  */
-async function githubApi(options, route) {
+async function githubApi<T>(
+  options: OriginOptions,
+  route: string,
+): Promise<T | null> {
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const repository = options.repository || GITHUB_REPOSITORY;
   try {
@@ -253,7 +237,7 @@ async function githubApi(options, route) {
         },
       },
     );
-    return res.ok ? await res.json() : null;
+    return res.ok ? ((await res.json()) as T) : null;
   } catch {
     return null;
   }
@@ -264,11 +248,10 @@ async function githubApi(options, route) {
  * (not copies: `git log --follow` would also follow a copy, and two
  * changesets often have similar text).
  *
- * @param {string} root
- * @param {string} file repo-relative path
- * @returns {string[]} `[sha, author name, subject]`, or `[]`
+ * @param file repo-relative path
+ * @returns `[sha, author name, subject]`, or `[]`
  */
-function addingCommit(root, file) {
+function addingCommit(root: string, file: string): string[] {
   const dir = path.posix.dirname(file);
   const log = tryGit(root, [
     'log',
@@ -309,15 +292,15 @@ function addingCommit(root, file) {
  * The author is the pull request's GitHub login when a token is available,
  * else the commit's author name. Bots are dropped.
  *
- * @param {string} root
- * @param {string} file repo-relative path
- * @param {OriginOptions} [options]
- * @returns {Promise<Origin>}
+ * @param file repo-relative path
  */
-export async function resolveOrigin(root, file, options = {}) {
+export async function resolveOrigin(
+  root: string,
+  file: string,
+  options: OriginOptions = {},
+): Promise<Origin> {
   const [sha = '', authorName = '', subject = ''] = addingCommit(root, file);
-  /** @type {number | null} */
-  let pr = options.prOverride ?? null;
+  let pr: number | null = options.prOverride ?? null;
   if (pr === null) {
     const m = /\(#(\d+)\)\s*$/.exec(subject);
     pr = m ? Number(m[1]) : null;
@@ -335,11 +318,13 @@ export async function resolveOrigin(root, file, options = {}) {
     const m = /^Merge pull request #(\d+)/m.exec(merges);
     pr = m ? Number(m[1]) : null;
   }
-  /** @type {string | null} */
-  let login = null;
+  let login: string | null = null;
   if (options.token) {
     if (pr === null && sha) {
-      const pulls = await githubApi(options, `commits/${sha}/pulls`);
+      const pulls = await githubApi<GitHubPull[]>(
+        options,
+        `commits/${sha}/pulls`,
+      );
       if (Array.isArray(pulls) && pulls.length > 0) {
         const merged = pulls.find(p => p.merged_at) || pulls[0];
         pr = merged.number;
@@ -347,7 +332,7 @@ export async function resolveOrigin(root, file, options = {}) {
       }
     }
     if (pr !== null && login === null) {
-      const pull = await githubApi(options, `pulls/${pr}`);
+      const pull = await githubApi<GitHubPull>(options, `pulls/${pr}`);
       login = pull && pull.user ? pull.user.login : null;
     }
   }

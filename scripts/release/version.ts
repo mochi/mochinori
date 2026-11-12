@@ -17,19 +17,16 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {exitOnEpipe, parseStrict} from '../changesets/cli.mjs';
-import {main as updateChangelog, patchGuard} from '../changesets/release.mjs';
-import {isMain, readPackages, readPending, ROOT} from '../changesets/repo.mjs';
+import {exitOnEpipe, parseStrict} from '../changesets/cli.ts';
+import {main as updateChangelog, patchGuard} from '../changesets/release.ts';
+import {isMain, readPackages, readPending, ROOT} from '../changesets/repo.ts';
 
 const USAGE =
   'usage: pnpm run release:version --increment patch|minor [--dry-run]';
-
-/**
- * @param {string} version
- * @param {'patch' | 'minor'} increment
- * @returns {string}
- */
-export function bumpVersion(version, increment) {
+export function bumpVersion(
+  version: string,
+  increment: 'patch' | 'minor',
+): string {
   const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
   if (!m) {
     throw new Error(`Cannot bump "${version}": expected a version like 0.1.0.`);
@@ -47,11 +44,8 @@ export function bumpVersion(version, increment) {
 /**
  * Replace the top-level "version" of a package.json without reformatting
  * the rest of the file.
- *
- * @param {string} file
- * @param {string} version
  */
-function writeVersion(file, version) {
+function writeVersion(file: string, version: string) {
   const text = fs.readFileSync(file, 'utf8');
   const re = /^(\s*"version":\s*)"[^"]*"/m;
   if (!re.test(text)) {
@@ -62,12 +56,7 @@ function writeVersion(file, version) {
     text.replace(re, (_, prefix) => `${prefix}"${version}"`),
   );
 }
-
-/**
- * @param {string[]} argv
- * @returns {Promise<number>}
- */
-export async function main(argv) {
+export async function main(argv: string[]): Promise<number> {
   const parsed = parseStrict(argv, {
     'dry-run': {default: false, type: 'boolean'},
     increment: {type: 'string'},

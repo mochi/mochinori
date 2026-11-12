@@ -4,17 +4,16 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
  * `pnpm run check-changesets` — validate pending changesets.
  *
- *   node scripts/changesets/check.mjs [--dir <changeset dir>]
+ *   node scripts/changesets/check.ts [--dir <changeset dir>]
  *     Validates every changeset (category, bump, required sections,
  *     packages) and `.changeset/config.json`. Problems fail the run.
  *
- *   node scripts/changesets/check.mjs --base <ref> [--head <ref>] [--coverage warn|error]
+ *   node scripts/changesets/check.ts --base <ref> [--head <ref>] [--coverage warn|error]
  *     Also checks coverage: a change to a published package's shipped code
  *     between merge-base(base, head) and head needs a changeset naming that
  *     package, and deleting a published package needs a [breaking] one.
@@ -28,7 +27,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {parseStrict} from './cli.mjs';
+import {parseStrict} from './cli.ts';
 import {
   changesetTemplate,
   checkCoverage,
@@ -37,8 +36,8 @@ import {
   manifestDelta,
   newChangesetUrl,
   parseNameStatus,
-} from './coverage.mjs';
-import {parseChangesetFile, parseEntry, validateChangeset} from './entry.mjs';
+} from './coverage.ts';
+import {parseChangesetFile, parseEntry, validateChangeset} from './entry.ts';
 import {
   git,
   isChangesetFile,
@@ -48,18 +47,15 @@ import {
   readPending,
   ROOT,
   validationContext,
-} from './repo.mjs';
+} from './repo.ts';
 
 const USAGE =
-  'usage: node scripts/changesets/check.mjs [--dir <dir>] [--base <ref> [--head <ref>] [--coverage warn|error]] [--root <dir>]';
-
-/**
- * @param {string} root
- * @param {string} rev
- * @param {string} file
- * @returns {any}
- */
-function readJsonAt(root, rev, file) {
+  'usage: node scripts/changesets/check.ts [--dir <dir>] [--base <ref> [--head <ref>] [--coverage warn|error]] [--root <dir>]';
+function readJsonAt(
+  root: string,
+  rev: string,
+  file: string,
+): Record<string, unknown> | null {
   try {
     return JSON.parse(git(root, ['show', `${rev}:${file}`]));
   } catch {
@@ -69,11 +65,8 @@ function readJsonAt(root, rev, file) {
 
 /**
  * Escape a message for a GitHub Actions workflow command.
- *
- * @param {string} text
- * @returns {string}
  */
-function escapeAnnotation(text) {
+function escapeAnnotation(text: string): string {
   return text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
 }
 
@@ -81,11 +74,8 @@ function escapeAnnotation(text) {
  * A link that opens the changeset for the missing packages, prefilled, on
  * the pull request's branch. Uses HEAD_REPO, HEAD_REF and PR_TITLE, which
  * the workflow copies from the pull request event.
- *
- * @param {string[]} missing
- * @returns {string | null}
  */
-export function addChangesetLink(missing) {
+export function addChangesetLink(missing: string[]): string | null {
   const {HEAD_REPO, HEAD_REF, PR_TITLE} = process.env;
   if (!HEAD_REPO || !HEAD_REF || missing.length === 0) {
     return null;
@@ -102,11 +92,13 @@ export function addChangesetLink(missing) {
 /**
  * Report coverage problems where a pull request author will see them.
  *
- * @param {string[]} problems
- * @param {'warn' | 'error'} mode
- * @param {string | null} link prefilled "add changeset" link
+ * @param link prefilled "add changeset" link
  */
-function reportToGitHub(problems, mode, link) {
+function reportToGitHub(
+  problems: string[],
+  mode: 'warn' | 'error',
+  link: string | null,
+) {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     return;
   }
@@ -144,10 +136,9 @@ function reportToGitHub(problems, mode, link) {
 }
 
 /**
- * @param {string[]} argv
- * @returns {number} exit code
+ * @returns exit code
  */
-export function main(argv) {
+export function main(argv: string[]): number {
   const parsed = parseStrict(argv, {
     base: {type: 'string'},
     coverage: {type: 'string'},
@@ -173,10 +164,8 @@ export function main(argv) {
   const packages = readPackages(root);
   const ctx = validationContext(packages);
 
-  /** @type {string[]} */
-  const errors = [];
-  /** @type {string[]} */
-  const warnings = [];
+  const errors: string[] = [];
+  const warnings: string[] = [];
 
   const configPath = path.join(root, '.changeset', 'config.json');
   if (fs.existsSync(configPath)) {
@@ -198,8 +187,7 @@ export function main(argv) {
   }
 
   let coverageNote = '';
-  /** @type {string[]} */
-  let coverageProblems = [];
+  let coverageProblems: string[] = [];
   if (values.base) {
     if (process.env.SKIP_CHANGESET === 'true') {
       coverageNote = '; coverage skipped (skip-changeset label)';

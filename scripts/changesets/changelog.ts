@@ -3,7 +3,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -29,6 +28,8 @@
  * to slice release notes out of the file, so it must not change.
  */
 
+import type {Category, ReleaseEntry} from './entry.ts';
+
 import {
   CATEGORIES,
   isBehaviorChange,
@@ -36,26 +37,19 @@ import {
   parseSections as parseLabeledSections,
   renderEntry,
   REPO_URL,
-} from './entry.mjs';
+} from './entry.ts';
 
-/** @typedef {import('./entry.mjs').Category} Category */
-/** @typedef {import('./entry.mjs').ReleaseEntry} ReleaseEntry */
-
-/**
- * @typedef {object} Commit
- * @property {string} subject
- * @property {string} author
- */
+export interface Commit {
+  subject: string;
+  author: string;
+}
 
 const RELEASE_COMMIT_RE = /^v\d+\.\d+\.\d+(?:-\S+)?(?:\s+\(#\d+\))?$/;
 
 /**
  * Is this the version bump commit of a release (`v0.52.0`, `v0.52.0 (#9252)`)?
- *
- * @param {string} subject
- * @returns {boolean}
  */
-export function isReleaseCommit(subject) {
+export function isReleaseCommit(subject: string): boolean {
   return RELEASE_COMMIT_RE.test(subject.trim());
 }
 
@@ -63,10 +57,9 @@ export function isReleaseCommit(subject) {
  * The `### All changes` list: every commit subject as written, with its
  * pull request linked. A safety net under the curated sections.
  *
- * @param {Commit[]} commits newest first
- * @returns {string}
+ * @param commits newest first
  */
-export function renderAllChanges(commits) {
+export function renderAllChanges(commits: Commit[]): string {
   return commits
     .filter(c => !isReleaseCommit(c.subject))
     .map(c => {
@@ -82,8 +75,7 @@ export function renderAllChanges(commits) {
 }
 
 /**
- * @param {{version: string, date: string, entries: ReleaseEntry[], commits?: Commit[], heading?: string, intro?: string}} release
- * @returns {string} markdown, ending with a newline
+ * @returns markdown, ending with a newline
  */
 export function renderVersionBlock({
   version,
@@ -92,7 +84,14 @@ export function renderVersionBlock({
   commits = [],
   heading,
   intro,
-}) {
+}: {
+  version: string;
+  date: string;
+  entries: ReleaseEntry[];
+  commits?: Commit[];
+  heading?: string;
+  intro?: string;
+}): string {
   const parts = [heading || `## v${version.replace(/^v/, '')} (${date})`];
   if (intro) {
     parts.push(intro);
@@ -126,8 +125,7 @@ export function renderVersionBlock({
         : 'No changesets were recorded for this release; see the commits below.',
     );
   }
-  /** @type {string[]} */
-  const contributors = [];
+  const contributors: string[] = [];
   for (const entry of entries) {
     for (const who of entry.contributors) {
       if (!contributors.includes(who)) {
@@ -149,12 +147,8 @@ export function renderVersionBlock({
 /**
  * Insert a version block above the newest existing version, keeping any
  * preamble that precedes it.
- *
- * @param {string} changelog
- * @param {string} block
- * @returns {string}
  */
-export function insertVersionBlock(changelog, block) {
+export function insertVersionBlock(changelog: string, block: string): string {
   const match = /^## /m.exec(changelog);
   if (!match) {
     const sep = changelog.trim() === '' ? '' : '\n';
@@ -165,35 +159,42 @@ export function insertVersionBlock(changelog, block) {
   return `${head}${block.replace(/\n*$/, '\n\n')}${tail}`;
 }
 
-/**
- * @typedef {object} ParsedEntry
- * @property {string} text the bullet as written, continuation lines unindented
- * @property {string[]} packages npm names from a leading `**a, b**:`
- * @property {string} summary the bullet's first line without packages or PR
- * @property {number | null} pr
- * @property {string} details the bullet's body after the first line
- * @property {Partial<Record<string, string>>} sections labeled sections
- */
+export interface ParsedEntry {
+  /** the bullet as written, continuation lines unindented */
+  text: string;
+  /** npm names from a leading `**a, b**:` */
+  packages: string[];
+  /** the bullet's first line without packages or PR */
+  summary: string;
+  pr: number | null;
+  /** the bullet's body after the first line */
+  details: string;
+  /** labeled sections */
+  sections: Partial<Record<string, string>>;
+}
 
-/**
- * @typedef {object} ParsedSection
- * @property {string} title the heading as written ('' for an untitled block)
- * @property {Category | 'behavior' | 'all' | 'contributors' | 'other'} kind
- * @property {string} body the section body as written
- * @property {ParsedEntry[]} entries
- */
+export interface ParsedSection {
+  /** the heading as written ('' for an untitled block) */
+  title: string;
+  kind: Category | 'behavior' | 'all' | 'contributors' | 'other';
+  /** the section body as written */
+  body: string;
+  entries: ParsedEntry[];
+}
 
-/**
- * @typedef {object} ParsedVersion
- * @property {string} version without a leading `v`
- * @property {string} date as written in the heading
- * @property {string} heading the full heading line
- * @property {string} body everything under the heading, verbatim
- * @property {ParsedSection[]} sections
- */
+export interface ParsedVersion {
+  /** without a leading `v` */
+  version: string;
+  /** as written in the heading */
+  date: string;
+  /** the full heading line */
+  heading: string;
+  /** everything under the heading, verbatim */
+  body: string;
+  sections: ParsedSection[];
+}
 
-/** @type {Readonly<Record<string, ParsedSection['kind']>>} */
-const SECTION_KINDS = {
+const SECTION_KINDS: Readonly<Record<string, ParsedSection['kind']>> = {
   'all changes': 'all',
   'behavior changes': 'behavior',
   'breaking changes': 'breaking',
@@ -207,12 +208,7 @@ const SECTION_KINDS = {
   'other changes': 'chore',
   performance: 'perf',
 };
-
-/**
- * @param {string} title
- * @returns {ParsedSection['kind']}
- */
-function sectionKind(title) {
+function sectionKind(title: string): ParsedSection['kind'] {
   const key = title.trim().toLowerCase();
   if (Object.prototype.hasOwnProperty.call(SECTION_KINDS, key)) {
     return SECTION_KINDS[key];
@@ -223,16 +219,16 @@ function sectionKind(title) {
 /**
  * Parse CHANGELOG.md into versions, sections and entries. Older blocks
  * that have no `###` headings parse as a single `all` section.
- *
- * @param {string} markdown
- * @returns {ParsedVersion[]}
  */
-export function parseChangelog(markdown) {
+export function parseChangelog(markdown: string): ParsedVersion[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  /** @type {ParsedVersion[]} */
-  const versions = [];
-  /** @type {{heading: string, version: string, date: string, lines: string[]} | null} */
-  let current = null;
+  const versions: ParsedVersion[] = [];
+  let current: {
+    heading: string;
+    version: string;
+    date: string;
+    lines: string[];
+  } | null = null;
   const flush = () => {
     if (current) {
       const body = trimBlank(current.lines).join('\n');
@@ -265,12 +261,7 @@ export function parseChangelog(markdown) {
   flush();
   return versions;
 }
-
-/**
- * @param {string[]} lines
- * @returns {string[]}
- */
-function trimBlank(lines) {
+function trimBlank(lines: string[]): string[] {
   const out = [...lines];
   while (out.length && out[0].trim() === '') {
     out.shift();
@@ -280,16 +271,9 @@ function trimBlank(lines) {
   }
   return out;
 }
-
-/**
- * @param {string} body
- * @returns {ParsedSection[]}
- */
-function parseSections(body) {
-  /** @type {ParsedSection[]} */
-  const sections = [];
-  /** @type {{title: string, lines: string[]}} */
-  let current = {lines: [], title: ''};
+function parseSections(body: string): ParsedSection[] {
+  const sections: ParsedSection[] = [];
+  let current: {title: string; lines: string[]} = {lines: [], title: ''};
   const flush = () => {
     const text = trimBlank(current.lines).join('\n');
     if (current.title !== '' || text !== '') {
@@ -324,21 +308,20 @@ const PR_RE = /\s*\((?:\[#(\d+)\]\([^)]*\)|#(\d+))\)/g;
 
 /**
  * Split a bullet's first line into packages, summary and PR number.
- *
- * @param {string} line
- * @returns {{packages: string[], summary: string, pr: number | null}}
  */
-export function parseEntryHead(line) {
+export function parseEntryHead(line: string): {
+  packages: string[];
+  summary: string;
+  pr: number | null;
+} {
   let rest = line;
-  /** @type {string[]} */
-  let packages = [];
+  let packages: string[] = [];
   const pm = PACKAGES_PREFIX_RE.exec(rest);
   if (pm) {
     packages = pm[1].split(',').map(s => s.trim());
     rest = rest.slice(pm[0].length);
   }
-  /** @type {RegExpExecArray | null} */
-  let last = null;
+  let last: RegExpExecArray | null = null;
   for (const m of rest.matchAll(PR_RE)) {
     last = m;
   }
@@ -357,16 +340,11 @@ export function parseEntryHead(line) {
 /**
  * Split a section body into top-level bullets. A bullet continues over
  * indented lines and blank lines that are followed by indented lines.
- *
- * @param {string} body
- * @returns {ParsedEntry[]}
  */
-function parseEntries(body) {
+function parseEntries(body: string): ParsedEntry[] {
   const lines = body.split('\n');
-  /** @type {string[][]} */
-  const bullets = [];
-  /** @type {string[] | null} */
-  let current = null;
+  const bullets: string[][] = [];
+  let current: string[] | null = null;
   for (const line of lines) {
     if (/^[-*] /.test(line)) {
       current = [line.slice(2)];
@@ -394,12 +372,7 @@ function parseEntries(body) {
 }
 
 export const VERSION_RE = /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-
-/**
- * @param {string} version
- * @returns {boolean}
- */
-export function isVersion(version) {
+export function isVersion(version: string): boolean {
   return VERSION_RE.test(version);
 }
 
@@ -407,13 +380,9 @@ export function isVersion(version) {
  * Compare two semver strings with semver precedence: a prerelease sorts
  * before its release, and numeric prerelease identifiers compare as
  * numbers (`nightly.9` < `nightly.10`).
- *
- * @param {string} a
- * @param {string} b
- * @returns {number}
  */
-export function compareVersions(a, b) {
-  const parse = (/** @type {string} */ v) => {
+export function compareVersions(a: string, b: string): number {
+  const parse = (v: string) => {
     const clean = v.replace(/^v/, '');
     const dash = clean.indexOf('-');
     const core = dash === -1 ? clean : clean.slice(0, dash);
@@ -456,23 +425,23 @@ export function compareVersions(a, b) {
 /**
  * Does this version block have curated sections (any `###` heading)?
  * Blocks written before v0.23.0 are a flat list of commits.
- *
- * @param {ParsedVersion} version
- * @returns {boolean}
  */
-export function isCurated(version) {
+export function isCurated(version: ParsedVersion): boolean {
   return version.sections.some(s => s.title !== '');
 }
 
 /**
  * Versions in (from, to], oldest first. With `breakingOnly`, keep only the
  * breaking change, behavior change and deprecation sections, and drop versions with none.
- *
- * @param {ParsedVersion[]} versions
- * @param {{from: string, to?: string | null, breakingOnly?: boolean}} options
- * @returns {ParsedVersion[]}
  */
-export function selectRange(versions, {from, to, breakingOnly = false}) {
+export function selectRange(
+  versions: ParsedVersion[],
+  {
+    from,
+    to,
+    breakingOnly = false,
+  }: {from: string; to?: string | null; breakingOnly?: boolean},
+): ParsedVersion[] {
   const selected = versions
     .filter(
       v =>
@@ -498,12 +467,11 @@ export function selectRange(versions, {from, to, breakingOnly = false}) {
 
 /**
  * Versions in (from, to] that have no curated sections, oldest first.
- *
- * @param {ParsedVersion[]} versions
- * @param {{from: string, to?: string | null}} options
- * @returns {string[]}
  */
-export function uncuratedInRange(versions, {from, to}) {
+export function uncuratedInRange(
+  versions: ParsedVersion[],
+  {from, to}: {from: string; to?: string | null},
+): string[] {
   return selectRange(versions, {from, to})
     .filter(v => !isCurated(v))
     .map(v => v.version);
@@ -511,11 +479,8 @@ export function uncuratedInRange(versions, {from, to}) {
 
 /**
  * Render selected versions back to markdown.
- *
- * @param {ParsedVersion[]} versions
- * @returns {string}
  */
-export function renderRange(versions) {
+export function renderRange(versions: ParsedVersion[]): string {
   return versions
     .map(v => {
       const sections = v.sections.map(s =>
@@ -528,10 +493,8 @@ export function renderRange(versions) {
 
 /**
  * A JSON-friendly view of the selected versions.
- *
- * @param {ParsedVersion[]} versions
  */
-export function rangeToJSON(versions) {
+export function rangeToJSON(versions: ParsedVersion[]) {
   return versions.map(v => ({
     date: v.date,
     sections: v.sections.map(s => ({

@@ -4,13 +4,12 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
  * Turn the pending changesets into a CHANGELOG.md version block.
  *
- *   node scripts/changesets/release.mjs --version 0.53.0 [--date 2026-10-30]
+ *   node scripts/changesets/release.ts --version 0.53.0 [--date 2026-10-30]
  *     Validates every pending changeset, prepends the block for that
  *     version to CHANGELOG.md, and deletes the consumed changesets. Runs
  *     from `postversion` on the `latest` channel (`pnpm run
@@ -18,19 +17,21 @@
  *     CHANGELOG.md (its release pull request is not merged yet), so a second
  *     run cannot consume the same changesets twice.
  *
- *   node scripts/changesets/release.mjs --preview [--version 0.53.0]
+ *   node scripts/changesets/release.ts --preview [--version 0.53.0]
  *     Prints the block that the next release would get (by default for the
  *     next minor when a breaking change is pending, else the next patch)
  *     and changes nothing (`pnpm run changelog`).
  *
- * Prerelease versions (nightly, next, dev) are skipped: their changes stay
- * pending in `.changeset/` until the next `latest` release. The published
- * prerelease packages carry them as `## Unreleased` (see
- * scripts/npm/prepare-release.mjs).
+ * Prerelease versions are skipped: their changes stay pending in
+ * `.changeset/` until the next stable release.
  *
  * With GITHUB_TOKEN set, pull requests and contributor logins that git
  * history cannot provide are looked up through the GitHub API.
  */
+
+import type {Commit} from './changelog.ts';
+import type {ReleaseEntry} from './entry.ts';
+import type {PendingChangeset} from './repo.ts';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,8 +42,8 @@ import {
   insertVersionBlock,
   parseChangelog,
   renderVersionBlock,
-} from './changelog.mjs';
-import {validateChangeset} from './entry.mjs';
+} from './changelog.ts';
+import {validateChangeset} from './entry.ts';
 import {
   git,
   isMain,
@@ -51,28 +52,23 @@ import {
   resolveOrigin,
   ROOT,
   validationContext,
-} from './repo.mjs';
+} from './repo.ts';
 
-/** @typedef {import('./entry.mjs').ReleaseEntry} ReleaseEntry */
-/** @typedef {import('./repo.mjs').PendingChangeset} PendingChangeset */
-/** @typedef {import('./changelog.mjs').Commit} Commit */
-
-/**
- * @param {PendingChangeset[]} pending
- * @returns {PendingChangeset[]}
- */
-export function breakingChangesets(pending) {
+export function breakingChangesets(
+  pending: PendingChangeset[],
+): PendingChangeset[] {
   return pending.filter(c => c.entry.category === 'breaking');
 }
 
 /**
  * Refuse to publish a breaking change in a patch release.
  *
- * @param {string} version
- * @param {PendingChangeset[]} pending
- * @returns {string | null} the error, or null when the release is allowed
+ * @returns the error, or null when the release is allowed
  */
-export function patchGuard(version, pending) {
+export function patchGuard(
+  version: string,
+  pending: PendingChangeset[],
+): string | null {
   const [, , patch] = version.replace(/^v/, '').split('-')[0].split('.');
   const breaking = breakingChangesets(pending);
   if (Number(patch) === 0 || breaking.length === 0) {
@@ -88,12 +84,11 @@ export function patchGuard(version, pending) {
 /**
  * The version the pending changesets call for: the next minor when any is
  * breaking, otherwise the next patch.
- *
- * @param {string} current
- * @param {PendingChangeset[]} pending
- * @returns {string}
  */
-export function nextVersion(current, pending) {
+export function nextVersion(
+  current: string,
+  pending: PendingChangeset[],
+): string {
   const [major, minor, patch] = current
     .replace(/^v/, '')
     .split('-')[0]
@@ -108,12 +103,13 @@ export function nextVersion(current, pending) {
  * The newest stable release before `version`: the newest `vX.Y.Z` tag or
  * LATEST_RELEASE (the latest GitHub release), whichever is newer.
  *
- * @param {string} root
- * @param {string} version
- * @param {string | undefined} latestRelease
- * @returns {string | null} without the leading `v`
+ * @returns without the leading `v`
  */
-export function previousRelease(root, version, latestRelease) {
+export function previousRelease(
+  root: string,
+  version: string,
+  latestRelease: string | undefined,
+): string | null {
   let tags;
   try {
     tags = git(root, ['tag', '--list', 'v*']);
@@ -132,13 +128,12 @@ export function previousRelease(root, version, latestRelease) {
  * Refuse to render twice for the same changesets: the previous release must
  * already be in CHANGELOG.md (its release pull request merged), and the
  * target version must not be.
- *
- * @param {string} changelog
- * @param {string} version
- * @param {string | null} previous
- * @returns {string | null}
  */
-export function renderGuard(changelog, version, previous) {
+export function renderGuard(
+  changelog: string,
+  version: string,
+  previous: string | null,
+): string | null {
   const versions = parseChangelog(changelog).map(v => v.version);
   if (versions.some(v => compareVersions(v, version) === 0)) {
     return `CHANGELOG.md already has a v${version} section; refusing to add it again.`;
@@ -158,12 +153,8 @@ export function renderGuard(changelog, version, previous) {
 
 /**
  * Commits from `previous` (exclusive) to HEAD (inclusive), newest first.
- *
- * @param {string} root
- * @param {string | null} previous
- * @returns {Commit[]}
  */
-export function commitsSince(root, previous) {
+export function commitsSince(root: string, previous: string | null): Commit[] {
   if (previous === null) {
     return [];
   }
@@ -186,15 +177,13 @@ export function commitsSince(root, previous) {
       return {author, subject};
     });
 }
-
-/**
- * @param {PendingChangeset[]} pending
- * @param {(changeset: PendingChangeset) => Promise<{pr: number | null, author: string | null}>} origin
- * @returns {Promise<ReleaseEntry[]>}
- */
-export async function toReleaseEntries(pending, origin) {
-  /** @type {ReleaseEntry[]} */
-  const entries = [];
+export async function toReleaseEntries(
+  pending: PendingChangeset[],
+  origin: (
+    changeset: PendingChangeset,
+  ) => Promise<{pr: number | null; author: string | null}>,
+): Promise<ReleaseEntry[]> {
+  const entries: ReleaseEntry[] = [];
   for (const changeset of pending) {
     const {entry} = changeset;
     const {pr, author} = await origin(changeset);
@@ -215,12 +204,9 @@ export async function toReleaseEntries(pending, origin) {
   }
   return entries;
 }
-
-/**
- * @param {string} root
- * @returns {(changeset: PendingChangeset) => ReturnType<typeof resolveOrigin>}
- */
-function originResolver(root) {
+function originResolver(
+  root: string,
+): (changeset: PendingChangeset) => ReturnType<typeof resolveOrigin> {
   return changeset =>
     resolveOrigin(root, changeset.file, {
       prOverride: changeset.entry.pr,
@@ -232,11 +218,12 @@ function originResolver(root) {
  * The `## Unreleased` block for the pending changesets, or '' when none are
  * pending. Used for the CHANGELOG.md copy in prerelease packages.
  *
- * @param {string} root
- * @param {string} version the prerelease version being published
- * @returns {Promise<string>}
+ * @param version the prerelease version being published
  */
-export async function renderUnreleased(root, version) {
+export async function renderUnreleased(
+  root: string,
+  version: string,
+): Promise<string> {
   const pending = readPending(path.join(root, '.changeset'), root);
   if (pending.length === 0) {
     return '';
@@ -250,12 +237,7 @@ export async function renderUnreleased(root, version) {
     version,
   });
 }
-
-/**
- * @param {string[]} argv
- * @returns {Promise<number>}
- */
-export async function main(argv) {
+export async function main(argv: string[]): Promise<number> {
   const {values} = parseArgs({
     args: argv,
     options: {

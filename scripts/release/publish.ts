@@ -18,28 +18,21 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {parseStrict} from '../changesets/cli.mjs';
-import {isMain, readPackages, ROOT} from '../changesets/repo.mjs';
+import {parseStrict} from '../changesets/cli.ts';
+import {isMain, readPackages, ROOT} from '../changesets/repo.ts';
 
 const USAGE = 'usage: pnpm run release:publish [--dry-run] [--tag <tag>]';
 const REGISTRY = 'https://registry.npmjs.org';
-
-/**
- * @param {string} name
- * @param {string} version
- * @returns {Promise<boolean>}
- */
-async function isPublished(name, version) {
+async function isPublished(name: string, version: string): Promise<boolean> {
   return registryHas(
     `${name.replace('/', '%2f')}/${encodeURIComponent(version)}`,
   );
 }
 
 /**
- * @param {string} route a package name, or `name/version`
- * @returns {Promise<boolean>}
+ * @param route a package name, or `name/version`
  */
-async function registryHas(route) {
+async function registryHas(route: string): Promise<boolean> {
   const res = await fetch(`${REGISTRY}/${route}`);
   if (res.status === 404) {
     return false;
@@ -49,12 +42,7 @@ async function registryHas(route) {
   }
   return true;
 }
-
-/**
- * @param {string[]} argv
- * @returns {Promise<number>}
- */
-export async function main(argv) {
+export async function main(argv: string[]): Promise<number> {
   const parsed = parseStrict(argv, {
     'dry-run': {default: false, type: 'boolean'},
     tag: {default: 'latest', type: 'string'},

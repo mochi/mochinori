@@ -21,7 +21,7 @@ import {
   matchPackages,
   newChangesetUrl,
   parseNameStatus,
-} from '../../changesets/coverage.mjs';
+} from '../../changesets/coverage.ts';
 import {
   isBehaviorChange,
   isRemoval,
@@ -29,13 +29,13 @@ import {
   parseChangesetFile,
   parseEntry,
   validateChangeset,
-} from '../../changesets/entry.mjs';
+} from '../../changesets/entry.ts';
 import {
   formatChangeset,
   main as newChangeset,
   slugify,
-} from '../../changesets/new.mjs';
-import {readPackages, ROOT, validationContext} from '../../changesets/repo.mjs';
+} from '../../changesets/new.ts';
+import {readPackages, ROOT, validationContext} from '../../changesets/repo.ts';
 
 const FIXTURES = path.join(__dirname, 'fixtures', 'changesets');
 

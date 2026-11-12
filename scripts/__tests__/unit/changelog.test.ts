@@ -22,9 +22,9 @@ import {
   renderRange,
   renderVersionBlock,
   selectRange,
-} from '../../changesets/changelog.mjs';
-import {isRemoval} from '../../changesets/entry.mjs';
-import {main as range} from '../../changesets/range.mjs';
+} from '../../changesets/changelog.ts';
+import {isRemoval} from '../../changesets/entry.ts';
+import {main as range} from '../../changesets/range.ts';
 import {
   commitsSince,
   main as release,
@@ -33,9 +33,9 @@ import {
   previousRelease,
   renderGuard,
   renderUnreleased,
-} from '../../changesets/release.mjs';
-import {main as notes, releaseNotes} from '../../changesets/release-notes.mjs';
-import {readPending, resolveOrigin, ROOT} from '../../changesets/repo.mjs';
+} from '../../changesets/release.ts';
+import {main as notes, releaseNotes} from '../../changesets/release-notes.ts';
+import {readPending, resolveOrigin, ROOT} from '../../changesets/repo.ts';
 
 const FIXTURES = path.join(__dirname, 'fixtures', 'changesets');
 
@@ -702,8 +702,8 @@ describe('command line', () => {
   it('runs through a symlink', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mochinori-link-'));
     try {
-      const link = path.join(dir, 'range.mjs');
-      fs.symlinkSync(path.join(ROOT, 'scripts/changesets/range.mjs'), link);
+      const link = path.join(dir, 'range.ts');
+      fs.symlinkSync(path.join(ROOT, 'scripts/changesets/range.ts'), link);
       const out = execFileSync(
         process.execPath,
         [link, '--from', '0.51.0', '--to', '0.51.0'],

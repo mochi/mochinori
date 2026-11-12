@@ -4,7 +4,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -35,18 +34,13 @@ import {
   renderRange,
   selectRange,
   uncuratedInRange,
-} from './changelog.mjs';
-import {exitOnEpipe, parseStrict} from './cli.mjs';
-import {isMain, ROOT} from './repo.mjs';
+} from './changelog.ts';
+import {exitOnEpipe, parseStrict} from './cli.ts';
+import {isMain, ROOT} from './repo.ts';
 
 const USAGE =
   'usage: pnpm run changelog:range --from <version> [--to <version>] [--breaking] [--json] [--changelog <file>]';
-
-/**
- * @param {string[]} argv
- * @returns {number}
- */
-export function main(argv) {
+export function main(argv: string[]): number {
   const parsed = parseStrict(argv, {
     breaking: {default: false, type: 'boolean'},
     changelog: {type: 'string'},
@@ -63,7 +57,7 @@ export function main(argv) {
     console.error(`--from is required.\n${USAGE}`);
     return 2;
   }
-  for (const flag of ['from', 'to']) {
+  for (const flag of ['from', 'to'] as const) {
     if (values[flag] !== undefined && !isVersion(values[flag])) {
       console.error(
         `--${flag} must be a version such as 0.40.0, got "${values[flag]}".\n${USAGE}`,

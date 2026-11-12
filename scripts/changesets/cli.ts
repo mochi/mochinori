@@ -3,21 +3,20 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
  * Shared command-line helpers for the changeset scripts.
  */
 
-import {parseArgs} from 'node:util';
+import {parseArgs, type ParseArgsOptionsConfig} from 'node:util';
 
 /**
  * Exit quietly when stdout is closed early (`... | head`).
  */
 export function exitOnEpipe() {
   process.stdout.on('error', error => {
-    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'EPIPE') {
+    if ((error as NodeJS.ErrnoException).code === 'EPIPE') {
       process.exit(0);
     }
     throw error;
@@ -27,13 +26,22 @@ export function exitOnEpipe() {
 /**
  * Strict `parseArgs`: unknown options and positionals are errors. A bare
  * `--` (from `npm run x -- --flag`) is ignored.
- *
- * @template {import('node:util').ParseArgsConfig['options']} T
- * @param {string[]} argv
- * @param {T} options
- * @returns {{values: any} | {error: string}}
  */
-export function parseStrict(argv, options) {
+export function parseStrict<T extends ParseArgsOptionsConfig>(
+  argv: string[],
+  options: T,
+):
+  | {
+      values: ReturnType<
+        typeof parseArgs<{
+          allowPositionals: false;
+          args: string[];
+          options: T;
+          strict: true;
+        }>
+      >['values'];
+    }
+  | {error: string} {
   try {
     const {values} = parseArgs({
       allowPositionals: false,
@@ -43,6 +51,6 @@ export function parseStrict(argv, options) {
     });
     return {values};
   } catch (error) {
-    return {error: /** @type {Error} */ (error).message};
+    return {error: (error as Error).message};
   }
 }

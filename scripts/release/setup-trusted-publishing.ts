@@ -5,7 +5,6 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
- *
  */
 
 /**
@@ -33,7 +32,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {parseArgs, promisify} from 'node:util';
 
-import {readPackages, ROOT} from '../changesets/repo.mjs';
+import {readPackages, ROOT} from '../changesets/repo.ts';
 
 const exec = promisify(execCb);
 
@@ -94,16 +93,12 @@ if (!repoOwner || !repoName) {
 // targets, every public package is processed.
 const targetNames = [...positionals, ...(argv.package || [])];
 
-/**
- * @typedef {object} PublicPackage
- * @property {() => string} getNpmName
- * @property {(file: string) => string} resolve path inside the package
- */
-
-/**
- * @returns {PublicPackage[]}
- */
-function getPublicPackages() {
+export interface PublicPackage {
+  getNpmName: () => string;
+  /** path inside the package */
+  resolve: (file: string) => string;
+}
+function getPublicPackages(): PublicPackage[] {
   return readPackages(ROOT)
     .filter(p => !p.isPrivate)
     .map(p => ({
@@ -111,12 +106,7 @@ function getPublicPackages() {
       resolve: file => path.join(ROOT, p.dir, file),
     }));
 }
-
-/**
- * @param {string} file
- * @returns {Promise<boolean>}
- */
-async function pathExists(file) {
+async function pathExists(file: string): Promise<boolean> {
   try {
     await fs.access(file);
     return true;
@@ -124,12 +114,7 @@ async function pathExists(file) {
     return false;
   }
 }
-
-/**
- * @param {string} name
- * @returns {Promise<boolean>}
- */
-async function packageExistsOnRegistry(name) {
+async function packageExistsOnRegistry(name: string): Promise<boolean> {
   const res = await fetch(`${registry}/${name}`, {method: 'HEAD'});
   if (res.status === 404) {
     return false;
@@ -139,12 +124,7 @@ async function packageExistsOnRegistry(name) {
   }
   throw new Error(`Unexpected status ${res.status} from ${registry}/${name}`);
 }
-
-/**
- * @param {string} dir
- * @param {PublicPackage} pkg
- */
-async function writeStubFiles(dir, pkg) {
+async function writeStubFiles(dir: string, pkg: PublicPackage) {
   await fs.writeFile(
     path.join(dir, 'package.json'),
     JSON.stringify(
@@ -176,11 +156,7 @@ async function writeStubFiles(dir, pkg) {
     await fs.copyFile(license, path.join(dir, 'LICENSE'));
   }
 }
-
-/**
- * @param {PublicPackage} pkg
- */
-async function publishStub(pkg) {
+async function publishStub(pkg: PublicPackage) {
   const name = pkg.getNpmName();
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mochinori-stub-'));
   try {
@@ -230,25 +206,40 @@ async function publishStub(pkg) {
     await fs.rm(tmpDir, {force: true, recursive: true});
   }
 }
-
-/**
- * @param {number} ms
- * @returns {Promise<void>}
- */
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * A trusted publisher configuration, in either the flattened shape that
+ * `npm trust list --json` prints or the raw registry shape.
+ */
+interface TrustConfig {
+  id?: string;
+  type?: string;
+  file?: string;
+  repository?: string;
+  environment?: string;
+  permissions?: string[];
+  claims?: {
+    repository?: string;
+    environment?: string;
+    workflow_ref?: {file?: string};
+  };
+}
+
+type TrustListOutput =
+  TrustConfig | TrustConfig[] | {error: {code?: string; summary?: string}};
 
 /**
  * Extract the workflow filename from a stored trust config. Handles
  * both the flattened shape returned by `npm trust list --json`
  * (`{file}`) and the raw registry shape (`{claims:{workflow_ref:
  * {file}}}`).
- *
- * @param {any} config
- * @returns {string | undefined}
  */
-function configFile(config) {
+function configFile(
+  config: TrustConfig | null | undefined,
+): string | undefined {
   if (!config || typeof config !== 'object') {
     return undefined;
   }
@@ -263,11 +254,10 @@ function configFile(config) {
 /**
  * Extract the repository (owner/name) from a stored trust config,
  * handling both the flattened and raw shapes.
- *
- * @param {any} config
- * @returns {string | undefined}
  */
-function configRepo(config) {
+function configRepo(
+  config: TrustConfig | null | undefined,
+): string | undefined {
   if (!config || typeof config !== 'object') {
     return undefined;
   }
@@ -277,11 +267,10 @@ function configRepo(config) {
 /**
  * Extract the environment name from a stored trust config (empty/
  * undefined means "no environment"), handling both shapes.
- *
- * @param {any} config
- * @returns {string | undefined}
  */
-function configEnvironment(config) {
+function configEnvironment(
+  config: TrustConfig | null | undefined,
+): string | undefined {
   if (!config || typeof config !== 'object') {
     return undefined;
   }
@@ -303,11 +292,10 @@ function configEnvironment(config) {
  * the parsed config entries), or `{error}` with a human-readable
  * message when the lookup genuinely failed (auth / network / OTP),
  * so the caller can surface it instead of silently swallowing it.
- *
- * @param {string} name
- * @returns {Promise<{configs?: Array<any>, error?: string}>}
  */
-async function fetchTrustConfigs(name) {
+async function fetchTrustConfigs(
+  name: string,
+): Promise<{configs?: TrustConfig[]; error?: string}> {
   const {code, stdout, stderr} = await runNpm(
     ['trust', 'list', name, '--json', '--registry', registry],
     {captureStdout: true},
@@ -319,13 +307,13 @@ async function fetchTrustConfigs(name) {
   }
   const text = stdout.trim();
   if (text) {
-    let parsed;
+    let parsed: TrustListOutput | null;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(text) as TrustListOutput;
     } catch {
       parsed = null;
     }
-    if (parsed && parsed.error) {
+    if (parsed && !Array.isArray(parsed) && 'error' in parsed) {
       const errCode = String(parsed.error.code || '');
       if (/E404/i.test(errCode)) {
         return {configs: []};
@@ -333,7 +321,7 @@ async function fetchTrustConfigs(name) {
       return {error: parsed.error.summary || errCode || 'unknown error'};
     }
     if (parsed) {
-      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const items: TrustConfig[] = Array.isArray(parsed) ? parsed : [parsed];
       return {configs: items.filter(Boolean)};
     }
   }
@@ -351,11 +339,8 @@ async function fetchTrustConfigs(name) {
 
 /**
  * One-line summary of a stored trust config for log lines.
- *
- * @param {any} config
- * @returns {string}
  */
-function describeConfig(config) {
+function describeConfig(config: TrustConfig | null | undefined): string {
   return configFile(config) || (config && config.type) || '?';
 }
 
@@ -363,11 +348,8 @@ function describeConfig(config) {
  * Check whether a stored trust configuration entry matches the
  * (repository, workflow, no-environment, publish) tuple we're about
  * to register.
- *
- * @param {any} config
- * @returns {boolean}
  */
-function configMatches(config) {
+function configMatches(config: TrustConfig | null | undefined): boolean {
   if (!config || config.type !== 'github') {
     return false;
   }
@@ -404,11 +386,7 @@ const PNPM_ONLY_NPM_CONFIG_KEYS = [
   '_jsr-registry',
   'manage-package-manager-versions',
 ];
-
-/**
- * @returns {NodeJS.ProcessEnv}
- */
-function npmCleanEnv() {
+function npmCleanEnv(): NodeJS.ProcessEnv {
   const env = {...process.env};
   for (const key of PNPM_ONLY_NPM_CONFIG_KEYS) {
     delete env[`npm_config_${key}`];
@@ -428,12 +406,11 @@ function npmCleanEnv() {
  * --json`), pass `captureStdout: true`; note that piping stdout makes
  * it a non-TTY, so a fresh OTP challenge can't be satisfied during a
  * captured call — warm the auth session first (see warmTrustAuth).
- *
- * @param {string[]} args
- * @param {{captureStdout?: boolean, cwd?: string}} [options]
- * @returns {Promise<{code: number | null, stdout: string, stderr: string}>}
  */
-function runNpm(args, {captureStdout = false, cwd} = {}) {
+function runNpm(
+  args: string[],
+  {captureStdout = false, cwd}: {captureStdout?: boolean; cwd?: string} = {},
+): Promise<{code: number | null; stdout: string; stderr: string}> {
   return new Promise(resolve => {
     // Lazy import; keeps top of file tidy and avoids extra weight on
     // dry-run/check-only paths.
@@ -476,11 +453,8 @@ function runNpm(args, {captureStdout = false, cwd} = {}) {
  * TTY) so npm can open the browser / prompt. The user should pick
  * "skip two-factor authentication for the next 5 minutes" so the rest
  * of the run sails through. Returns true if the sample read succeeded.
- *
- * @param {string} sampleName
- * @returns {Promise<boolean>}
  */
-async function warmTrustAuth(sampleName) {
+async function warmTrustAuth(sampleName: string): Promise<boolean> {
   console.log(
     `\nAuthenticating for trust API access via \`npm trust list ${sampleName}\`.`,
   );
@@ -513,11 +487,12 @@ const RATE_LIMIT_BACKOFF_MAX_MS = 60_000;
 /**
  * Revoke a single trust config by ID.
  *
- * @param {string} pkgName
- * @param {string} id
- * @returns {Promise<boolean>} true on success
+ * @returns true on success
  */
-async function revokeTrustConfig(pkgName, id) {
+async function revokeTrustConfig(
+  pkgName: string,
+  id: string,
+): Promise<boolean> {
   if (dryRun) {
     console.log(
       `  ${pkgName} ... [dry-run] npm trust revoke ${pkgName} --id=${id}`,
@@ -548,11 +523,10 @@ async function revokeTrustConfig(pkgName, id) {
  * stderr to tell an `E409 Conflict` (the registry's way of saying
  * "this exact trust config already exists") apart from real failures,
  * and to back off and retry on `E429 Too Many Requests`.
- *
- * @param {PublicPackage} pkg
- * @returns {Promise<'configured' | 'already-configured' | 'dry-run' | 'failed'>}
  */
-async function addTrustConfig(pkg) {
+async function addTrustConfig(
+  pkg: PublicPackage,
+): Promise<'configured' | 'already-configured' | 'dry-run' | 'failed'> {
   const name = pkg.getNpmName();
   const args = [
     'trust',
@@ -622,12 +596,11 @@ async function checkAuth() {
  * Ensure the local npm CLI supports `npm trust github`. The subcommand
  * was added in npm 11.5; we require 11.10+ to match the upstream
  * trusted-publishing docs.
- *
- * @returns {Promise<{ok: true, version: string} | {ok: false, reason: string}>}
  */
-async function checkNpmTrustSupport() {
-  /** @type {string} */
-  let version;
+async function checkNpmTrustSupport(): Promise<
+  {ok: true; version: string} | {ok: false; reason: string}
+> {
+  let version: string;
   try {
     const {stdout} = await exec(`npm --version`);
     version = stdout.trim();
@@ -659,11 +632,9 @@ async function checkNpmTrustSupport() {
   }
   return {ok: true, version};
 }
-
-/**
- * @param {Array<{pkg: PublicPackage, existing: Array<any>}>} entries
- */
-function printManualSetup(entries) {
+function printManualSetup(
+  entries: {pkg: PublicPackage; existing: TrustConfig[]}[],
+) {
   if (entries.length === 0) {
     return;
   }
@@ -696,8 +667,7 @@ function printManualSetup(entries) {
 async function main() {
   let pkgs = getPublicPackages();
   if (targetNames.length > 0) {
-    /** @type {Map<string, (typeof pkgs)[number]>} */
-    const byKey = new Map();
+    const byKey: Map<string, (typeof pkgs)[number]> = new Map();
     for (const pkg of pkgs) {
       const npmName = pkg.getNpmName();
       byKey.set(npmName, pkg);
@@ -706,8 +676,7 @@ async function main() {
         byKey.set(npmName.slice(slash + 1), pkg);
       }
     }
-    /** @type {typeof pkgs} */
-    const selected = [];
+    const selected: typeof pkgs = [];
     const seen = new Set();
     const unknown = [];
     for (const name of targetNames) {
@@ -753,10 +722,8 @@ async function main() {
     console.log(`Using npm ${trustSupport.version} (supports 'npm trust')\n`);
   }
 
-  /** @type {Array<PublicPackage>} */
-  const missing = [];
-  /** @type {Array<PublicPackage>} */
-  const existing = [];
+  const missing: PublicPackage[] = [];
+  const existing: PublicPackage[] = [];
   for (const pkg of pkgs) {
     const name = pkg.getNpmName();
     process.stdout.write(`  ${name} ... `);
@@ -770,8 +737,7 @@ async function main() {
     }
   }
 
-  /** @type {string[]} */
-  const failures = [];
+  const failures: string[] = [];
 
   if (missing.length > 0) {
     if (!bootstrap) {
@@ -820,10 +786,8 @@ async function main() {
   //   - none:      no trust config → safe to add
   //   - unknown:   couldn't check (auth issue / network) → try the
   //                add anyway and let npm decide
-  /** @type {Array<{pkg: PublicPackage, existing: Array<any>}>} */
-  const toRegister = [];
-  /** @type {Array<{pkg: PublicPackage, existing: Array<any>}>} */
-  const conflicts = [];
+  const toRegister: {pkg: PublicPackage; existing: TrustConfig[]}[] = [];
+  const conflicts: {pkg: PublicPackage; existing: TrustConfig[]}[] = [];
   if (trustCandidates.length > 0) {
     // Reading the trust API (`npm trust list`) requires auth and may
     // require OTP. npm only runs its interactive web-auth recovery when

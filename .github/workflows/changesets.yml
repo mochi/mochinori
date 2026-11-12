@@ -44,9 +44,9 @@ jobs:
       - name: Check changeset coverage
         run: |
           git worktree add --detach "$RUNNER_TEMP/base" "$BASE_SHA"
-          checker="$RUNNER_TEMP/base/scripts/changesets/check.mjs"
+          checker="$RUNNER_TEMP/base/scripts/changesets/check.ts"
           if [ ! -f "$checker" ]; then
-            checker=scripts/changesets/check.mjs
+            checker=scripts/changesets/check.ts
           fi
           node "$checker" --root "$GITHUB_WORKSPACE" --base "$BASE_SHA" --head HEAD
         env:
