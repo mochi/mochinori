@@ -26,7 +26,7 @@ export function exitOnEpipe() {
 
 /**
  * Strict `parseArgs`: unknown options and positionals are errors. A bare
- * `--` (from `pnpm run x -- --flag`) is ignored.
+ * `--` (from `npm run x -- --flag`) is ignored.
  *
  * @template {import('node:util').ParseArgsConfig['options']} T
  * @param {string[]} argv

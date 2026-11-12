@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * `pnpm run release:version -- --increment patch|minor [--dry-run]`
+ * `pnpm run release:version --increment patch|minor [--dry-run]`
  *
  * Start a release: set the next version in the root package.json and in
  * every published package (they are all released together at one version),
@@ -22,7 +22,7 @@ import {main as updateChangelog, patchGuard} from '../changesets/release.mjs';
 import {isMain, readPackages, readPending, ROOT} from '../changesets/repo.mjs';
 
 const USAGE =
-  'usage: pnpm run release:version -- --increment patch|minor [--dry-run]';
+  'usage: pnpm run release:version --increment patch|minor [--dry-run]';
 
 /**
  * @param {string} version

@@ -481,7 +481,7 @@ describe('changeset coverage', () => {
     );
     expect(result.problems[0]).toContain("'@mochinori/list': patch");
     expect(result.problems[0]).toContain(
-      'pnpm run changeset:new -- --category fix --packages @mochinori/list',
+      'pnpm run changeset:new --category fix --packages @mochinori/list',
     );
     expect(result.problems[0]).toContain('skip-changeset');
   });

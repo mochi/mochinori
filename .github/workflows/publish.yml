@@ -69,11 +69,11 @@ jobs:
       - if: steps.version.outputs.release
         run: pnpm run test-unit
       - if: steps.version.outputs.release
-        run: pnpm run release:publish -- ${DRY_RUN:+--dry-run}
+        run: pnpm run release:publish ${DRY_RUN:+--dry-run}
       - if: steps.version.outputs.release && !env.DRY_RUN
         name: Tag the release and create the GitHub release
         run: |
-          pnpm --silent run release-notes -- --version "$VERSION" > "$RUNNER_TEMP/notes.md"
+          pnpm --silent run release-notes --version "$VERSION" > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
         env:
           VERSION: ${{ steps.version.outputs.version }}

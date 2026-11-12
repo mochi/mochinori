@@ -16,7 +16,7 @@ lists every commit.
 
 A version without one of these sections had none of that kind. To print the
 part between the version you have and the one you want, run
-`pnpm run changelog:range -- --from <version> [--to <version>] [--breaking]`
+`pnpm run changelog:range --from <version> [--to <version>] [--breaking]`
 in a clone of the repository (`--breaking` keeps the three sections above).
 This file also ships in every package, for example as
 `node_modules/@mochinori/images/CHANGELOG.md`.

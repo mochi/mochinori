@@ -8,7 +8,7 @@
  */
 
 /**
- * `pnpm run changeset:new -- --category fix --packages @mochinori/images,@mochinori/emoji --summary "..."`
+ * `pnpm run changeset:new --category fix --packages @mochinori/images,@mochinori/emoji --summary "..."`
  *
  * Write a changeset in the format .changeset/README.md describes.
  *
@@ -33,7 +33,7 @@ import {CATEGORIES, normalizeCategory, validateChangeset} from './entry.mjs';
 import {isMain, readPackages, ROOT, validationContext} from './repo.mjs';
 
 const USAGE = [
-  'usage: pnpm run changeset:new -- --category <category> --packages <a,b> --summary "<one line>"',
+  'usage: pnpm run changeset:new --category <category> --packages <a,b> --summary "<one line>"',
   '         [--pr <number>] [--contributor <handle>] [--migration "..."] [--detect "..."]',
   '         [--codemod "..."] [--verify "..."] [--replacement "..."] [--removal "..."] [--name <file>]',
   `categories: ${CATEGORIES.map(c => c.key).join(', ')}`,

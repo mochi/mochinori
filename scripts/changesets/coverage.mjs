@@ -297,7 +297,7 @@ function coverageMessage(missing, required) {
     '',
     'Add a changeset, e.g. with',
     '',
-    `  pnpm run changeset:new -- --category fix --packages ${missing.join(',')} --summary "..."`,
+    `  pnpm run changeset:new --category fix --packages ${missing.join(',')} --summary "..."`,
     '',
     'which writes a file such as .changeset/short-description.md:',
     '',

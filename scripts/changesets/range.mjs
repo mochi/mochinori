@@ -8,7 +8,7 @@
  */
 
 /**
- * `pnpm run changelog:range -- --from 0.40.0 [--to 0.52.0] [--breaking] [--json]`
+ * `pnpm run changelog:range --from 0.40.0 [--to 0.52.0] [--breaking] [--json]`
  *
  * Print every CHANGELOG.md entry newer than --from and no newer than --to
  * (default: the newest version in the file), oldest first, which is the
@@ -40,7 +40,7 @@ import {exitOnEpipe, parseStrict} from './cli.mjs';
 import {isMain, ROOT} from './repo.mjs';
 
 const USAGE =
-  'usage: pnpm run changelog:range -- --from <version> [--to <version>] [--breaking] [--json] [--changelog <file>]';
+  'usage: pnpm run changelog:range --from <version> [--to <version>] [--breaking] [--json] [--changelog <file>]';
 
 /**
  * @param {string[]} argv

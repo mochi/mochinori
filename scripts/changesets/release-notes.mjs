@@ -8,7 +8,7 @@
  */
 
 /**
- * `pnpm run release-notes -- [--version 0.53.0]`
+ * `pnpm run release-notes [--version 0.53.0]`
  *
  * Print the CHANGELOG.md block for one version (default: the newest)
  * without its `##` heading: a starting point for the GitHub release notes.
@@ -22,7 +22,7 @@ import {exitOnEpipe, parseStrict} from './cli.mjs';
 import {isMain, ROOT} from './repo.mjs';
 
 const USAGE =
-  'usage: pnpm run release-notes -- [--version <version>] [--changelog <file>]';
+  'usage: pnpm run release-notes [--version <version>] [--changelog <file>]';
 
 /**
  * @param {string} markdown CHANGELOG.md contents

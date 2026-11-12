@@ -9,7 +9,7 @@
  */
 
 /**
- * `pnpm run setup-trusted-publishing -- [--bootstrap] [--setup-trust] [--replace] [--dry-run] [package ...]`
+ * `pnpm run setup-trusted-publishing [--bootstrap] [--setup-trust] [--replace] [--dry-run] [package ...]`
  *
  * Run locally, after `npm login`, by an owner of the `@mochinori` scope.
  * npm can only trust a workflow for a package that already exists, so:

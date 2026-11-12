@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * `pnpm run release:publish -- [--dry-run] [--tag latest]`
+ * `pnpm run release:publish [--dry-run] [--tag latest]`
  *
  * Publish every public package at the root package.json's version, skipping
  * a package whose version is already on npm, so a failed run can simply be
@@ -21,7 +21,7 @@ import path from 'node:path';
 import {parseStrict} from '../changesets/cli.mjs';
 import {isMain, readPackages, ROOT} from '../changesets/repo.mjs';
 
-const USAGE = 'usage: pnpm run release:publish -- [--dry-run] [--tag <tag>]';
+const USAGE = 'usage: pnpm run release:publish [--dry-run] [--tag <tag>]';
 const REGISTRY = 'https://registry.npmjs.org';
 
 /**
@@ -94,7 +94,7 @@ export async function main(argv) {
     if (unclaimed.length > 0) {
       console.error(
         `Not on npm yet, so trusted publishing cannot publish them: ${unclaimed.join(', ')}.\n` +
-          'A maintainer runs `pnpm run setup-trusted-publishing -- --bootstrap --setup-trust` locally first; see "Releasing" in CONTRIBUTING.md.',
+          'A maintainer runs `pnpm run setup-trusted-publishing --bootstrap --setup-trust` locally first; see "Releasing" in CONTRIBUTING.md.',
       );
       return 1;
     }

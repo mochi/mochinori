@@ -13,7 +13,7 @@ becomes the change's entry in [CHANGELOG.md](CHANGELOG.md) at the next
 release. Write it for someone who uses mochinori.
 
 ```sh
-pnpm run changeset:new -- --category fix --packages @mochinori/images \
+pnpm run changeset:new --category fix --packages @mochinori/images \
   --summary "Keep an image's alt text when it is made inline"
 ```
 
@@ -78,7 +78,7 @@ tests before it publishes anything.
 To preview a release locally without changing anything:
 
 ```sh
-pnpm run release:version -- --increment minor --dry-run
+pnpm run release:version --increment minor --dry-run
 ```
 
 ### One-time setup
@@ -105,7 +105,7 @@ admin of this repository.
    ```sh
    npm login --registry https://registry.npmjs.org
    pnpm run setup-trusted-publishing                      # check only
-   pnpm run setup-trusted-publishing -- --bootstrap --setup-trust
+   pnpm run setup-trusted-publishing --bootstrap --setup-trust
    ```
 
    `--bootstrap` publishes a deprecated `0.0.0-bootstrap.0` placeholder
@@ -125,7 +125,7 @@ admin of this repository.
 5. Run the Release workflow (choose `minor`) and merge its pull request.
 
 A new package added later needs step 4 again, limited to that package:
-`pnpm run setup-trusted-publishing -- --bootstrap --setup-trust @mochinori/<name>`.
+`pnpm run setup-trusted-publishing --bootstrap --setup-trust @mochinori/<name>`.
 Publish refuses to run while any public package is missing from npm.
 
 ### Release protocol

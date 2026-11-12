@@ -11,7 +11,7 @@ each entry is written for someone who uses mochinori, not for its maintainers.
 Create one with `pnpm run changeset:new`, or write the file by hand:
 
 ```sh
-pnpm run changeset:new -- --category fix --packages @mochinori/images \
+pnpm run changeset:new --category fix --packages @mochinori/images \
   --summary "Keep an image's alt text when it is made inline"
 ```
 
@@ -217,7 +217,7 @@ print only the part between two versions, run this in a clone of the
 repository:
 
 ```sh
-pnpm run changelog:range -- --from 0.1.0 --breaking
+pnpm run changelog:range --from 0.1.0 --breaking
 # or against an app's installed copy:
 node scripts/changesets/range.mjs --changelog /path/to/app/node_modules/@mochinori/images/CHANGELOG.md --from 0.1.0
 ```

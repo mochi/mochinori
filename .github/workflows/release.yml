@@ -43,7 +43,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - id: version
-        run: pnpm run release:version -- --increment "$INCREMENT"
+        run: pnpm run release:version --increment "$INCREMENT"
         env:
           INCREMENT: ${{ inputs.increment }}
           # Lets the changelog look up pull requests and contributor logins
@@ -54,14 +54,14 @@ jobs:
           branch="release/v$VERSION"
           git checkout -b "$branch"
           git add -A
-          git commit -m "Release v$VERSION" -m "$(pnpm --silent run release-notes -- --version "$VERSION")"
+          git commit -m "Release v$VERSION" -m "$(pnpm --silent run release-notes --version "$VERSION")"
           git push --force origin "$branch"
           {
             echo "## Release v$VERSION"
             echo
             echo 'Merging this pull request publishes every package at this version to npm and tags the release.'
             echo
-            pnpm --silent run release-notes -- --version "$VERSION"
+            pnpm --silent run release-notes --version "$VERSION"
           } > "$RUNNER_TEMP/body.md"
           if gh pr create --base main --head "$branch" --title "Release v$VERSION" --body-file "$RUNNER_TEMP/body.md"; then
             echo "Opened the release pull request for v$VERSION." >> "$GITHUB_STEP_SUMMARY"
