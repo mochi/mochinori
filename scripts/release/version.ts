@@ -45,7 +45,7 @@ export function bumpVersion(
  * Replace the top-level "version" of a package.json without reformatting
  * the rest of the file.
  */
-function writeVersion(file: string, version: string) {
+export function writeVersion(file: string, version: string) {
   const text = fs.readFileSync(file, 'utf8');
   const re = /^(\s*"version":\s*)"[^"]*"/m;
   if (!re.test(text)) {

@@ -81,6 +81,25 @@ To preview a release locally without changing anything:
 pnpm run release:version --increment minor --dry-run
 ```
 
+### Continuous releases (pkg.pr.new)
+
+Every commit to a pull request and every commit to `main` publishes all
+public packages to [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new)
+through the Continuous Releases workflow (`pkg-pr-new.yml`). Nothing goes to
+npm.
+
+```sh
+npm i https://pkg.pr.new/@mochinori/images@19        # latest commit of PR #19
+npm i https://pkg.pr.new/@mochinori/images@4282a68   # a specific commit
+npm i https://pkg.pr.new/@mochinori/images@main      # tip of main
+```
+
+The pkg.pr.new bot comments the install commands on each pull request.
+Previews are built with `pnpm run build` after
+`scripts/release/preview-version.ts` stamps a version just after the latest
+release: `0.1.1-pr.19.g4282a68` for a pull request and `0.1.1-main.g4282a68`
+for `main`.
+
 ### One-time setup
 
 These steps need an owner of the `@mochinori` scope on npmjs.com and an
@@ -98,7 +117,10 @@ admin of this repository.
 
 3. **Add the `skip-changeset` label** to the repository (Issues → Labels).
 
-4. **Claim the package names and trust the Publish workflow.** npm can only
+4. **Install the [pkg.pr.new GitHub App](https://github.com/apps/pkg-pr-new)**
+   on the repository, for the continuous releases.
+
+5. **Claim the package names and trust the Publish workflow.** npm can only
    trust a workflow for a package that already exists, and Publish has no
    token to fall back on, so this runs once from a maintainer's machine:
 
@@ -122,9 +144,9 @@ admin of this repository.
    Then, under each package's Settings → Publishing access on npmjs.com,
    choose "Require two-factor authentication and disallow tokens".
 
-5. Run the Release workflow (choose `minor`) and merge its pull request.
+6. Run the Release workflow (choose `minor`) and merge its pull request.
 
-A new package added later needs step 4 again, limited to that package:
+A new package added later needs step 5 again, limited to that package:
 `pnpm run setup-trusted-publishing --bootstrap --setup-trust @mochinori/<name>`.
 Publish refuses to run while any public package is missing from npm.
 
