@@ -4,6 +4,9 @@ inputs:
   node-version:
     required: true
     description: 'Node version, e.g. 24.x'
+  registry-url:
+    required: false
+    description: 'actions/setup-node: npm registry to use (set it to publish)'
 
 runs:
   using: 'composite'
@@ -14,6 +17,7 @@ runs:
       with:
         cache: 'pnpm'
         node-version: ${{ inputs.node-version }}
+        registry-url: ${{ inputs.registry-url }}
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile

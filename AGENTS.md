@@ -20,7 +20,11 @@ notice.
 - `pnpm run lint` / `lint:fix` - ESLint
 - `pnpm run prettier` / `prettier:fix` - Prettier
 - `pnpm run tsc`, `tsc-website` - TypeScript, per tsconfig
-- `pnpm run ci-check` - Everything CI checks except tests and builds
+- `pnpm run ci-check` - Everything CI checks except tests and builds,
+  including `check-changesets`
+- `pnpm run changeset:new` - Add a changeset (see "Changesets" below)
+- `pnpm run changelog` - Preview the CHANGELOG.md section the pending
+  changesets would produce
 - `pnpm run dev:website` - Build the site and run it with its API routes and
   Durable Objects in Vite/Miniflare (http://localhost:5173)
 - `pnpm run deploy:website` - Build the site, then `void deploy --platform cloudflare`. Never
@@ -179,7 +183,10 @@ catches them.
 
 Once a package is published, changes must be backwards compatible: keep
 exported APIs and the serialized JSON of nodes working, add rather than
-rename, and deprecate before removing.
+rename, and deprecate before removing (with a `[deprecation]` changeset).
+A breaking change that cannot be avoided ships in a minor release (the
+packages are `0.x`) with a `[breaking]` changeset whose `Migration:`
+paragraph tells callers what to change; see "Changesets" below.
 
 ## Testing
 
@@ -194,3 +201,42 @@ Write commit messages and PR descriptions to the shape of
 `.github/pull_request_template.md`: a `[packages] Type: title` subject, a
 `## Description`, and a `## Test plan` with real `### Before` and
 `### After` output. Never include agent session URLs or other private links.
+
+### Changesets
+
+A changeset is required for every user-facing change: a published
+package's behavior, API, types, or the consumer-facing fields of its
+`package.json` (dependencies, peer ranges, exports, files). Add it in
+`.changeset/` with `pnpm run changeset:new` or by hand (format in
+`.changeset/README.md`): frontmatter listing each affected npm package with
+`patch` (or `minor` for `[breaking]`, never `major`), then
+`[category] one-line summary` with category `breaking`, `deprecation`,
+`feature`, `fix`, `perf`, `docs` or `chore`, and no PR number.
+
+- A `[breaking]` entry needs `Migration:` and `Detect:` (usually just the
+  affected symbol, import or CSS class; add `Codemod:` when useful).
+- A type signature change that can make existing call sites stop compiling
+  (overloads, generics, narrowed parameter or widened return types,
+  including calls that relied on an inferred type argument) is
+  `[breaking]` even when it only deprecates something; see "Type signature
+  changes" in `.changeset/README.md`.
+- A `[deprecation]` entry needs `Replacement:` and `Removal:` (`v0.N.0`,
+  `no earlier than v0.N.0`, or `not scheduled`).
+- A non-breaking change that alters observable output or behavior (exported
+  HTML or JSON, the DOM, editing behavior) gets a `Verify:` paragraph
+  saying what to test.
+- No Markdown headings in the body. Add a `PR: #123` line only when the
+  changeset lands in a different PR than the change.
+
+Tests, the website, scripts and tooling need none; a maintainer can label a
+PR `skip-changeset` when a change to `src/` has no effect on users.
+Validate with `pnpm run check-changesets` (part of `ci-check`); the
+Changesets workflow fails a PR that changes a published package without
+one. The changeset file is the record, so the commit message's
+`## Changeset` section is optional.
+
+### Releases
+
+Never run a release, publish to npm, or push a `v*` tag unless a person
+asked. Releases go through the Release and Publish workflows described in
+"Releasing" in `CONTRIBUTING.md`.

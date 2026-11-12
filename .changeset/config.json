@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "access": "public",
+  "baseBranch": "main",
+  "changelog": "./changelog.cjs",
+  "commit": false,
+  "fixed": [
+    [
+      "@mochinori/*",
+      "!@mochinori/eslint-plugin-internal",
+      "!@mochinori/website",
+      "!@mochinori/website-worker"
+    ]
+  ],
+  "format": false,
+  "ignore": [
+    "@mochinori/eslint-plugin-internal",
+    "@mochinori/website",
+    "@mochinori/website-worker"
+  ],
+  "linked": [],
+  "updateInternalDependencies": "patch"
+}

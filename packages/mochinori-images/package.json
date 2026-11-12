@@ -31,6 +31,7 @@
     "src",
     "!src/__tests__",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {

@@ -27,7 +27,14 @@
     "lint:fix": "eslint ./ --fix",
     "prettier": "prettier --list-different .",
     "prettier:fix": "prettier --write .",
-    "ci-check": "npm-run-all --parallel tsc tsc-website prettier lint",
+    "ci-check": "npm-run-all --parallel tsc tsc-website prettier lint check-changesets",
+    "changelog": "node ./scripts/changesets/release.mjs --preview",
+    "changelog:range": "node ./scripts/changesets/range.mjs",
+    "changeset:new": "node ./scripts/changesets/new.mjs",
+    "check-changesets": "node ./scripts/changesets/check.mjs",
+    "release-notes": "node ./scripts/changesets/release-notes.mjs",
+    "release:version": "node ./scripts/release/version.mjs",
+    "release:publish": "node ./scripts/release/publish.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

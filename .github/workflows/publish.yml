@@ -1,0 +1,82 @@
+# Publishes every public package to npm when main reaches a version that has
+# no git tag yet (that is, when a release pull request from release.yml is
+# merged), then tags the release and creates its GitHub release.
+#
+# Publishing uses npm trusted publishing: each package on npmjs.com trusts
+# this workflow file (publish.yml in mochi/mochinori), so no npm token is
+# stored here, and every version gets a provenance attestation. NPM_TOKEN is
+# only for the first release, before the packages exist on npm; delete the
+# secret once trusted publishing is set up. See "Releasing" in CONTRIBUTING.md.
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Build and pack, but publish nothing'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'mochi/mochinori' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Pushes the v<version> tag and creates the GitHub release
+      contents: write
+      # npm trusted publishing (OIDC) and provenance
+      id-token: write
+    env:
+      CI: true
+      DRY_RUN: ${{ inputs.dry-run && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: version
+        name: Find the version to release
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$version" = "0.0.0" ]; then
+            echo "Nothing released yet (version 0.0.0)." >> "$GITHUB_STEP_SUMMARY"
+          elif git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+            echo "v$version is already tagged." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.release
+        uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+          registry-url: 'https://registry.npmjs.org'
+      - if: steps.version.outputs.release
+        run: pnpm run build
+      - if: steps.version.outputs.release
+        run: pnpm run test-unit
+      - if: steps.version.outputs.release
+        run: pnpm run release:publish -- ${DRY_RUN:+--dry-run}
+        env:
+          # Empty once trusted publishing is set up, which is what it needs.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - if: steps.version.outputs.release && !env.DRY_RUN
+        name: Tag the release and create the GitHub release
+        run: |
+          pnpm --silent run release-notes -- --version "$VERSION" > "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}

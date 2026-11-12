@@ -42,6 +42,10 @@ pnpm run ci-check        # TypeScript, Prettier and ESLint
 pnpm run build           # build the published packages
 ```
 
+Changes to a published package need a changeset, and all packages are
+released to npm together at one version; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 The website deploys to Cloudflare with [Void](https://void.cloud): the
 Docusaurus build is served as static assets, alongside API routes and Durable
 Objects. See the

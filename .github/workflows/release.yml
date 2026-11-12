@@ -1,0 +1,73 @@
+# Starts a release: bumps every published package to the next version,
+# turns the pending changesets into that version's CHANGELOG.md section, and
+# opens a release pull request from the `release/v<version>` branch. Merging
+# that pull request publishes the packages (publish.yml).
+#
+# Opening the pull request needs "Allow GitHub Actions to create and approve
+# pull requests" (Settings → Actions → General). Without it the branch is
+# still pushed, and the job summary links to where to open the pull request.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: 'Version increment (a pending [breaking] changeset needs minor)'
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - id: version
+        run: pnpm run release:version -- --increment "$INCREMENT"
+        env:
+          INCREMENT: ${{ inputs.increment }}
+          # Lets the changelog look up pull requests and contributor logins
+          # that git history does not show (read-only API calls).
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Push the release branch and open the pull request
+        run: |
+          branch="release/v$VERSION"
+          git checkout -b "$branch"
+          git add -A
+          git commit -m "Release v$VERSION" -m "$(pnpm --silent run release-notes -- --version "$VERSION")"
+          git push --force origin "$branch"
+          {
+            echo "## Release v$VERSION"
+            echo
+            echo 'Merging this pull request publishes every package at this version to npm and tags the release.'
+            echo
+            pnpm --silent run release-notes -- --version "$VERSION"
+          } > "$RUNNER_TEMP/body.md"
+          if gh pr create --base main --head "$branch" --title "Release v$VERSION" --body-file "$RUNNER_TEMP/body.md"; then
+            echo "Opened the release pull request for v$VERSION." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Pushed \`$branch\`. Open its pull request at https://github.com/$GITHUB_REPOSITORY/compare/main...$branch?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
