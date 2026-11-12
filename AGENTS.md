@@ -63,6 +63,10 @@ notice.
   (`./ImageNode.tsx`). `tsc` rewrites them to `.js`
   (`rewriteRelativeImportExtensions`), so `dist/` is valid ESM for Node.
 - Use `import type` for type-only imports (`verbatimModuleSyntax`).
+- Write code, including scripts and config, in TypeScript ESM (`.ts`; Node
+  24 runs repo scripts directly with type stripping). `.mjs` is acceptable
+  but `.ts` is preferred. Never add CommonJS (`.cjs`, `require`) unless a
+  tool absolutely requires it.
 - Public entry points (`src/index.ts`) use named exports only.
 
 ## Lexical is a singleton within one app
