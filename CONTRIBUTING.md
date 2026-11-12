@@ -87,8 +87,9 @@ These steps need an owner of the `@mochinori` scope on npmjs.com and an
 admin of this repository.
 
 1. **npm scope.** Create the `mochinori` organization on npmjs.com (or use
-   the account that already owns the `@mochinori` scope). Turn on two-factor
-   authentication for every member who can publish.
+   the account that already owns the `@mochinori` scope), and turn on
+   account-level two-factor authentication for every member who can
+   publish.
 
 2. **Let GitHub Actions open the release pull request.** In the repository's
    Settings → Actions → General, check "Allow GitHub Actions to create and
@@ -97,30 +98,46 @@ admin of this repository.
 
 3. **Add the `skip-changeset` label** to the repository (Issues → Labels).
 
-4. **First release.** npm can only trust a workflow for a package that
-   already exists, so the first version is published with a token:
-   1. On npmjs.com, create a granular access token with read and write
-      access to the `@mochinori` scope (packages and scopes), that expires
-      in a day or two.
-   2. Add it as the `NPM_TOKEN` repository secret (Settings → Secrets and
-      variables → Actions).
-   3. Run the Release workflow and merge its pull request. Publish uses the
-      token, still with provenance.
-
-5. **Trusted publishing.** For each published package, on npmjs.com open the
-   package → Settings → Trusted Publisher, choose GitHub Actions, and enter
-   organization `mochi`, repository `mochinori`, workflow file
-   `publish.yml` (leave the environment empty). With npm 11.10 or later the
-   same can be done from a terminal after `npm login`:
+4. **Claim the package names and trust the Publish workflow.** npm can only
+   trust a workflow for a package that already exists, and Publish has no
+   token to fall back on, so this runs once from a maintainer's machine:
 
    ```sh
-   npm trust github @mochinori/images --repo mochi/mochinori --file publish.yml
-   npm trust github @mochinori/emoji --repo mochi/mochinori --file publish.yml
+   npm login --registry https://registry.npmjs.org
+   pnpm run setup-trusted-publishing                      # check only
+   pnpm run setup-trusted-publishing -- --bootstrap --setup-trust
    ```
 
-   Then, under each package's Settings → Publishing access, choose "Require
-   two-factor authentication and disallow tokens", delete the `NPM_TOKEN`
-   secret, and revoke the token.
+   `--bootstrap` publishes a deprecated `0.0.0-bootstrap.0` placeholder
+   under the `bootstrap` dist-tag for each package not on npm yet, which
+   claims the name without touching `latest`. `--setup-trust` runs
+   `npm trust github` so each package trusts `publish.yml` in
+   mochi/mochinori. It needs npm 11.10 or later (`npm i -g npm@latest`).
+   Each write asks for two-factor authentication: on the first prompt, open
+   the URL npm prints and choose "Skip two-factor authentication for the
+   next 5 minutes" so the rest of the run goes through. The script is
+   idempotent and skips packages that are already set up. `--dry-run` shows
+   what it would do.
 
-A new package added later needs step 4 again for its first version (or a
-one-off `pnpm publish` of it from a maintainer's machine), then step 5.
+   Then, under each package's Settings → Publishing access on npmjs.com,
+   choose "Require two-factor authentication and disallow tokens".
+
+5. Run the Release workflow (choose `minor`) and merge its pull request.
+
+A new package added later needs step 4 again, limited to that package:
+`pnpm run setup-trusted-publishing -- --bootstrap --setup-trust @mochinori/<name>`.
+Publish refuses to run while any public package is missing from npm.
+
+### Release protocol
+
+- A breaking change needs a `[breaking]` changeset, and its pull request
+  title says `Breaking change`.
+- A patch release is refused while a `[breaking]` changeset is pending. If an
+  urgent fix has to ship then, release a minor instead (on 0.x that is the
+  same kind of release), rather than holding back or splitting the breaking
+  change.
+- A maintainer can write the changeset for an external contributor (with a
+  `PR: #123` line when it lands in a later pull request) or add the
+  `skip-changeset` label when the change has no effect on users. When
+  reviewing a fix that changes observable output, add a `Verify:` paragraph
+  to its changeset.

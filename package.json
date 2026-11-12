@@ -35,6 +35,7 @@
     "release-notes": "node ./scripts/changesets/release-notes.mjs",
     "release:version": "node ./scripts/release/version.mjs",
     "release:publish": "node ./scripts/release/publish.mjs",
+    "setup-trusted-publishing": "node ./scripts/release/setup-trusted-publishing.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

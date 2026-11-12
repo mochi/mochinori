@@ -10,7 +10,8 @@
  * installed.
  *
  * In GitHub Actions this publishes with npm trusted publishing (OIDC) and a
- * provenance attestation; see "Releasing" in CONTRIBUTING.md.
+ * provenance attestation; see "Releasing" in CONTRIBUTING.md. A package
+ * that is not on npm yet needs `pnpm run setup-trusted-publishing` first.
  */
 
 import {execFileSync} from 'node:child_process';
@@ -29,16 +30,22 @@ const REGISTRY = 'https://registry.npmjs.org';
  * @returns {Promise<boolean>}
  */
 async function isPublished(name, version) {
-  const res = await fetch(
-    `${REGISTRY}/${name.replace('/', '%2f')}/${encodeURIComponent(version)}`,
+  return registryHas(
+    `${name.replace('/', '%2f')}/${encodeURIComponent(version)}`,
   );
+}
+
+/**
+ * @param {string} route a package name, or `name/version`
+ * @returns {Promise<boolean>}
+ */
+async function registryHas(route) {
+  const res = await fetch(`${REGISTRY}/${route}`);
   if (res.status === 404) {
     return false;
   }
   if (!res.ok) {
-    throw new Error(
-      `${REGISTRY} answered ${res.status} for ${name}@${version}`,
-    );
+    throw new Error(`${REGISTRY} answered ${res.status} for ${route}`);
   }
   return true;
 }
@@ -75,6 +82,22 @@ export async function main(argv) {
         mismatched.map(p => `  - ${p.name} is at ${p.version}`).join('\n'),
     );
     return 1;
+  }
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    // Trusted publishing can only publish a package that already exists.
+    const unclaimed = [];
+    for (const pkg of packages) {
+      if (!(await registryHas(pkg.name.replace('/', '%2f')))) {
+        unclaimed.push(pkg.name);
+      }
+    }
+    if (unclaimed.length > 0) {
+      console.error(
+        `Not on npm yet, so trusted publishing cannot publish them: ${unclaimed.join(', ')}.\n` +
+          'A maintainer runs `pnpm run setup-trusted-publishing -- --bootstrap --setup-trust` locally first; see "Releasing" in CONTRIBUTING.md.',
+      );
+      return 1;
+    }
   }
   const changelog = path.join(ROOT, 'CHANGELOG.md');
   const published = [];

@@ -3,10 +3,11 @@
 # merged), then tags the release and creates its GitHub release.
 #
 # Publishing uses npm trusted publishing: each package on npmjs.com trusts
-# this workflow file (publish.yml in mochi/mochinori), so no npm token is
-# stored here, and every version gets a provenance attestation. NPM_TOKEN is
-# only for the first release, before the packages exist on npm; delete the
-# secret once trusted publishing is set up. See "Releasing" in CONTRIBUTING.md.
+# this workflow file (publish.yml in mochi/mochinori), and every version gets
+# a provenance attestation. There is no npm token to fall back on, so a
+# misconfigured trust setup fails loudly. A package must exist on npm before
+# it can trust a workflow: `pnpm run setup-trusted-publishing` claims new
+# names from a maintainer's machine. See "Releasing" in CONTRIBUTING.md.
 name: Publish
 
 on:
@@ -69,9 +70,6 @@ jobs:
         run: pnpm run test-unit
       - if: steps.version.outputs.release
         run: pnpm run release:publish -- ${DRY_RUN:+--dry-run}
-        env:
-          # Empty once trusted publishing is set up, which is what it needs.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - if: steps.version.outputs.release && !env.DRY_RUN
         name: Tag the release and create the GitHub release
         run: |
