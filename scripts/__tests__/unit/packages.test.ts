@@ -73,6 +73,8 @@ describe('workspace packages', () => {
         expect(conditions.default, entry).toMatch(/^\.\/dist\/.*\.js$/);
       }
       expect(pkg.files).toContain('dist');
+      // The release copies the root CHANGELOG.md into the package
+      expect(pkg.files).toContain('CHANGELOG.md');
     });
 
     it('declares Lexical and React as peer dependencies only', () => {

@@ -41,3 +41,6 @@ npm-debug.log*
 # settings are tracked.
 .claude/*
 !.claude/settings.json
+
+# The release copies the root CHANGELOG.md into each package it publishes
+packages/*/CHANGELOG.md

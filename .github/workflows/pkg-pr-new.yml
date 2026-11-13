@@ -1,0 +1,60 @@
+name: Continuous Releases
+
+# Publishes every public package to pkg.pr.new for each pull request commit
+# and each commit to main, e.g.
+#
+#   npm i https://pkg.pr.new/@mochinori/images@19        # latest commit of PR #19
+#   npm i https://pkg.pr.new/@mochinori/images@4282a68   # a specific commit
+#   npm i https://pkg.pr.new/@mochinori/images@main      # tip of main
+#
+# This runs alongside the npm releases, not instead of them: npm releases
+# still go through release.yml and publish.yml, which own the npm trusted
+# publisher config. Nothing here touches npm, pushes refs, or needs secrets.
+# Previews are versioned after the latest release (see
+# scripts/release/preview-version.ts).
+#
+# Requires the pkg.pr.new GitHub App (https://github.com/apps/pkg-pr-new) to
+# be installed on the repository.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  # A newer commit on a PR supersedes the older preview; every commit on main
+  # gets its own release, so main runs never cancel each other.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  publish:
+    # Skip pushes to forks; PRs from forks still run against mochi/mochinori.
+    if: github.repository == 'mochi/mochinori'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Build the PR head rather than GitHub's merge commit, so the
+          # preview contains exactly the commit pkg.pr.new labels it with.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: 24.x
+      - name: Stamp preview version
+        run: pnpm run preview-version --sha="$SHA" --pr="$PR"
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR: ${{ github.event.pull_request.number }}
+      - run: pnpm run build
+      # --pnpm packs with pnpm, which resolves `workspace:` and `catalog:`
+      # specifiers the way `pnpm publish` does for npm. Private packages
+      # (the website, the Worker, the lint rules) are skipped by pkg-pr-new.
+      - run: pnpm exec pkg-pr-new publish --pnpm --no-template --packageManager=npm,pnpm './packages/*'
